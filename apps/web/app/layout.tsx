@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
+import { AppShell } from "@/components/layout/AppShell";
 
 export const metadata: Metadata = {
   title: "CINEHA AI — Intelligent Content Creation Assistant",
@@ -21,7 +22,7 @@ export default function RootLayout({
   return (
     <html lang="en" className="dark">
       <body className="bg-cine-bg text-cine-text antialiased selection:bg-cine-accent selection:text-white">
-        {children}
+        <AppShell>{children}</AppShell>
       </body>
     </html>
   );
