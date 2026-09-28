@@ -7,6 +7,7 @@ import {
   AlertCircle,
   RefreshCw,
   ArrowLeft,
+  Sparkles,
 } from "lucide-react";
 import { RetentionScoreGauge } from "./RetentionScoreGauge";
 import { CategoryScoresGrid } from "./CategoryScoresGrid";
@@ -224,13 +225,22 @@ export function RetentionWorkspace({ initialScriptId = null }: RetentionWorkspac
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-2">
           {currentScriptId && (
-            <Link
-              href="/scripts"
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-300 bg-slate-800 hover:bg-slate-700 border border-white/10 transition-colors"
-            >
-              <ArrowLeft className="w-3.5 h-3.5" />
-              <span>Back to Studio</span>
-            </Link>
+            <>
+              <Link
+                href="/scripts"
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-300 bg-slate-800 hover:bg-slate-700 border border-white/10 transition-colors"
+              >
+                <ArrowLeft className="w-3.5 h-3.5" />
+                <span>Back to Studio</span>
+              </Link>
+              <Link
+                href={`/optimizer?script_id=${currentScriptId}`}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold text-white bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-400 hover:to-blue-400 shadow-md shadow-cyan-500/20 transition-all"
+              >
+                <Sparkles className="w-3.5 h-3.5" />
+                <span>Optimize Screenplay</span>
+              </Link>
+            </>
           )}
         </div>
 

@@ -14,8 +14,14 @@ from app.schemas.script import (
     ScriptVersionResponse,
 )
 from app.schemas.analyzer import ScriptAnalysisResponse, ScriptAnalysisRequest
+from app.schemas.optimizer import (
+    ScriptOptimizationRequest,
+    ScriptOptimizationResponse,
+    SaveOptimizedScriptRequest,
+)
 from app.agents.script_agent import get_script_agent, ScriptAgent
 from app.agents.retention_analyzer_agent import get_retention_analyzer_agent, RetentionAnalyzerAgent
+from app.agents.script_optimizer_agent import get_script_optimizer_agent, ScriptOptimizerAgent
 
 router = APIRouter()
 
@@ -272,5 +278,45 @@ async def analyze_script_endpoint(
 ) -> ScriptAnalysisResponse:
     return await agent.analyze(
         request=ScriptAnalysisRequest(script_id=script_id),
+        db=db,
+    )
+
+
+@router.post(
+    "/scripts/{script_id}/optimize",
+    response_model=ScriptOptimizationResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Generate Script Optimization Preview",
+    description="Optimizes an existing screenplay against chosen retention goals and generates before/after diagnostics without overwriting the script.",
+)
+async def optimize_script_endpoint(
+    script_id: str,
+    payload: ScriptOptimizationRequest,
+    db: AsyncSession = Depends(get_db),
+    agent: ScriptOptimizerAgent = Depends(get_script_optimizer_agent),
+) -> ScriptOptimizationResponse:
+    return await agent.optimize(
+        script_id=script_id,
+        request=payload,
+        db=db,
+    )
+
+
+@router.post(
+    "/scripts/{script_id}/save-optimized",
+    response_model=ScriptResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Save Optimized Script Version",
+    description="Explicitly commits an optimized script as a new immutable ScriptVersion, preserving previous versions.",
+)
+async def save_optimized_endpoint(
+    script_id: str,
+    payload: SaveOptimizedScriptRequest,
+    db: AsyncSession = Depends(get_db),
+    agent: ScriptOptimizerAgent = Depends(get_script_optimizer_agent),
+) -> ScriptResponse:
+    return await agent.save_optimized(
+        script_id=script_id,
+        payload=payload,
         db=db,
     )

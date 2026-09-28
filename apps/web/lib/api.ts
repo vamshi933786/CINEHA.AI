@@ -18,6 +18,11 @@ import type {
   ScriptAnalysisRequest,
   ScriptAnalysisResponse,
 } from "../types/analyzer";
+import type {
+  ScriptOptimizationRequest,
+  ScriptOptimizationResponse,
+  SaveOptimizedScriptRequest,
+} from "../types/optimizer";
 
 export class ApiClient {
   private baseUrl: string;
@@ -315,6 +320,75 @@ export class ApiClient {
 
     const data = await response.json();
     return data as ScriptAnalysisResponse;
+  }
+
+  async optimizeScript(
+    scriptId: string,
+    payload: ScriptOptimizationRequest
+  ): Promise<ScriptOptimizationResponse> {
+    const response = await fetch(`${this.baseUrl}/scripts/${scriptId}/optimize`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(payload),
+    });
+
+    if (!response.ok) {
+      let errorMessage = `Failed to optimize script (status: ${response.status})`;
+      try {
+        const errorJson = await response.json();
+        if (errorJson.detail) {
+          if (Array.isArray(errorJson.detail)) {
+            errorMessage = errorJson.detail
+              .map((d: any) => d.msg || JSON.stringify(d))
+              .join(", ");
+          } else {
+            errorMessage = errorJson.detail;
+          }
+        }
+      } catch (_) {}
+      throw new Error(errorMessage);
+    }
+
+    const data = await response.json();
+    return data as ScriptOptimizationResponse;
+  }
+
+  async saveOptimizedScript(
+    scriptId: string,
+    payload: SaveOptimizedScriptRequest
+  ): Promise<Script> {
+    const response = await fetch(
+      `${this.baseUrl}/scripts/${scriptId}/save-optimized`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(payload),
+      }
+    );
+
+    if (!response.ok) {
+      let errorMessage = `Failed to save optimized script (status: ${response.status})`;
+      try {
+        const errorJson = await response.json();
+        if (errorJson.detail) {
+          if (Array.isArray(errorJson.detail)) {
+            errorMessage = errorJson.detail
+              .map((d: any) => d.msg || JSON.stringify(d))
+              .join(", ");
+          } else {
+            errorMessage = errorJson.detail;
+          }
+        }
+      } catch (_) {}
+      throw new Error(errorMessage);
+    }
+
+    const data = await response.json();
+    return data as Script;
   }
 }
 

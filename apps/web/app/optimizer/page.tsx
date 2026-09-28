@@ -1,23 +1,42 @@
-import React from "react";
-import { FeaturePlaceholder } from "@/components/ui/FeaturePlaceholder";
+"use client";
 
-export default function OptimizerPage() {
+import React, { Suspense } from "react";
+import { Sparkles } from "lucide-react";
+import { PageHeader } from "@/components/ui/PageHeader";
+import { Badge } from "@/components/ui/Badge";
+import { OptimizerWorkspace } from "@/components/optimizer";
+
+export default function ScriptOptimizerPage() {
   return (
-    <FeaturePlaceholder
-      title="Script Optimizer"
-      description="Side-by-side visual diff studio refining wording, hooks, and pacing while preserving creator voice."
-      phase="Phase 7"
-      moduleNumber={6}
-      breadcrumbs={[{ label: "Script Optimizer" }]}
-      plannedFeatures={[
-        "Side-by-side visual diff (Original vs Optimized)",
-        "Targeted tone, duration, and language shifts",
-        "Alternative hook injection with 1-click swap",
-        "Comprehensive versioning tree with one-click restore",
-        "Word count & estimated timing diff comparison",
-        "Export final optimized screenplay",
-      ]}
-      architecturalNotes="Uses State Reducer Pattern for managing complex multi-version rollback trees and visual line diffs."
-    />
+    <div className="space-y-6 max-w-7xl mx-auto pb-12">
+      {/* Page Header */}
+      <PageHeader
+        title="Script Optimizer"
+        description="Goal-driven screenplay optimization engine. Re-engineers hooks, purges filler phrases, balances short-form pacing cadence, and sharpens CTA conversion with full before/after diffs."
+        breadcrumbs={[
+          { label: "Dashboard", href: "/" },
+          { label: "Script Studio", href: "/studio" },
+          { label: "Retention Analyzer", href: "/analyzer" },
+          { label: "Script Optimizer" },
+        ]}
+        badge={
+          <Badge variant="accent" size="sm">
+            Phase 7 Part B: Script Optimizer
+          </Badge>
+        }
+      />
+
+      {/* Main Optimizer Workspace wrapped in Suspense for search params */}
+      <Suspense
+        fallback={
+          <div className="p-12 text-center text-slate-400 text-sm flex items-center justify-center gap-2">
+            <Sparkles className="w-4 h-4 text-cyan-400 animate-pulse" />
+            <span>Loading Script Optimizer...</span>
+          </div>
+        }
+      >
+        <OptimizerWorkspace />
+      </Suspense>
+    </div>
   );
 }

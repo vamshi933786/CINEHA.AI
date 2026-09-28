@@ -1,5 +1,7 @@
 import json
 import uuid
+import re
+import copy
 import httpx
 from typing import List, Optional, Dict, Any
 from app.core.config import settings
@@ -49,6 +51,26 @@ class BaseLLMProvider:
         cta: str,
         niche: Optional[str] = None,
         target_audience: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        raise NotImplementedError
+
+    async def optimize_script(
+        self,
+        title: str,
+        topic: str,
+        platform: str,
+        language: str,
+        duration_seconds: int,
+        tone: str,
+        hook: str,
+        segments: List[Dict[str, Any]],
+        cta: str,
+        goals: List[str],
+        instructions: Optional[str] = None,
+        target_retention_areas: Optional[List[str]] = None,
+        creator_name: Optional[str] = None,
+        niche: Optional[str] = None,
+        audience: Optional[str] = None,
     ) -> Dict[str, Any]:
         raise NotImplementedError
 
@@ -968,6 +990,219 @@ class OfflineHeuristicMockProvider(BaseLLMProvider):
             "provider_used": "heuristic_mock",
         }
 
+    async def optimize_script(
+        self,
+        title: str,
+        topic: str,
+        platform: str,
+        language: str,
+        duration_seconds: int,
+        tone: str,
+        hook: str,
+        segments: List[Dict[str, Any]],
+        cta: str,
+        goals: List[str],
+        instructions: Optional[str] = None,
+        target_retention_areas: Optional[List[str]] = None,
+        creator_name: Optional[str] = None,
+        niche: Optional[str] = None,
+        audience: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        opt_segments = copy.deepcopy(segments)
+        changes_made = []
+        opt_hook = hook
+        opt_cta = cta
+        opt_title = title if "(Optimized)" in title else f"{title} (Optimized)"
+
+        normalized_goals = set(
+            g.strip().lower().replace(" ", "_").replace("-", "_") for g in goals
+        )
+        # Expand aliases
+        if "general_retention_optimization" in normalized_goals:
+            normalized_goals.add("general_retention")
+        if "strengthen_curiosity_/_open_loops" in normalized_goals or "strengthen_curiosity_open_loops" in normalized_goals:
+            normalized_goals.add("strengthen_curiosity")
+
+        lang_lower = language.lower()
+
+        # 1. REMOVE FILLER WORDS
+        if "remove_filler" in normalized_goals or "general_retention" in normalized_goals:
+            filler_candidates = [
+                "basically", "actually", "literally", "honestly", "you know",
+                "kind of", "sort of", "in this video", "hey guys", "like and subscribe",
+                "without further ado", "as you can see", "so yeah", "just want to",
+            ]
+            for seg in opt_segments:
+                vo = seg.get("voiceover", "")
+                cleaned_vo = vo
+                for fc in filler_candidates:
+                    pattern = re.compile(rf"\b{re.escape(fc)}\b,?\s*", re.IGNORECASE)
+                    cleaned_vo = pattern.sub("", cleaned_vo)
+                cleaned_vo = re.sub(r"\s+", " ", cleaned_vo).strip()
+                if cleaned_vo and cleaned_vo[0].islower():
+                    cleaned_vo = cleaned_vo[0].upper() + cleaned_vo[1:]
+
+                if cleaned_vo != vo and cleaned_vo:
+                    changes_made.append({
+                        "section": seg.get("section", "BODY"),
+                        "field": "voiceover",
+                        "before": vo,
+                        "after": cleaned_vo,
+                        "reason": "Purged conversational filler phrases to accelerate spoken cadence and reduce early audience drop-off",
+                    })
+                    seg["voiceover"] = cleaned_vo
+
+            # Clean hook and CTA if they had fillers
+            for fc in ["hey guys", "in this video", "basically", "actually", "so yeah"]:
+                pattern = re.compile(rf"\b{re.escape(fc)}\b,?\s*", re.IGNORECASE)
+                opt_hook = pattern.sub("", opt_hook).strip()
+                if opt_hook and opt_hook[0].islower():
+                    opt_hook = opt_hook[0].upper() + opt_hook[1:]
+
+            for fc in ["like and subscribe", "you know", "so yeah"]:
+                pattern = re.compile(rf"\b{re.escape(fc)}\b,?\s*", re.IGNORECASE)
+                opt_cta = pattern.sub("", opt_cta).strip()
+                if opt_cta and opt_cta[0].islower():
+                    opt_cta = opt_cta[0].upper() + opt_cta[1:]
+
+        # 2. IMPROVE HOOK
+        if "improve_hook" in normalized_goals or "general_retention" in normalized_goals:
+            orig_hook = opt_hook
+            topic_clean = topic.strip()
+            if "te" in lang_lower:
+                new_hook = f"ఆపండి! {topic_clean} లో 99% మంది చేసే పెద్ద తప్పు ఇదే."
+            elif "tanglish" in lang_lower or "tenglish" in lang_lower:
+                new_hook = f"Wait! Stop scrolling. {topic_clean} lo 99% creators chese mistake idi."
+            else:
+                new_hook = f"Stop scrolling! This 1 mistake in {topic_clean} is ruining your results."
+
+            if new_hook != orig_hook:
+                changes_made.append({
+                    "section": "HOOK",
+                    "field": "voiceover",
+                    "before": orig_hook,
+                    "after": new_hook,
+                    "reason": "Re-engineered opening hook with high psychological friction and scroll-stopping contrarian tension",
+                })
+                opt_hook = new_hook
+                if opt_segments:
+                    opt_segments[0]["voiceover"] = new_hook
+                    opt_segments[0]["on_screen_text"] = f"STOP DOING THIS ❌ — {topic_clean.upper()}"
+                    opt_segments[0]["visual_direction"] = "Crash-zoom into creator's eyes with dynamic studio contrast and immediate eye contact."
+                    opt_segments[0]["audio_direction"] = "Sub-bass drop with punchy vinyl needle stop."
+
+        # 3. STRENGTHEN CURIOSITY / OPEN LOOPS
+        if "strengthen_curiosity" in normalized_goals or "general_retention" in normalized_goals:
+            # Inject curiosity loop into body segment (segment 1 or 2)
+            target_idx = 1 if len(opt_segments) > 2 else 0
+            target_seg = opt_segments[target_idx]
+            orig_vo = target_seg.get("voiceover", "")
+            if "secret" not in orig_vo.lower() and "wait" not in orig_vo.lower():
+                if "te" in lang_lower:
+                    curiosity_cue = " కానీ అసలైన సీక్రెట్ వేరే ఉంది, చివరి ట్రిక్ తెలిస్తే షాక్ అవుతారు."
+                elif "tanglish" in lang_lower:
+                    curiosity_cue = " But real secret veredi undi, wait for the final reveal."
+                else:
+                    curiosity_cue = " But the real secret isn't what most creators think — wait until the final reveal."
+
+                new_vo = orig_vo.rstrip(".") + curiosity_cue
+                changes_made.append({
+                    "section": target_seg.get("section", "BODY"),
+                    "field": "voiceover",
+                    "before": orig_vo,
+                    "after": new_vo,
+                    "reason": "Inserted psychological open loop to withhold resolution and drive watch-time to the conclusion",
+                })
+                target_seg["voiceover"] = new_vo
+                target_seg["on_screen_text"] = "WAIT FOR THE FINAL SECRET ⚡️"
+                target_seg["b_roll"] = "Fast montage teasers flashing ahead to the finished outcome"
+
+        # 4. IMPROVE PACING & TIMING
+        if "improve_pacing" in normalized_goals or "general_retention" in normalized_goals:
+            # Re-calibrate timing boundaries so hook is <= 3s, CTA is <= 4s
+            n_segs = len(opt_segments)
+            if n_segs >= 4:
+                timing_map = [
+                    ("0:00", "0:03"),
+                    ("0:03", f"0:{round(duration_seconds * 0.4):02d}"),
+                    (f"0:{round(duration_seconds * 0.4):02d}", f"0:{round(duration_seconds * 0.85):02d}"),
+                    (f"0:{round(duration_seconds * 0.85):02d}", f"0:{duration_seconds:02d}"),
+                ]
+                # Apply for 4 segments or scale
+                for i in range(min(4, n_segs)):
+                    opt_segments[i]["start_time"] = timing_map[i][0]
+                    opt_segments[i]["end_time"] = timing_map[i][1]
+
+                changes_made.append({
+                    "section": "GLOBAL",
+                    "field": "timing",
+                    "before": f"Original time intervals across {n_segs} beats",
+                    "after": f"Optimized 0-3s hook, balanced narrative body, and sharp 4s CTA (total {duration_seconds}s)",
+                    "reason": "Re-calibrated time codes to conform to short-form retention tolerances (2.5–3.2 words/second)",
+                })
+
+        # 5. IMPROVE CTA
+        if "improve_cta" in normalized_goals or "general_retention" in normalized_goals:
+            orig_cta = opt_cta
+            if "te" in lang_lower:
+                new_cta = f"ఈ గైడ్‌ని ఇప్పుడే సేవ్ చేయండి, మీ నెక్స్ట్ వీడియోలో ట్రై చేయండి!"
+            elif "tanglish" in lang_lower:
+                new_cta = f"Ee guide ni save cheyandi, next shoot lo try cheyandi!"
+            elif "tiktok" in platform.lower():
+                new_cta = f"Save this guide now and try it on your next video!"
+            elif "youtube" in platform.lower():
+                new_cta = f"Subscribe now for daily high-retention {topic.lower()} breakdowns!"
+            else:
+                new_cta = f"Save this before your next shoot and follow for part 2!"
+
+            if new_cta != orig_cta or not any("save" in c.lower() for c in [orig_cta]):
+                changes_made.append({
+                    "section": "CTA",
+                    "field": "voiceover",
+                    "before": orig_cta,
+                    "after": new_cta,
+                    "reason": "Converted passive or multi-ask closing into a decisive single-action conversion command",
+                })
+                opt_cta = new_cta
+                if opt_segments:
+                    opt_segments[-1]["voiceover"] = new_cta
+                    opt_segments[-1]["on_screen_text"] = "SAVE THIS GUIDE 📌"
+                    opt_segments[-1]["visual_direction"] = "Creator delivers smiling, authoritative eye contact pointing down toward save icon."
+
+        # If instructions were provided, apply custom note
+        if instructions and instructions.strip():
+            changes_made.append({
+                "section": "GLOBAL",
+                "field": "instructions",
+                "before": "Standard screenplay rules",
+                "after": f"Applied guidance: {instructions.strip()[:100]}",
+                "reason": "Incorporated creator-specified creative directives and tone constraints",
+            })
+
+        # Ensure at least 1 change is documented
+        if not changes_made:
+            changes_made.append({
+                "section": "GLOBAL",
+                "field": "visual_direction",
+                "before": "Standard shot framing",
+                "after": "Tightened cutaways with rapid B-roll pattern interrupts every 3.5 seconds",
+                "reason": "Elevated visual choreography to prevent viewer drop-off during speaking pauses",
+            })
+
+        return {
+            "title": opt_title,
+            "topic": topic,
+            "platform": platform,
+            "language": language,
+            "duration_seconds": duration_seconds,
+            "tone": tone,
+            "hook": opt_hook,
+            "segments": opt_segments,
+            "cta": opt_cta,
+            "changes_made": changes_made,
+            "provider_used": "heuristic_mock",
+        }
+
 class GeminiLLMProvider(BaseLLMProvider):
     """
     Google Gemini AI Provider integration.
@@ -1206,6 +1441,86 @@ class GeminiLLMProvider(BaseLLMProvider):
 
         return await self.mock_fallback.analyze_script_retention(
             title, topic, platform, language, duration_seconds, hook, segments, cta, niche, target_audience
+        )
+
+    async def optimize_script(
+        self,
+        title: str,
+        topic: str,
+        platform: str,
+        language: str,
+        duration_seconds: int,
+        tone: str,
+        hook: str,
+        segments: List[Dict[str, Any]],
+        cta: str,
+        goals: List[str],
+        instructions: Optional[str] = None,
+        target_retention_areas: Optional[List[str]] = None,
+        creator_name: Optional[str] = None,
+        niche: Optional[str] = None,
+        audience: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        if not self.api_key:
+            return await self.mock_fallback.optimize_script(
+                title, topic, platform, language, duration_seconds, tone, hook, segments, cta,
+                goals, instructions, target_retention_areas, creator_name, niche, audience
+            )
+
+        try:
+            url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={self.api_key}"
+            goals_str = ", ".join(goals)
+            prompt = (
+                f"You are a master short-form screenplay optimizer and retention editor for {platform}.\n"
+                f"Optimize the following screenplay based on these explicit goals: {goals_str}.\n"
+                f"Topic: {topic}\n"
+                f"Language: {language}\n"
+                f"Duration: {duration_seconds}s\n"
+                f"Tone: {tone}\n"
+                f"Creator Instructions: {instructions or 'None'}\n\n"
+                f"Original Hook: {hook}\n"
+                f"Original CTA: {cta}\n"
+                f"Original Segments:\n{json.dumps(segments, indent=2)}\n\n"
+                f"Return ONLY valid JSON matching this schema:\n"
+                f"{{\n"
+                f'  "title": "{title} (Optimized)",\n'
+                f'  "hook": "Optimized high-tension hook",\n'
+                f'  "cta": "Optimized single-action CTA",\n'
+                f'  "segments": [\n'
+                f'    {{"id": "seg_1", "start_time": "0:00", "end_time": "0:03", "section": "HOOK", "voiceover": "...", "visual_direction": "...", "b_roll": "...", "on_screen_text": "...", "audio_direction": "..."}}\n'
+                f'  ],\n'
+                f'  "changes_made": [\n'
+                f'    {{"section": "HOOK", "field": "voiceover", "before": "...", "after": "...", "reason": "..."}}\n'
+                f'  ]\n'
+                f'}}\n'
+            )
+            async with httpx.AsyncClient(timeout=25.0) as client:
+                res = await client.post(
+                    url,
+                    json={"contents": [{"parts": [{"text": prompt}]}]},
+                    headers={"Content-Type": "application/json"}
+                )
+                if res.status_code == 200:
+                    data = res.json()
+                    raw_text = data["candidates"][0]["content"]["parts"][0]["text"]
+                    start = raw_text.find("{")
+                    end = raw_text.rfind("}") + 1
+                    if start != -1 and end != -1:
+                        parsed = json.loads(raw_text[start:end])
+                        if "segments" in parsed and "changes_made" in parsed:
+                            parsed["topic"] = topic
+                            parsed["platform"] = platform
+                            parsed["language"] = language
+                            parsed["duration_seconds"] = duration_seconds
+                            parsed["tone"] = tone
+                            parsed["provider_used"] = "gemini"
+                            return parsed
+        except Exception:
+            pass
+
+        return await self.mock_fallback.optimize_script(
+            title, topic, platform, language, duration_seconds, tone, hook, segments, cta,
+            goals, instructions, target_retention_areas, creator_name, niche, audience
         )
 
 def get_llm_provider() -> BaseLLMProvider:

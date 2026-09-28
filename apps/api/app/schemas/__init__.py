@@ -19,6 +19,14 @@ from app.schemas.analyzer import (
     ScriptAnalysisRequest,
     ScriptAnalysisResponse,
 )
+from app.schemas.optimizer import (
+    ScriptChangeItem,
+    ScriptOptimizationRequest,
+    OptimizedScriptData,
+    ScriptOptimizationResponse,
+    SaveOptimizedScriptRequest,
+    VALID_OPTIMIZATION_GOALS,
+)
 
 __all__ = [
     "HealthResponse",
@@ -35,6 +43,12 @@ __all__ = [
     "ScriptAnalysisMetrics",
     "ScriptAnalysisRequest",
     "ScriptAnalysisResponse",
+    "ScriptChangeItem",
+    "ScriptOptimizationRequest",
+    "OptimizedScriptData",
+    "ScriptOptimizationResponse",
+    "SaveOptimizedScriptRequest",
+    "VALID_OPTIMIZATION_GOALS",
 ]
 
 

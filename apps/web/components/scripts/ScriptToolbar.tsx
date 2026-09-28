@@ -13,6 +13,7 @@ import {
   History,
   ChevronDown,
   Activity,
+  Sparkles,
 } from "lucide-react";
 import type { Script, ScriptVersion } from "@/types/script";
 
@@ -147,6 +148,15 @@ export function ScriptToolbar({
             >
               <Activity className="w-3.5 h-3.5 text-amber-400" />
               <span>Analyze Retention</span>
+            </Link>
+
+            <Link
+              href={`/optimizer?script_id=${script.id}`}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-cyan-300 bg-cyan-500/10 hover:bg-cyan-500/20 border border-cyan-500/30 transition-all hover:scale-[1.02]"
+              title="Optimize hook, pacing, and filler in Script Optimizer"
+            >
+              <Sparkles className="w-3.5 h-3.5 text-cyan-400" />
+              <span>Optimize Script</span>
             </Link>
 
             <button
