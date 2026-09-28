@@ -8,6 +8,12 @@ import type {
   HookGenerationRequest,
   HookGenerationResponse,
 } from "../types/hook";
+import type {
+  Script,
+  ScriptVersion,
+  ScriptGenerationPayload,
+  ScriptUpdatePayload,
+} from "../types/script";
 
 export class ApiClient {
   private baseUrl: string;
@@ -133,6 +139,121 @@ export class ApiClient {
     const data = await response.json();
     return data as HookGenerationResponse;
   }
+
+  async generateScript(payload: ScriptGenerationPayload): Promise<Script> {
+    const response = await fetch(`${this.baseUrl}/scripts/generate`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(payload),
+    });
+
+    if (!response.ok) {
+      let errorMessage = `Failed to generate script (status: ${response.status})`;
+      try {
+        const errorJson = await response.json();
+        if (errorJson.detail) {
+          if (Array.isArray(errorJson.detail)) {
+            errorMessage = errorJson.detail
+              .map((d: any) => d.msg || JSON.stringify(d))
+              .join(", ");
+          } else {
+            errorMessage = errorJson.detail;
+          }
+        }
+      } catch (_) {}
+      throw new Error(errorMessage);
+    }
+
+    const data = await response.json();
+    return data as Script;
+  }
+
+  async getScripts(limit: number = 50): Promise<Script[]> {
+    const response = await fetch(`${this.baseUrl}/scripts?limit=${limit}`, {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      cache: "no-store",
+    });
+
+    if (!response.ok) {
+      throw new Error(`Failed to load scripts (status: ${response.status})`);
+    }
+
+    const data = await response.json();
+    return data as Script[];
+  }
+
+  async getScript(scriptId: string): Promise<Script> {
+    const response = await fetch(`${this.baseUrl}/scripts/${scriptId}`, {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      cache: "no-store",
+    });
+
+    if (!response.ok) {
+      throw new Error(`Failed to load script (status: ${response.status})`);
+    }
+
+    const data = await response.json();
+    return data as Script;
+  }
+
+  async updateScript(
+    scriptId: string,
+    payload: ScriptUpdatePayload
+  ): Promise<Script> {
+    const response = await fetch(`${this.baseUrl}/scripts/${scriptId}`, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(payload),
+    });
+
+    if (!response.ok) {
+      let errorMessage = `Failed to update script (status: ${response.status})`;
+      try {
+        const errorJson = await response.json();
+        if (errorJson.detail) {
+          if (Array.isArray(errorJson.detail)) {
+            errorMessage = errorJson.detail
+              .map((d: any) => d.msg || JSON.stringify(d))
+              .join(", ");
+          } else {
+            errorMessage = errorJson.detail;
+          }
+        }
+      } catch (_) {}
+      throw new Error(errorMessage);
+    }
+
+    const data = await response.json();
+    return data as Script;
+  }
+
+  async getScriptVersions(scriptId: string): Promise<ScriptVersion[]> {
+    const response = await fetch(`${this.baseUrl}/scripts/${scriptId}/versions`, {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      cache: "no-store",
+    });
+
+    if (!response.ok) {
+      throw new Error(`Failed to load script versions (status: ${response.status})`);
+    }
+
+    const data = await response.json();
+    return data as ScriptVersion[];
+  }
 }
 
 export const api = new ApiClient();
+

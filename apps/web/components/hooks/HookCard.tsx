@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
+import Link from "next/link";
 import type { HookItem } from "@/types/hook";
 import { Card, CardHeader, CardContent, CardFooter } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
@@ -174,9 +175,22 @@ export function HookCard({
         </div>
 
         {/* Footer Meta */}
-        <div className="pt-3 border-t border-cine-border/40 flex items-center justify-between text-[11px] font-mono text-slate-500">
-          <span>{hook.platform}</span>
-          <span className="capitalize">{hook.language}</span>
+        <div className="pt-3 border-t border-cine-border/40 flex flex-wrap items-center justify-between gap-2 text-[11px] font-mono text-slate-500">
+          <div className="flex items-center gap-2">
+            <span>{hook.platform}</span>
+            <span>•</span>
+            <span className="capitalize">{hook.language}</span>
+          </div>
+
+          <Link
+            href={`/scripts?hook=${encodeURIComponent(hook.hook_text)}&platform=${encodeURIComponent(
+              hook.platform
+            )}&language=${encodeURIComponent(hook.language)}`}
+            className="inline-flex items-center gap-1 text-[11px] text-cyan-400 hover:text-cyan-300 font-sans font-medium transition-colors"
+          >
+            <span>Use in Script Studio</span>
+            <ArrowRight className="w-3 h-3" />
+          </Link>
         </div>
       </CardContent>
     </Card>
