@@ -1,5 +1,9 @@
 import { API_BASE_URL } from "./config";
 import type { HealthResponse } from "../types/api";
+import type {
+  CreatorProfileData,
+  ProfileContainerResponse,
+} from "../types/creatorProfile";
 
 export class ApiClient {
   private baseUrl: string;
@@ -36,6 +40,62 @@ export class ApiClient {
         timestamp: new Date().toISOString(),
       };
     }
+  }
+
+  async getProfile(): Promise<ProfileContainerResponse> {
+    try {
+      const response = await fetch(`${this.baseUrl}/profile`, {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        cache: "no-store",
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to load profile (status: ${response.status})`);
+      }
+
+      const data = await response.json();
+      return data as ProfileContainerResponse;
+    } catch (err: any) {
+      return {
+        profile: null,
+        is_configured: false,
+      };
+    }
+  }
+
+  async updateProfile(
+    profileData: CreatorProfileData
+  ): Promise<ProfileContainerResponse> {
+    const response = await fetch(`${this.baseUrl}/profile`, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(profileData),
+    });
+
+    if (!response.ok) {
+      let errorMessage = `Failed to save profile (status: ${response.status})`;
+      try {
+        const errorJson = await response.json();
+        if (errorJson.detail) {
+          if (Array.isArray(errorJson.detail)) {
+            errorMessage = errorJson.detail
+              .map((d: any) => d.msg || JSON.stringify(d))
+              .join(", ");
+          } else {
+            errorMessage = errorJson.detail;
+          }
+        }
+      } catch (_) {}
+      throw new Error(errorMessage);
+    }
+
+    const data = await response.json();
+    return data as ProfileContainerResponse;
   }
 }
 

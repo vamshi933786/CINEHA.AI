@@ -88,4 +88,22 @@ This document records chronological development checkpoints, environment finding
   6. Tested responsiveness across mobile phone (375px), tablet (768px), laptop (1024px), and desktop (1440px) with zero horizontal overflow, touch-friendly tap targets ($\ge 44\text{px}$), and keyboard accessibility.
   7. Verified Next.js static build (`next build` generating 13 routes successfully) and TypeScript zero-error compilation.
 
+---
+
+## Log Entry 005: Phase 4 — Creator Profile & Persona Engine
+- **Date:** 2026-09-28
+- **Phase:** Phase 4 (Creator Profile & Persona Engine)
+- **Author:** Antigravity Architect / Pair Programmer
+- **Summary of Implementation:**
+  Built and verified the complete Creator Profile & Persona Engine with real database persistence, Pydantic validation, and responsive UI:
+  1. Created SQLAlchemy `CreatorProfile` model in `apps/api/app/models/creator_profile.py` inheriting from `BaseModel`, storing creator_name, niche, target_audience, platforms, primary_language, content_tones, creator_bio, and content_goals with native JSON serialization.
+  2. Implemented Pydantic v2 schemas in `apps/api/app/schemas/creator_profile.py` with strict validation rules, length caps, and unknown field rejection (`extra="forbid"`).
+  3. Built `GET /api/v1/profile` and `PUT /api/v1/profile` REST endpoints with upsert logic in `apps/api/app/api/v1/endpoints/profile.py`.
+  4. Added backend test suite (`apps/api/tests/test_profile.py`) covering empty profile state, valid creation, retrieval, updates, and validation failure rejections (9 backend tests passing).
+  5. Implemented `CreatorProfileProvider` in `apps/web/providers/CreatorProfileProvider.tsx` using the Provider Pattern, providing ubiquitous persona access via `useCreatorProfile()`.
+  6. Built polished profile UI in `apps/web/app/profile/page.tsx` with responsive 2-column layout (`ProfileForm`) and live summary card (`ProfileSummaryCard`).
+  7. Added frontend unit tests (`apps/web/tests/profile.test.tsx`) covering summary rendering, form validation, and successful submission (11 frontend tests passing).
+  8. Verified production compilation via `next build` (zero TypeScript errors) and verified responsiveness across 375px, 768px, 1024px, and 1440px.
+
+
 
