@@ -153,14 +153,64 @@ Retrieves past research queries and source archives.
 
 ---
 
-## 6. Video Analysis Endpoints
+## 6. Video Analysis & Video → Script Endpoints
 
-### `POST /videos/analyze`
-Accepts `multipart/form-data` video files (MP4/MOV up to 50MB) for pacing, audio clarity, and visual opening audit.
+### `POST /videos/process`
+Unified processing endpoint executing multimodal video inspection and returning dual outputs: comprehensive video analysis and reconstructed structured script.
 
-**Form Data:**
-- `file`: binary video file
+**Form Data / JSON Body:**
+- `file`: (Optional if `video_url` is provided) Binary video file (MP4, MOV, WEBM up to **100 MB**; enforced via `MAX_VIDEO_SIZE_MB=100`).
+- `video_url`: (Optional if `file` is provided) Public YouTube or Instagram Reel URL. Strictly complies with platform access policies; does not bypass authentication or DRM.
 - `platform`: `instagram_reels` | `tiktok` | `youtube_shorts`
+- `output_mode`: `both` | `analysis_only` | `script_only` (default: `both`)
+
+**Response (200 OK):**
+```json
+{
+  "success": true,
+  "video_metadata": {
+    "filename": "cinematic_walk.mp4",
+    "duration_seconds": 32.4,
+    "resolution": "1080x1920",
+    "aspect_ratio": "9:16",
+    "framerate": 30.0,
+    "file_size_mb": 42.1
+  },
+  "video_analysis": {
+    "hook_evaluation": "Strong 0-2s visual hook with whip-pan camera move.",
+    "story_structure": "Three distinct tips clearly delimited by visual cutaways.",
+    "visual_composition": "Good rule-of-thirds framing, high aesthetic contrast.",
+    "audio_clarity": "Voice is crisp; background music level is well-balanced (-14dB).",
+    "pacing_score": 92,
+    "suitability": "Highly aligned with Instagram Reels best practices.",
+    "actionable_recommendations": [
+      "Add larger subtitles during the transition at 00:14.",
+      "Trim the closing 2 seconds to make the loop seamless."
+    ]
+  },
+  "extracted_script": {
+    "title": "Reconstructed Script: Cinematic Gimbal Walk",
+    "dialogue_transcript": "Stop holding your gimbal like a selfie stick. Here are three ninja walk secrets you need today...",
+    "beats": [
+      {
+        "timestamp": "00:00 - 00:03",
+        "transcript": "Stop holding your gimbal like a selfie stick.",
+        "visual_description": "Creator demonstrates incorrect rigid walking stance, exaggerated shaky movement.",
+        "on_screen_text": "DON'T HOLD IT LIKE THIS ❌",
+        "audio_cues": "Upbeat lo-fi beat, abrupt record scratch SFX."
+      },
+      {
+        "timestamp": "00:03 - 00:10",
+        "transcript": "Bend your knees, lock your elbows, and heel-to-toe step.",
+        "visual_description": "Side-profile shot illustrating bent knees and smooth creeping motion.",
+        "on_screen_text": "TIP 1: BEND KNEES & HEEL-TO-TOE",
+        "audio_cues": "Smooth synth riser."
+      }
+    ],
+    "call_to_action": "Follow for daily mobile cinematography breakdowns."
+  }
+}
+```
 
 ---
 

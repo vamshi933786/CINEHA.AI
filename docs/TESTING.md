@@ -47,7 +47,7 @@ apps/
 - **API Health:** Verifies `GET /api/v1/health` responds with HTTP 200 and valid JSON schema.
 - **Agent Schema Validation:** Asserts that invalid LLM outputs trigger Pydantic `ValidationError` and engage fallback handlers.
 - **Orchestrator Routing:** Tests full pipeline execution vs quick single-agent generation.
-- **Video Analysis Guardrails:** Asserts rejection of non-video MIME types (e.g. `.exe`, `.pdf`) and files exceeding size limit (>50MB).
+- **Video Analysis & Script Guardrails:** Asserts rejection of non-video MIME types (e.g. `.exe`, `.pdf`) and files exceeding size limit (>100MB enforced by `MAX_VIDEO_SIZE_MB=100`).
 - **Database Persistence:** Confirms SQLite/PostgreSQL CRUD operations, cascade deletes, and version increments.
 
 ### C. Heuristic Quality Tests

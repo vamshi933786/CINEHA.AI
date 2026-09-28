@@ -15,7 +15,7 @@ This document details the architecture, schemas, and operational protocols of th
 | **5. Script Generator Agent** | Writes structured 2-column screenplay (Voiceover + Visual Directions + Overlays) in EN/TE/Tenglish. | `ScriptGenerationPayload` | `StructuredScriptPayload` |
 | **6. Retention Review Agent**| Conducts rubric-based heuristic audit on hook velocity, narrative pacing, and CTA clarity. | `ScriptReviewPayload` | `ScriptAuditPayload` |
 | **7. Script Optimizer Agent** | Computes structured diffs, refines language, and produces alternative hooks without altering core message. | `ScriptOptimizationPayload` | `OptimizedScriptPayload` |
-| **8. Video Analysis Agent** | Evaluates video metadata, keyframe pacing, and audio clarity from uploaded MP4/MOV files. | `VideoAnalysisPayload` | `VideoAuditPayload` |
+| **8. Video Analysis & Video → Script Agent** | Evaluates video metadata, keyframe pacing, audio clarity, and transcribes spoken dialogue, visual actions, on-screen text, producing dual outputs (Analysis Audit + Reconstructed Script) from local files (MP4/MOV/WEBM up to 100MB via `MAX_VIDEO_SIZE_MB=100`) or public URLs. | `VideoProcessingPayload` | `VideoProcessingResultPayload` |
 
 ---
 

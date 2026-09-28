@@ -39,5 +39,36 @@ This document records chronological development checkpoints, environment finding
 15. Created `docs/TROUBLESHOOTING.md` outlining standard operational diagnostics.
 
 ### Git Checkpoint
-- **Commit:** `feat: initialize repository and foundational architectural documentation`
+- **Commit:** `c09442f` (`docs: establish project foundation, architecture, and roadmaps`)
 - **Reversibility Status:** Baseline checkpoint established.
+
+---
+
+## Log Entry 002: Requirements Update & Specification Alignment
+- **Date:** 2026-09-28
+- **Phase:** Phase 1 (Specification Refinement)
+- **Author:** Antigravity Architect / Pair Programmer
+- **Summary of Changes:**
+  Updated all architectural blueprints, schemas, security standards, and API definitions to align with approved requirements:
+  1. Updated video upload limit from 50MB to **100 MB**, centralized under `MAX_VIDEO_SIZE_MB=100`.
+  2. Formally separated **Video Analysis** (metadata, hook, story, visual, audio, pacing, suitability) and **Video → Script** (reconstructed screenplay: transcript without fabrication, visual cues, on-screen text, audio cues, timecodes) as dual capabilities stemming from a shared multimodal pipeline.
+  3. Added planned support for public YouTube and Instagram URLs with strict compliance controls (no DRM or login bypass; graceful error messaging).
+  4. Defined dual-tab UI workflow: `[ Upload Video ] [ Video URL ]` $\rightarrow$ `[ VIDEO ANALYSIS ] [ EXTRACTED SCRIPT ]`.
+  5. Affirmed mobile, tablet, laptop, and desktop responsiveness as a first-class requirement from Phase 2 onward.
+
+---
+
+## Log Entry 003: Phase 2 — Project Scaffolding & Setup Verified
+- **Date:** 2026-09-28
+- **Phase:** Phase 2 (Project Scaffolding & Setup)
+- **Author:** Antigravity Architect / Pair Programmer
+- **Summary of Implementation:**
+  Successfully scaffolded and integrated `apps/web` (Next.js 14, React 18, TypeScript, Tailwind CSS) and `apps/api` (FastAPI, Pydantic v2, SQLAlchemy 2.0 Async):
+  1. Configured backend application with Pydantic v2 settings, centralizing `MAX_VIDEO_SIZE_MB=100`, CORS middleware, and async SQLite engine (`sqlite+aiosqlite:///./cineha_ai.db`).
+  2. Implemented `GET /api/v1/health` verifying database connectivity (`SELECT 1`), active AI provider, and configuration parameters.
+  3. Added backend test suite (`pytest`, `pytest-asyncio`, `httpx`) covering health check, CORS preflight, and configuration settings (5 tests passing).
+  4. Scaffolded Next.js 14 App Router frontend with cinema-dark theme, responsive viewport metadata, type-safe API client (`ApiClient`), and live heartbeat status badge.
+  5. Added frontend unit tests (`vitest`, `jsdom`) validating API communication and error fallback (2 tests passing).
+  6. Verified production compilation via `next build` (zero TypeScript or build errors).
+  7. Started FastAPI server on `http://localhost:8000` and Next.js server on `http://localhost:3000`. Verified full client-server communication.
+

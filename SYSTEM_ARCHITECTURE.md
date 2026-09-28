@@ -77,7 +77,7 @@ The system separates specialized agent domains rather than relying on a single m
 4. **Script Generator Agent:** Produces structured 2-column scripts with voiceover, visual cues, text overlays, and pacing markers in English, Telugu, and Tenglish.
 5. **Retention/Structure Review Agent:** Executes rubric-based heuristic scoring on hook retention, narrative pacing, filler density, and CTA strength.
 6. **Script Optimizer Agent:** Computes structured diffs, refines wording while respecting creator persona, and presents side-by-side versions.
-7. **Video Analysis Agent:** Integrates FFmpeg frame-sampling and visual heuristics to audit uploaded shorts for pacing, audio clarity, and framing.
+7. **Video Analysis & Video → Script Agent:** Coordinates FFmpeg container inspection, frame-sampling, transcription, and visual heuristics. Delivers dual outputs: (a) Video Analysis Audit (metadata, hook, story, visual, audio, pacing, suitability) and (b) Video → Script Reconstruction (dialogue transcript without fabrication, visual descriptions, on-screen text, audio cues, timecodes). Supports MP4, MOV, WEBM and public YouTube/Instagram URLs (with platform compliance and no DRM/auth bypass).
 
 ### Layer 4: Data & Persistence Tier
 - **ORM:** SQLAlchemy 2.0 with async engine support.
@@ -88,6 +88,6 @@ The system separates specialized agent domains rather than relying on a single m
 
 ## 3. Security & Isolation Boundaries
 - **Environment Confidentiality:** Zero secret leakage in client bundles or log outputs.
-- **Ephemeral Media Storage:** Uploaded video files for analysis are isolated to a sandboxed `/tmp/cineha_uploads/` scratch directory and immediately purged upon analysis completion.
+- **Ephemeral Media Storage:** Uploaded video files (max **100 MB**, configured via `MAX_VIDEO_SIZE_MB=100`) are isolated to a sandboxed `/tmp/cineha_uploads/` scratch directory and immediately purged upon analysis completion.
 - **Input Sanitization:** Regex-based sanitization and prompt injection shields before passing text to LLM providers.
 - **CORS & Rate Limiting:** Strict allowed-origin headers for frontend domains and IP-based rate limiting on intensive generation endpoints.

@@ -45,11 +45,32 @@
 - **Inputs:** Script + analysis critique + user revision goals (tighten pacing, punch up hook, translate/re-tone).
 - **Outputs:** Side-by-side visual diff comparison, preserved core idea, alternate hooks, revised CTA, revision history with one-click restore.
 
-### Module 7: Multimodal Video Analysis
-- **Inputs:** Video upload (MP4, MOV; validated file sizes and mime-types).
-- **Processing:** Metadata extraction (resolution, framerate, duration, bitrate), audio stream analysis, keyframe extraction (opening 3-second hook frame, mid-scene transitions).
-- **Analysis:** Visual composition, scene pacing, audio clarity, caption readability, storytelling retention, actionable editing feedback.
-- **Cleanup:** Strict transient storage policy — automatic purge of scratch video files after processing.
+### Module 7: Multimodal Video Analysis & Video → Script Engine
+- **Dual Pipeline Architecture:**
+  $$\text{VIDEO INPUT} \longrightarrow \text{VIDEO PROCESSING} \longrightarrow \begin{cases} \text{VIDEO ANALYSIS (Audit, Pacing, Retention)} \\ \text{VIDEO } \rightarrow \text{ SCRIPT (Reconstruction, Transcript, Cues)} \end{cases}$$
+- **Input Channels:**
+  - Local Video File Upload: MP4, MOV, WEBM.
+  - File Size Limit: **100 MB** (`MAX_VIDEO_SIZE_MB=100`).
+  - Video URL Input: Public YouTube URLs and public Instagram URLs.
+  - Ethical & Security Access Controls: Strict adherence to platform access policies. No bypassing of login walls, private accounts, DRM, or access controls. Clear user error with prompt to upload file directly if URL is inaccessible.
+- **Interface Structure:**
+  - Input Selector: `[ Upload Video ]` `[ Video URL ]`
+  - Processing Result Tabs: `[ VIDEO ANALYSIS ]` `[ EXTRACTED SCRIPT ]`
+- **Output 1 — Video Analysis:**
+  - Metadata (resolution, framerate, duration, bitrate, aspect ratio).
+  - Hook evaluation (first 3-5 seconds visual & audio impact).
+  - Story structure, pacing velocity, scene transitions.
+  - Audio clarity & background music balance.
+  - On-screen text readability & caption audit.
+  - Actionable editing & retention recommendations.
+- **Output 2 — Video → Script Reconstruction:**
+  - Structured screenplay reconstructed from footage:
+    - **TRANSCRIPT:** Exact transcribed spoken dialogue (strictly no fabricated dialogue).
+    - **VISUAL:** Detailed visual action and B-roll descriptions observed in video.
+    - **ON-SCREEN TEXT:** Detected title cards, captions, and text overlays.
+    - **AUDIO:** Detected music genre, ambient effects, and speech tone.
+    - **TIMESTAMPS:** Precise time-coded beats (e.g. `00:00 - 00:03`).
+- **Cleanup & Security:** Transient scratch storage only; raw video files auto-purged immediately post-processing.
 
 ### Module 8: Creator Profile & Persona Engine
 - **Fields:** Creator name, brand name, primary niche, target demographic, platforms, content style, primary language, tone profile, CTA style, editing rhythm, experience level.

@@ -19,9 +19,10 @@ This document formalizes the security controls, boundary enforcement, and privac
 ---
 
 ## 3. Video Upload Sandbox & Transient Lifecycle
-- **Strict MIME & Magic Byte Validation:** File headers are checked to verify genuine MP4 (`ftyp` box) or QuickTime MOV files; deceptive extensions are rejected.
-- **Size Limitation:** 50MB ceiling enforced via reverse proxy and FastAPI middleware.
-- **Immediate File Purge:** Uploaded video files are saved to an isolated temporary scratch folder (`/tmp/cineha_uploads/`), processed for frame metadata, and unlinked (`os.remove()`) immediately inside a `finally:` block. No raw video files remain stored on disk.
+- **Strict MIME & Magic Byte Validation:** File headers are verified for valid MP4 (`ftyp` box), QuickTime MOV, or WEBM (`1A 45 DF A3` EBML) signatures; invalid or spoofed extensions are rejected.
+- **Size Limitation:** 100 MB ceiling enforced via reverse proxy and FastAPI middleware using the configurable `MAX_VIDEO_SIZE_MB=100` setting.
+- **URL Compliance Guardrails:** URL inputs are restricted to public YouTube and Instagram links. The service strictly abides by platform access terms and does not attempt credential bypass, private account scrapping, or DRM evasion.
+- **Immediate File Purge:** Uploaded or downloaded video files are saved to an isolated temporary scratch folder (`/tmp/cineha_uploads/`), processed for frame metadata and transcription, and unlinked (`os.remove()`) immediately inside a `finally:` block. No raw video files remain stored on disk.
 
 ---
 

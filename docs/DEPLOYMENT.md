@@ -87,7 +87,7 @@ ALLOWED_ORIGINS=https://cineha.vercel.app,http://localhost:3000
 DATABASE_URL=postgresql+asyncpg://user:password@host:5432/cineha_prod
 GEMINI_API_KEY=your_gemini_api_key_here
 OPENAI_API_KEY=your_openai_api_key_here
-MAX_UPLOAD_SIZE_MB=50
+MAX_VIDEO_SIZE_MB=100
 ```
 
 ---
