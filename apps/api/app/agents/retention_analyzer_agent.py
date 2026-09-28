@@ -1,0 +1,135 @@
+import logging
+from typing import Optional, Dict, Any, List
+from fastapi import HTTPException, status
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select
+from app.models.script import Script
+from app.models.creator_profile import CreatorProfile
+from app.schemas.analyzer import ScriptAnalysisRequest, ScriptAnalysisResponse
+from app.services.llm_provider import get_llm_provider, BaseLLMProvider, OfflineHeuristicMockProvider
+
+logger = logging.getLogger(__name__)
+
+
+class RetentionAnalyzerAgent:
+    """
+    Retention Analyst Agent.
+    Performs comprehensive diagnostic audits across 9 core short-form psychological dimensions:
+    Hook clarity, Hook strength, Story pacing, Information density, Filler repetition,
+    Segment timing, Curiosity open loops, CTA punch, and Overall retention viability.
+    """
+
+    def __init__(self, provider: Optional[BaseLLMProvider] = None):
+        self.provider = provider or get_llm_provider()
+
+    async def analyze(
+        self,
+        request: ScriptAnalysisRequest,
+        db: AsyncSession,
+    ) -> ScriptAnalysisResponse:
+        resolved_script_id: Optional[str] = None
+        title = request.title or "Untitled Screenplay"
+        topic = request.topic or ""
+        platform = request.platform or "Instagram Reels"
+        language = request.language or "English"
+        duration_seconds = request.duration_seconds or 30
+        hook = request.hook or ""
+        segments: List[Dict[str, Any]] = []
+        cta = request.cta or ""
+
+        # 1. If script_id is provided, resolve from database
+        if request.script_id:
+            stmt = select(Script).where(Script.id == request.script_id)
+            result = await db.execute(stmt)
+            db_script = result.scalar_one_or_none()
+            if db_script is None and not request.segments:
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail=f"Script with ID '{request.script_id}' not found.",
+                )
+            if db_script:
+                resolved_script_id = db_script.id
+                title = db_script.title
+                topic = db_script.topic
+                platform = db_script.platform
+                language = db_script.language
+                duration_seconds = db_script.duration_seconds
+                hook = db_script.hook
+                segments = db_script.segments if isinstance(db_script.segments, list) else []
+                cta = db_script.cta
+
+        # 2. If raw segments provided in request, override or populate
+        if request.segments:
+            segments = [s.model_dump() for s in request.segments]
+            if request.title:
+                title = request.title
+            if request.topic:
+                topic = request.topic
+            if request.hook:
+                hook = request.hook
+            if request.cta:
+                cta = request.cta
+            if request.duration_seconds:
+                duration_seconds = request.duration_seconds
+            if request.platform:
+                platform = request.platform
+            if request.language:
+                language = request.language
+
+        if not segments:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail="No screenplay beats or segments provided to analyze.",
+            )
+
+        if not hook and segments:
+            hook = segments[0].get("voiceover", "")
+
+        if not cta and segments:
+            cta = segments[-1].get("voiceover", "")
+
+        # 3. Retrieve creator profile context if available
+        profile_stmt = select(CreatorProfile).order_by(CreatorProfile.created_at.desc()).limit(1)
+        profile_res = await db.execute(profile_stmt)
+        creator_profile = profile_res.scalar_one_or_none()
+
+        niche = creator_profile.niche if creator_profile else "Creator Content"
+        target_audience = creator_profile.target_audience if creator_profile else "General short-form viewers"
+
+        try:
+            analysis_data = await self.provider.analyze_script_retention(
+                title=title,
+                topic=topic,
+                platform=platform,
+                language=language,
+                duration_seconds=duration_seconds,
+                hook=hook,
+                segments=segments,
+                cta=cta,
+                niche=niche,
+                target_audience=target_audience,
+            )
+        except Exception as e:
+            logger.error(f"Error in RetentionAnalyzerAgent provider: {e}. Falling back to heuristic mock.")
+            fallback = OfflineHeuristicMockProvider()
+            analysis_data = await fallback.analyze_script_retention(
+                title=title,
+                topic=topic,
+                platform=platform,
+                language=language,
+                duration_seconds=duration_seconds,
+                hook=hook,
+                segments=segments,
+                cta=cta,
+                niche=niche,
+                target_audience=target_audience,
+            )
+
+        analysis_data["script_id"] = resolved_script_id
+        analysis_data["title"] = title
+
+        return ScriptAnalysisResponse.model_validate(analysis_data)
+
+
+def get_retention_analyzer_agent() -> RetentionAnalyzerAgent:
+    return RetentionAnalyzerAgent()

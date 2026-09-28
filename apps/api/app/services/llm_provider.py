@@ -37,6 +37,22 @@ class BaseLLMProvider:
     ) -> Dict[str, Any]:
         raise NotImplementedError
 
+    async def analyze_script_retention(
+        self,
+        title: str,
+        topic: str,
+        platform: str,
+        language: str,
+        duration_seconds: int,
+        hook: str,
+        segments: List[Dict[str, Any]],
+        cta: str,
+        niche: Optional[str] = None,
+        target_audience: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        raise NotImplementedError
+
+
 
 class OfflineHeuristicMockProvider(BaseLLMProvider):
     """
@@ -607,6 +623,351 @@ class OfflineHeuristicMockProvider(BaseLLMProvider):
                 },
             ]
 
+    async def analyze_script_retention(
+        self,
+        title: str,
+        topic: str,
+        platform: str,
+        language: str,
+        duration_seconds: int,
+        hook: str,
+        segments: List[Dict[str, Any]],
+        cta: str,
+        niche: Optional[str] = None,
+        target_audience: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        def _to_sec(val: Any) -> float:
+            try:
+                parts = str(val).strip().split(":")
+                if len(parts) == 2:
+                    return float(parts[0]) * 60 + float(parts[1])
+                elif len(parts) == 3:
+                    return float(parts[0]) * 3600 + float(parts[1]) * 60 + float(parts[2])
+                return float(val)
+            except Exception:
+                return 0.0
+
+        total_words = 0
+        detected_fillers: List[str] = []
+        filler_candidates = [
+            "basically", "actually", "literally", "honestly", "you know",
+            "kind of", "sort of", "in this video", "hey guys", "like and subscribe",
+            "without further ado", "as you can see", "so yeah", "just want to"
+        ]
+
+        segment_stats = []
+        for idx, seg in enumerate(segments):
+            vo = seg.get("voiceover", "")
+            words = vo.split()
+            seg_word_count = len(words)
+            total_words += seg_word_count
+
+            vo_lower = vo.lower()
+            for fc in filler_candidates:
+                if fc in vo_lower and fc not in detected_fillers:
+                    detected_fillers.append(fc)
+
+            s_sec = _to_sec(seg.get("start_time", "0:00"))
+            e_sec = _to_sec(seg.get("end_time", "0:03"))
+            seg_dur = max(e_sec - s_sec, 1.0)
+            wps = round(seg_word_count / seg_dur, 2)
+            segment_stats.append({
+                "idx": idx,
+                "id": seg.get("id", f"seg_{idx+1}"),
+                "time_range": f"{seg.get('start_time', '0:00')}–{seg.get('end_time', '0:03')}",
+                "section": seg.get("section", "BEAT"),
+                "words": seg_word_count,
+                "dur": seg_dur,
+                "wps": wps,
+                "has_visual": bool(seg.get("visual_direction")),
+                "has_text": bool(seg.get("on_screen_text")),
+                "has_broll": bool(seg.get("b_roll")),
+                "has_audio": bool(seg.get("audio_direction")),
+            })
+
+        overall_wps = round(total_words / max(duration_seconds, 1), 2)
+        if overall_wps > 3.6:
+            pacing_assessment = f"Fast pacing ({overall_wps} wps) — rapid delivery requiring viewer focus"
+        elif overall_wps < 1.8:
+            pacing_assessment = f"Slow pacing ({overall_wps} wps) — risks viewer boredom"
+        else:
+            pacing_assessment = f"Optimal pacing ({overall_wps} wps) — matches native short-form cadence"
+
+        hook_dur = segment_stats[0]["dur"] if segment_stats else 3.0
+        cta_dur = segment_stats[-1]["dur"] if segment_stats else 3.0
+
+        # 1. Hook Clarity
+        hook_word_count = len(hook.split())
+        if 5 <= hook_word_count <= 18:
+            hook_clarity_score = 92
+            hook_clarity_rating = "Excellent"
+            hook_clarity_expl = f"Opening hook is concise ({hook_word_count} words) and establishes instant contextual clarity within 2 seconds."
+        elif hook_word_count > 24:
+            hook_clarity_score = 68
+            hook_clarity_rating = "Needs Improvement"
+            hook_clarity_expl = f"Opening hook ({hook_word_count} words) is too wordy for the 0–3s retention window; consider trimming auxiliary words."
+        else:
+            hook_clarity_score = 78
+            hook_clarity_rating = "Good"
+            hook_clarity_expl = f"Opening hook has reasonable clarity ({hook_word_count} words) but could communicate the core subject faster."
+
+        # 2. Hook Strength
+        power_triggers = ["mistake", "ruin", "secret", "never", "why", "truth", "stop", "wrong", "hack", "trick", "fail", "instead", "don't", "nobody", "kill", "setting", "flaw", "shocking", "save", "తప్పు", "రహస్యం"]
+        hook_lower = hook.lower()
+        trigger_matches = [pt for pt in power_triggers if pt in hook_lower]
+        if len(trigger_matches) >= 2 or "?" in hook or "stop" in hook_lower:
+            hook_strength_score = 94
+            hook_strength_rating = "Exceptional"
+            hook_strength_expl = f"High psychological friction with scroll-stopping triggers ({', '.join(trigger_matches[:3]) or 'urgency cue'})."
+        elif len(trigger_matches) == 1:
+            hook_strength_score = 84
+            hook_strength_rating = "Good"
+            hook_strength_expl = f"Effective opening hook with recognized psychological trigger ('{trigger_matches[0]}')."
+        else:
+            hook_strength_score = 72
+            hook_strength_rating = "Moderate"
+            hook_strength_expl = "Opening hook states the premise but lacks an urgent curiosity trigger or contrarian hook angle."
+
+        # 3. Story / Pacing Progression
+        sections_found = [s["section"].upper() for s in segment_stats]
+        has_hook = any("HOOK" in s for s in sections_found)
+        has_problem = any("PROBLEM" in s or "MISTAKE" in s or "CONTEXT" in s for s in sections_found)
+        has_solution = any("SOLUTION" in s or "BREAKDOWN" in s or "DEMO" in s for s in sections_found)
+        has_cta = any("CTA" in s or "RECAP" in s for s in sections_found)
+        narrative_pillars = sum([has_hook, has_problem, has_solution, has_cta])
+
+        if narrative_pillars >= 3 and 1.8 <= overall_wps <= 3.6:
+            pacing_score = 90
+            pacing_rating = "Excellent"
+            pacing_expl = f"Well-orchestrated {len(segments)}-beat narrative progression transitioning cleanly from hook to revelation without dead time."
+        else:
+            pacing_score = 74
+            pacing_rating = "Good"
+            pacing_expl = "Narrative moves forward reasonably, though the transition between problem exploration and resolution could be tighter."
+
+        # 4. Information Density
+        visual_beats = sum(1 for s in segment_stats if s["has_visual"] and s["has_text"])
+        density_ratio = visual_beats / max(len(segment_stats), 1)
+        if density_ratio >= 0.7:
+            info_density_score = 91
+            info_density_rating = "High Value"
+            info_density_expl = f"Strong multi-sensory density: {round(density_ratio * 100)}% of screenplay beats pair voiceover with explicit visual choreography and graphic overlays."
+        else:
+            info_density_score = 76
+            info_density_rating = "Moderate"
+            info_density_expl = "Audio dialogue carries the load; adding more lower-third graphic text cues will elevate information retention."
+
+        # 5. Filler / Repetition
+        if len(detected_fillers) == 0:
+            filler_score = 96
+            filler_rating = "Lean & Direct"
+            filler_expl = "Zero conversational filler phrases detected. Every beat advances the core message without padding."
+        elif len(detected_fillers) == 1:
+            filler_score = 80
+            filler_rating = "Acceptable"
+            filler_expl = f"Minimal fluff detected ('{detected_fillers[0]}'); removing it will tighten the spoken cadence."
+        else:
+            filler_score = 64
+            filler_rating = "Needs Trimming"
+            filler_expl = f"Detected conversational filler phrases ({', '.join(detected_fillers)}) that dilute viewer retention velocity."
+
+        # 6. Segment Timing
+        timing_issues = []
+        if hook_dur > 4.5:
+            timing_issues.append("Hook duration exceeds 4.5s")
+        if cta_dur > 7.0:
+            timing_issues.append("CTA duration exceeds 7.0s")
+        for s in segment_stats:
+            if s["wps"] > 4.0:
+                timing_issues.append(f"Beat {s['section']} ({s['wps']} wps) is overstuffed")
+
+        if len(timing_issues) == 0:
+            timing_score = 92
+            timing_rating = "Optimal"
+            timing_expl = f"All {len(segments)} beats conform to standard short-form time boundaries (hook {hook_dur}s, CTA {cta_dur}s)."
+        else:
+            timing_score = 73
+            timing_rating = "Suboptimal"
+            timing_expl = f"Timing imbalances detected: {', '.join(timing_issues[:2])}."
+
+        # 7. Curiosity / Open Loops
+        curiosity_markers = ["secret", "mistake", "truth", "this", "instead", "why", "step", "formula", "pro tip", "hack", "setting", "what happens", "here is"]
+        script_text_lower = (hook + " " + " ".join(s.get("voiceover", "") for s in segments)).lower()
+        found_curiosity = [cm for cm in curiosity_markers if cm in script_text_lower]
+        if len(found_curiosity) >= 2:
+            curiosity_score = 92
+            curiosity_rating = "High Curiosity"
+            curiosity_expl = "Strong psychological open loop established in the first 5 seconds, delaying gratification until the key reveal."
+        elif len(found_curiosity) == 1:
+            curiosity_score = 82
+            curiosity_rating = "Good"
+            curiosity_expl = "Opens an interest gap, though teasing the exact payoff earlier will boost watch time to the end."
+        else:
+            curiosity_score = 70
+            curiosity_rating = "Linear"
+            curiosity_expl = "Narrative is relatively linear; inject an explicit open loop or unanswered question in beat 1."
+
+        # 8. CTA Strength
+        cta_lower = cta.lower()
+        cta_actions = ["follow", "save", "comment", "share", "link", "profile", "part 2", "subscribe", "dm", "ఫాలో"]
+        cta_matches = [ca for ca in cta_actions if ca in cta_lower]
+        if len(cta_matches) == 1:
+            cta_score = 93
+            cta_rating = "Sharp & Focused"
+            cta_expl = f"Single, unambiguous conversion call to action ('{cta_matches[0]}') that eliminates decision fatigue."
+        elif len(cta_matches) > 1:
+            cta_score = 77
+            cta_rating = "Divided Focus"
+            cta_expl = "CTA requests multiple actions (e.g. follow AND save); recommend focusing on a single high-priority conversion goal."
+        else:
+            cta_score = 70
+            cta_rating = "Passive"
+            cta_expl = "Call to action is passive or polite; use an active conversion command like 'Save this for your next shoot'."
+
+        # 9. Overall Retention Potential
+        overall_score = round(
+            0.20 * hook_clarity_score +
+            0.20 * hook_strength_score +
+            0.15 * pacing_score +
+            0.15 * curiosity_score +
+            0.10 * info_density_score +
+            0.10 * timing_score +
+            0.05 * filler_score +
+            0.05 * cta_score
+        )
+        if overall_score >= 88:
+            overall_rating = "Exceptional Retention Potential"
+            retention_expl = "Script demonstrates elite short-form architecture: high-velocity hook, balanced pacing, tight beats, and focused CTA."
+        elif overall_score >= 78:
+            overall_rating = "Strong Retention Potential"
+            retention_expl = "Solid short-form structure with good retention probability; minor optimizations will push it into top quartile performance."
+        else:
+            overall_rating = "Moderate Retention — Optimization Recommended"
+            retention_expl = "Foundational premise is solid, but pacing velocity and hook sharpness should be refined to prevent early drop-off."
+
+        weak_points = []
+        if hook_clarity_score < 80:
+            weak_points.append(f"Opening hook ({hook_word_count} words) exceeds optimal 0–3s cognitive load.")
+        if hook_strength_score < 80:
+            weak_points.append("Hook lacks a high-stakes psychological trigger (curiosity gap or loss aversion).")
+        if overall_wps > 3.5:
+            weak_points.append(f"Spoken pacing ({overall_wps} words/sec) is unusually fast, risking viewer comprehension drop-off.")
+        elif overall_wps < 2.0:
+            weak_points.append(f"Spoken pacing ({overall_wps} words/sec) is relaxed, risking scroll-away during early beats.")
+        if detected_fillers:
+            weak_points.append(f"Conversational padding detected: '{', '.join(detected_fillers)}'.")
+        if cta_score < 80:
+            weak_points.append("CTA lacks a decisive single-action conversion command.")
+        if not weak_points:
+            weak_points.append("Minor: Visual framing could include more rapid pattern interrupts every 3.5 seconds.")
+
+        recommendations = []
+        if hook_clarity_score < 85:
+            recommendations.append("Trim opening hook to under 14 words to ensure viewer grasps the premise before the 3-second mark.")
+        if hook_strength_score < 85:
+            recommendations.append("Inject a contrarian angle or direct consequence in beat 1 (e.g. 'Stop doing this...').")
+        if detected_fillers:
+            recommendations.append("Eliminate all detected filler words to elevate spoken energy and velocity.")
+        if density_ratio < 0.8:
+            recommendations.append("Add punchy uppercase on-screen text punchlines to reinforce spoken takeaways visually.")
+        if cta_score < 85:
+            recommendations.append("Replace passive CTA with a single high-intent command like 'Save this for your next video shoot'.")
+        if len(recommendations) < 3:
+            recommendations.append("Utilize dynamic B-roll cutaways on every key revelation to restart the viewer attention clock.")
+            recommendations.append("Align sound design hits with on-screen text appearances for multi-sensory reinforcement.")
+
+        segment_observations = []
+        for s in segment_stats:
+            risk = "low"
+            obs = f"Spoken pace is {s['wps']} wps ({s['words']} words in {s['dur']}s)."
+            sug = None
+            if s["wps"] > 3.8:
+                risk = "high" if "HOOK" in s["section"] else "medium"
+                obs += " Pacing is fast; syllables may blur in fast playback."
+                sug = "Shorten spoken dialogue by 2–3 words."
+            elif s["wps"] < 1.7:
+                risk = "medium"
+                obs += " Pacing is slow; energy dips here."
+                sug = "Tighten delivery or add visual B-roll movement."
+            elif not s["has_text"]:
+                risk = "medium"
+                obs += " No on-screen graphic overlay defined for this beat."
+                sug = "Add a 2–3 word bold lower third text cue."
+            else:
+                obs += " Well-balanced sensory mix of voiceover and visual direction."
+
+            segment_observations.append({
+                "segment_id": s["id"],
+                "time_range": s["time_range"],
+                "section": s["section"],
+                "observation": obs,
+                "retention_risk": risk,
+                "suggestion": sug,
+            })
+
+        return {
+            "title": title,
+            "overall_score": overall_score,
+            "overall_rating": overall_rating,
+            "hook_clarity": {
+                "score": hook_clarity_score,
+                "rating": hook_clarity_rating,
+                "explanation": hook_clarity_expl,
+            },
+            "hook_strength": {
+                "score": hook_strength_score,
+                "rating": hook_strength_rating,
+                "explanation": hook_strength_expl,
+            },
+            "pacing_progression": {
+                "score": pacing_score,
+                "rating": pacing_rating,
+                "explanation": pacing_expl,
+            },
+            "information_density": {
+                "score": info_density_score,
+                "rating": info_density_rating,
+                "explanation": info_density_expl,
+            },
+            "filler_repetition": {
+                "score": filler_score,
+                "rating": filler_rating,
+                "explanation": filler_expl,
+            },
+            "segment_timing": {
+                "score": timing_score,
+                "rating": timing_rating,
+                "explanation": timing_expl,
+            },
+            "curiosity_open_loops": {
+                "score": curiosity_score,
+                "rating": curiosity_rating,
+                "explanation": curiosity_expl,
+            },
+            "cta_strength": {
+                "score": cta_score,
+                "rating": cta_rating,
+                "explanation": cta_expl,
+            },
+            "overall_retention_potential": {
+                "score": overall_score,
+                "rating": overall_rating,
+                "explanation": retention_expl,
+            },
+            "weak_points": weak_points,
+            "recommendations": recommendations,
+            "segment_observations": segment_observations,
+            "metrics": {
+                "total_word_count": total_words,
+                "words_per_second": overall_wps,
+                "pacing_assessment": pacing_assessment,
+                "detected_filler_words": detected_fillers,
+                "hook_duration_seconds": hook_dur,
+                "cta_duration_seconds": cta_dur,
+            },
+            "provider_used": "heuristic_mock",
+        }
+
 class GeminiLLMProvider(BaseLLMProvider):
     """
     Google Gemini AI Provider integration.
@@ -764,6 +1125,87 @@ class GeminiLLMProvider(BaseLLMProvider):
 
         return await self.mock_fallback.generate_script(
             topic, platform, language, duration_seconds, tone, hook, cta, creator_name, niche, audience, context
+        )
+
+    async def analyze_script_retention(
+        self,
+        title: str,
+        topic: str,
+        platform: str,
+        language: str,
+        duration_seconds: int,
+        hook: str,
+        segments: List[Dict[str, Any]],
+        cta: str,
+        niche: Optional[str] = None,
+        target_audience: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        if not self.api_key:
+            return await self.mock_fallback.analyze_script_retention(
+                title, topic, platform, language, duration_seconds, hook, segments, cta, niche, target_audience
+            )
+
+        try:
+            url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={self.api_key}"
+            segments_summary = "\n".join(
+                f"[{s.get('start_time')}–{s.get('end_time')}] {s.get('section')}: \"{s.get('voiceover')}\" (Visual: {s.get('visual_direction')}, Text: {s.get('on_screen_text')})"
+                for s in segments
+            )
+            prompt = (
+                f"You are an expert short-form video retention analyst for {platform}.\n"
+                f"Analyze this screenplay across 9 retention criteria:\n"
+                f"Title: {title}\nTopic: {topic}\nLanguage: {language}\nDuration: {duration_seconds}s\n"
+                f"Hook: {hook}\nCTA: {cta}\nBeats:\n{segments_summary}\n\n"
+                f"Return ONLY valid JSON matching this schema:\n"
+                f'{{\n'
+                f'  "title": "{title}",\n'
+                f'  "overall_score": 88,\n'
+                f'  "overall_rating": "Strong Retention Potential",\n'
+                f'  "hook_clarity": {{"score": 90, "rating": "Excellent", "explanation": "..."}},\n'
+                f'  "hook_strength": {{"score": 92, "rating": "Exceptional", "explanation": "..."}},\n'
+                f'  "pacing_progression": {{"score": 88, "rating": "Good", "explanation": "..."}},\n'
+                f'  "information_density": {{"score": 86, "rating": "Good", "explanation": "..."}},\n'
+                f'  "filler_repetition": {{"score": 94, "rating": "Lean", "explanation": "..."}},\n'
+                f'  "segment_timing": {{"score": 90, "rating": "Optimal", "explanation": "..."}},\n'
+                f'  "curiosity_open_loops": {{"score": 89, "rating": "High Curiosity", "explanation": "..."}},\n'
+                f'  "cta_strength": {{"score": 92, "rating": "Focused", "explanation": "..."}},\n'
+                f'  "overall_retention_potential": {{"score": 88, "rating": "Strong", "explanation": "..."}},\n'
+                f'  "weak_points": ["..."],\n'
+                f'  "recommendations": ["..."],\n'
+                f'  "segment_observations": [\n'
+                f'    {{"segment_id": "seg_1", "time_range": "0:00–0:03", "section": "HOOK", "observation": "...", "retention_risk": "low", "suggestion": null}}\n'
+                f'  ],\n'
+                f'  "metrics": {{\n'
+                f'    "total_word_count": 80,\n'
+                f'    "words_per_second": 2.7,\n'
+                f'    "pacing_assessment": "Optimal (2.5-3.5 wps)",\n'
+                f'    "detected_filler_words": [],\n'
+                f'    "hook_duration_seconds": 3.0,\n'
+                f'    "cta_duration_seconds": 5.0\n'
+                f'  }}\n'
+                f'}}\n'
+            )
+            async with httpx.AsyncClient(timeout=20.0) as client:
+                res = await client.post(
+                    url,
+                    json={"contents": [{"parts": [{"text": prompt}]}]},
+                    headers={"Content-Type": "application/json"}
+                )
+                if res.status_code == 200:
+                    data = res.json()
+                    raw_text = data["candidates"][0]["content"]["parts"][0]["text"]
+                    start = raw_text.find("{")
+                    end = raw_text.rfind("}") + 1
+                    if start != -1 and end != -1:
+                        parsed = json.loads(raw_text[start:end])
+                        if "overall_score" in parsed and "hook_clarity" in parsed:
+                            parsed["provider_used"] = "gemini"
+                            return parsed
+        except Exception:
+            pass
+
+        return await self.mock_fallback.analyze_script_retention(
+            title, topic, platform, language, duration_seconds, hook, segments, cta, niche, target_audience
         )
 
 def get_llm_provider() -> BaseLLMProvider:

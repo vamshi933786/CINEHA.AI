@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
+import Link from "next/link";
 import {
   Edit2,
   Save,
@@ -11,6 +12,7 @@ import {
   RotateCcw,
   History,
   ChevronDown,
+  Activity,
 } from "lucide-react";
 import type { Script, ScriptVersion } from "@/types/script";
 
@@ -137,6 +139,15 @@ export function ScriptToolbar({
               <Edit2 className="w-3.5 h-3.5 text-cyan-400" />
               <span>Edit Script</span>
             </button>
+
+            <Link
+              href={`/analyzer?script_id=${script.id}`}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-amber-300 bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 transition-all hover:scale-[1.02]"
+              title="Perform 9-point psychological retention analysis in Script Retention Analyzer"
+            >
+              <Activity className="w-3.5 h-3.5 text-amber-400" />
+              <span>Analyze Retention</span>
+            </Link>
 
             <button
               type="button"

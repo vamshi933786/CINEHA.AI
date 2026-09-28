@@ -12,6 +12,13 @@ from app.schemas.script import (
     ScriptResponse,
     ScriptVersionResponse,
 )
+from app.schemas.analyzer import (
+    CategoryScoreSchema,
+    SegmentObservationSchema,
+    ScriptAnalysisMetrics,
+    ScriptAnalysisRequest,
+    ScriptAnalysisResponse,
+)
 
 __all__ = [
     "HealthResponse",
@@ -23,5 +30,11 @@ __all__ = [
     "ScriptUpdateRequest",
     "ScriptResponse",
     "ScriptVersionResponse",
+    "CategoryScoreSchema",
+    "SegmentObservationSchema",
+    "ScriptAnalysisMetrics",
+    "ScriptAnalysisRequest",
+    "ScriptAnalysisResponse",
 ]
+
 

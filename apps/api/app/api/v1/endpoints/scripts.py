@@ -13,7 +13,9 @@ from app.schemas.script import (
     ScriptResponse,
     ScriptVersionResponse,
 )
+from app.schemas.analyzer import ScriptAnalysisResponse, ScriptAnalysisRequest
 from app.agents.script_agent import get_script_agent, ScriptAgent
+from app.agents.retention_analyzer_agent import get_retention_analyzer_agent, RetentionAnalyzerAgent
 
 router = APIRouter()
 
@@ -254,3 +256,21 @@ async def get_script_versions(
     versions = result.scalars().all()
 
     return [ScriptVersionResponse.model_validate(v) for v in versions]
+
+
+@router.post(
+    "/scripts/{script_id}/analyze",
+    response_model=ScriptAnalysisResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Analyze Script Retention",
+    description="Loads a saved script by ID and performs a 9-dimension retention diagnostic audit.",
+)
+async def analyze_script_endpoint(
+    script_id: str,
+    db: AsyncSession = Depends(get_db),
+    agent: RetentionAnalyzerAgent = Depends(get_retention_analyzer_agent),
+) -> ScriptAnalysisResponse:
+    return await agent.analyze(
+        request=ScriptAnalysisRequest(script_id=script_id),
+        db=db,
+    )

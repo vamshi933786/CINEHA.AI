@@ -14,6 +14,10 @@ import type {
   ScriptGenerationPayload,
   ScriptUpdatePayload,
 } from "../types/script";
+import type {
+  ScriptAnalysisRequest,
+  ScriptAnalysisResponse,
+} from "../types/analyzer";
 
 export class ApiClient {
   private baseUrl: string;
@@ -252,6 +256,65 @@ export class ApiClient {
 
     const data = await response.json();
     return data as ScriptVersion[];
+  }
+
+  async analyzeScript(
+    payload: ScriptAnalysisRequest
+  ): Promise<ScriptAnalysisResponse> {
+    const response = await fetch(`${this.baseUrl}/analyzer/script`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(payload),
+    });
+
+    if (!response.ok) {
+      let errorMessage = `Failed to analyze script (status: ${response.status})`;
+      try {
+        const errorJson = await response.json();
+        if (errorJson.detail) {
+          if (Array.isArray(errorJson.detail)) {
+            errorMessage = errorJson.detail
+              .map((d: any) => d.msg || JSON.stringify(d))
+              .join(", ");
+          } else {
+            errorMessage = errorJson.detail;
+          }
+        }
+      } catch (_) {}
+      throw new Error(errorMessage);
+    }
+
+    const data = await response.json();
+    return data as ScriptAnalysisResponse;
+  }
+
+  async analyzeScriptById(scriptId: string): Promise<ScriptAnalysisResponse> {
+    const response = await fetch(`${this.baseUrl}/analyzer/script/${scriptId}`, {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      cache: "no-store",
+    });
+
+    if (!response.ok) {
+      let errorMessage = `Failed to analyze script (status: ${response.status})`;
+      try {
+        const errorJson = await response.json();
+        if (errorJson.detail) {
+          errorMessage =
+            typeof errorJson.detail === "string"
+              ? errorJson.detail
+              : JSON.stringify(errorJson.detail);
+        }
+      } catch (_) {}
+      throw new Error(errorMessage);
+    }
+
+    const data = await response.json();
+    return data as ScriptAnalysisResponse;
   }
 }
 
