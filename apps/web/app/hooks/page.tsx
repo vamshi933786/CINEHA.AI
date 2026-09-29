@@ -117,7 +117,18 @@ export default function HookGeneratorPage() {
           selectedCategories.length === HOOK_TAXONOMIES.length
             ? undefined
             : selectedCategories,
-        creator_profile: profile || undefined,
+        creator_profile: profile
+          ? {
+              creator_name: profile.creator_name,
+              niche: profile.niche,
+              target_audience: profile.target_audience,
+              platforms: profile.platforms,
+              primary_language: profile.primary_language,
+              content_tones: profile.content_tones,
+              creator_bio: profile.creator_bio,
+              content_goals: profile.content_goals,
+            }
+          : undefined,
       });
 
       setGenerationResponse(response);

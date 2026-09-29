@@ -1,8 +1,8 @@
 from datetime import datetime, timezone
 from enum import Enum
-from typing import List, Optional
+from typing import List, Optional, Union
 from pydantic import BaseModel, Field, field_validator, ConfigDict
-from app.schemas.creator_profile import CreatorProfileBase
+from app.schemas.creator_profile import CreatorProfileBase, CreatorProfileResponse
 
 class HookTaxonomyEnum(str, Enum):
     CURIOSITY = "Curiosity"
@@ -75,7 +75,7 @@ class HookGenerationRequest(BaseModel):
         default=None,
         description="Selected categories (defaults to all 9 if empty or None)",
     )
-    creator_profile: Optional[CreatorProfileBase] = Field(
+    creator_profile: Optional[Union[CreatorProfileResponse, CreatorProfileBase]] = Field(
         default=None,
         description="Optional creator persona override; defaults to DB profile if omitted",
     )

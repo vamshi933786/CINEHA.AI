@@ -79,6 +79,38 @@ async def test_generate_hooks_with_creator_profile(async_client: AsyncClient):
     assert len(data["hooks"]) == 3
 
 @pytest.mark.asyncio
+async def test_generate_hooks_with_persisted_creator_profile(async_client: AsyncClient):
+    # Regression test: verifies that passing a creator_profile containing DB metadata
+    # (id, created_at, updated_at as returned by GET /profile) succeeds without
+    # triggering an "Extra inputs are not permitted" 422 error.
+    payload = {
+        "topic": "Cinematic Lighting Setup",
+        "platform": "Instagram Reels",
+        "language": "English",
+        "count": 3,
+        "creator_profile": {
+            "id": "c7a8b9d0-1234-5678-9abc-def012345678",
+            "created_at": "2026-09-28T12:00:00Z",
+            "updated_at": "2026-09-28T12:00:00Z",
+            "creator_name": "Sai Panga",
+            "niche": "Mobile Filmmaking",
+            "target_audience": "Creators",
+            "platforms": ["Instagram Reels"],
+            "primary_language": "English",
+            "content_tones": ["Cinematic", "Educational"],
+            "creator_bio": "Filmmaker sharing mobile cinematography tips",
+            "content_goals": ["Increase retention", "Grow followers"],
+        },
+    }
+
+    response = await async_client.post("/api/v1/hooks/generate", json=payload)
+    assert response.status_code == 200
+    data = response.json()
+    assert data["success"] is True
+    assert data["persona_used"] == "Sai Panga"
+    assert len(data["hooks"]) == 3
+
+@pytest.mark.asyncio
 async def test_hook_validation_failures(async_client: AsyncClient):
     # 1. Empty topic
     res1 = await async_client.post(
@@ -130,3 +162,23 @@ async def test_hook_validation_failures(async_client: AsyncClient):
         },
     )
     assert res6.status_code == 422
+
+    # 7. Unknown field rejection inside creator_profile
+    res7 = await async_client.post(
+        "/api/v1/hooks/generate",
+        json={
+            "topic": "Lighting",
+            "platform": "Instagram Reels",
+            "creator_profile": {
+                "creator_name": "Sai Panga",
+                "niche": "Mobile Filmmaking",
+                "platforms": ["Instagram Reels"],
+                "primary_language": "English",
+                "content_tones": ["Cinematic"],
+                "content_goals": ["Increase retention"],
+                "unauthorized_field": "injected_value",
+            },
+        },
+    )
+    assert res7.status_code == 422
+    assert "Extra inputs are not permitted" in res7.text
