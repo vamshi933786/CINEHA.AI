@@ -169,6 +169,9 @@ interface RetentionWorkspaceProps {
 
 export function RetentionWorkspace({ initialScriptId = null }: RetentionWorkspaceProps) {
   const [currentScriptId, setCurrentScriptId] = useState<string | null>(initialScriptId);
+  const [activePreset, setActivePreset] = useState<"viral" | "filler" | "cinematic" | null>(
+    initialScriptId ? null : "viral"
+  );
   const [analysis, setAnalysis] = useState<ScriptAnalysisResponse | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
@@ -176,10 +179,11 @@ export function RetentionWorkspace({ initialScriptId = null }: RetentionWorkspac
   const runAnalysis = useCallback(async (scriptId: string) => {
     setIsLoading(true);
     setError(null);
+    setCurrentScriptId(scriptId);
+    setActivePreset(null);
     try {
       const data = await api.analyzeScriptById(scriptId);
       setAnalysis(data);
-      setCurrentScriptId(scriptId);
     } catch (err: any) {
       console.error("Failed to analyze script by id:", err);
       setError(err?.message || "Failed to analyze script. Please verify the script ID exists.");
@@ -193,6 +197,7 @@ export function RetentionWorkspace({ initialScriptId = null }: RetentionWorkspac
       setIsLoading(true);
       setError(null);
       setCurrentScriptId(null);
+      setActivePreset(sampleKey);
       try {
         const samplePayload = SAMPLE_PRESETS[sampleKey];
         const data = await api.analyzeScript(samplePayload);
@@ -251,7 +256,7 @@ export function RetentionWorkspace({ initialScriptId = null }: RetentionWorkspac
             if (currentScriptId) {
               runAnalysis(currentScriptId);
             } else {
-              runSampleAnalysis("viral");
+              runSampleAnalysis(activePreset || "viral");
             }
           }}
           className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold text-slate-950 bg-gradient-to-r from-amber-400 to-orange-400 hover:from-amber-300 hover:to-orange-300 shadow-md shadow-amber-500/20 transition-all active:scale-95 disabled:opacity-50"
@@ -267,6 +272,8 @@ export function RetentionWorkspace({ initialScriptId = null }: RetentionWorkspac
         onSelectScriptId={handleSelectScript}
         onAnalyzeSample={runSampleAnalysis}
         isLoading={isLoading}
+        activeScriptTitle={analysis?.title}
+        activePreset={activePreset}
       />
 
       {/* Error Banner */}
@@ -287,8 +294,8 @@ export function RetentionWorkspace({ initialScriptId = null }: RetentionWorkspac
         </div>
       )}
 
-      {/* Loading Skeleton */}
-      {isLoading && (
+      {/* Initial Loading Skeleton when no analysis exists yet */}
+      {isLoading && !analysis && (
         <div className="p-12 rounded-2xl border border-white/10 bg-slate-900/60 backdrop-blur-md flex flex-col items-center justify-center text-center space-y-4">
           <div className="relative">
             <div className="w-16 h-16 rounded-full border-4 border-amber-400/20 border-t-amber-400 animate-spin" />
@@ -304,9 +311,22 @@ export function RetentionWorkspace({ initialScriptId = null }: RetentionWorkspac
         </div>
       )}
 
+      {/* Smooth updating banner when re-analyzing with existing data */}
+      {isLoading && analysis && (
+        <div className="p-3.5 rounded-xl border border-cyan-500/30 bg-cyan-500/10 text-cyan-200 text-xs flex items-center justify-between animate-fadeIn">
+          <div className="flex items-center gap-2.5">
+            <Activity className="w-4 h-4 text-cyan-400 animate-spin" />
+            <span>
+              Updating 9-dimension retention audit for <strong>{analysis.title}</strong>...
+            </span>
+          </div>
+          <span className="text-[11px] font-mono text-cyan-400/80">Diagnostic in progress</span>
+        </div>
+      )}
+
       {/* Live Retention Diagnostic Dashboard */}
-      {!isLoading && analysis && (
-        <div className="space-y-6">
+      {analysis && (
+        <div className={`space-y-6 transition-opacity duration-200 ${isLoading ? "opacity-60 pointer-events-none" : "opacity-100"}`}>
           {/* Top Score Gauge & Primary Speech Metrics */}
           <RetentionScoreGauge analysis={analysis} />
 

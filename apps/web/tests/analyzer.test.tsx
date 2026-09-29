@@ -1,6 +1,6 @@
 import React from "react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import { render, screen, fireEvent, waitFor, act } from "@testing-library/react";
 import "@testing-library/jest-dom";
 import { RetentionScoreGauge } from "../components/analyzer/RetentionScoreGauge";
 import { CategoryScoresGrid } from "../components/analyzer/CategoryScoresGrid";
@@ -8,8 +8,10 @@ import { WeakPointsAndRecommendations } from "../components/analyzer/WeakPointsA
 import { SegmentTimelineAnalysis } from "../components/analyzer/SegmentTimelineAnalysis";
 import { ScriptSelector } from "../components/analyzer/ScriptSelector";
 import { RetentionWorkspace } from "../components/analyzer/RetentionWorkspace";
+import RetentionAnalyzerPage from "../app/analyzer/page";
 import { api } from "../lib/api";
 import type { ScriptAnalysisResponse } from "../types/analyzer";
+import type { Script } from "../types/script";
 
 // Mock router and searchParams
 const mockPush = vi.fn();
@@ -116,6 +118,41 @@ const mockAnalysis: ScriptAnalysisResponse = {
   analyzed_at: "2026-09-28T14:00:00Z",
   provider_used: "heuristic_mock",
 };
+
+const mockSavedScripts: Script[] = [
+  {
+    id: "script-101",
+    title: "5 Lighting Hacks with Phone",
+    topic: "Smartphone Lighting",
+    platform: "Instagram Reels",
+    language: "English",
+    duration_seconds: 30,
+    tone: "Cinematic",
+    hook: "Stop using your phone flashlight!",
+    segments: [],
+    cta: "Follow for more",
+    provider_used: "heuristic_mock",
+    current_version: 1,
+    created_at: "2026-09-28T12:00:00Z",
+    updated_at: "2026-09-28T12:00:00Z",
+  },
+  {
+    id: "script-102",
+    title: "Gimbal Ninja Walk Masterclass",
+    topic: "Gimbal Movement",
+    platform: "YouTube Shorts",
+    language: "Tanglish",
+    duration_seconds: 60,
+    tone: "Educational",
+    hook: "Why your gimbal footage is still shaky",
+    segments: [],
+    cta: "Save this tip",
+    provider_used: "heuristic_mock",
+    current_version: 2,
+    created_at: "2026-09-28T13:00:00Z",
+    updated_at: "2026-09-28T13:00:00Z",
+  },
+];
 
 describe("Script Retention Analyzer Components", () => {
   beforeEach(() => {
@@ -240,5 +277,247 @@ describe("Script Retention Analyzer Components", () => {
       expect(screen.getAllByText("91")[0]).toBeInTheDocument();
       expect(screen.getByText("Back to Studio")).toBeInTheDocument();
     });
+  });
+
+  // Task 2: Required verification test suites
+  it("renders RetentionAnalyzerPage completely with header and breadcrumbs", async () => {
+    render(<RetentionAnalyzerPage />);
+
+    expect(screen.getByText("Script Retention Analyzer")).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        /Comprehensive diagnostic engine evaluating 9 psychological short-form retention criteria/
+      )
+    ).toBeInTheDocument();
+
+    await waitFor(() => {
+      expect(screen.getAllByText("91")[0]).toBeInTheDocument();
+    });
+  });
+
+  it("makes saved scripts available in the selector listbox", async () => {
+    vi.mocked(api.getScripts).mockResolvedValue(mockSavedScripts);
+
+    render(
+      <ScriptSelector
+        currentScriptId={null}
+        onSelectScriptId={vi.fn()}
+        onAnalyzeSample={vi.fn()}
+        isLoading={false}
+      />
+    );
+
+    await waitFor(() => {
+      expect(api.getScripts).toHaveBeenCalled();
+    });
+
+    const triggerBtn = screen.getByRole("button", {
+      name: /select script to analyze/i,
+    });
+    expect(triggerBtn).toBeInTheDocument();
+    expect(triggerBtn).toHaveAttribute("aria-expanded", "false");
+
+    // Open dropdown
+    fireEvent.click(triggerBtn);
+    expect(triggerBtn).toHaveAttribute("aria-expanded", "true");
+
+    // Check that scripts appear in the listbox
+    expect(screen.getByText("5 Lighting Hacks with Phone")).toBeInTheDocument();
+    expect(screen.getByText("Gimbal Ninja Walk Masterclass")).toBeInTheDocument();
+    expect(screen.getByText(/Saved Screenplays \(2\)/)).toBeInTheDocument();
+  });
+
+  it("allows user to select a script from the dropdown reliably", async () => {
+    vi.mocked(api.getScripts).mockResolvedValue(mockSavedScripts);
+    const mockOnSelectScriptId = vi.fn();
+
+    render(
+      <ScriptSelector
+        currentScriptId={null}
+        onSelectScriptId={mockOnSelectScriptId}
+        onAnalyzeSample={vi.fn()}
+        isLoading={false}
+      />
+    );
+
+    await waitFor(() => {
+      expect(api.getScripts).toHaveBeenCalled();
+    });
+
+    // Open dropdown
+    const triggerBtn = screen.getByRole("button", {
+      name: /select script to analyze/i,
+    });
+    fireEvent.click(triggerBtn);
+
+    // Click script option
+    const optionBtn = screen.getByText("5 Lighting Hacks with Phone");
+    fireEvent.click(optionBtn);
+
+    expect(mockOnSelectScriptId).toHaveBeenCalledWith("script-101");
+    // Dropdown closes after selection
+    expect(triggerBtn).toHaveAttribute("aria-expanded", "false");
+  });
+
+  it("passes selected script to analysis in RetentionWorkspace", async () => {
+    vi.mocked(api.getScripts).mockResolvedValue(mockSavedScripts);
+    vi.mocked(api.analyzeScriptById).mockResolvedValue({
+      ...mockAnalysis,
+      script_id: "script-101",
+      title: "5 Lighting Hacks with Phone",
+      overall_score: 87,
+    });
+
+    render(<RetentionWorkspace initialScriptId={null} />);
+
+    await waitFor(() => {
+      expect(api.getScripts).toHaveBeenCalled();
+      expect(api.analyzeScript).toHaveBeenCalled();
+    });
+
+    // Open selector
+    const triggerBtn = screen.getByRole("button", {
+      name: /select script to analyze/i,
+    });
+    fireEvent.click(triggerBtn);
+
+    // Select script
+    const scriptOption = screen.getByText("5 Lighting Hacks with Phone");
+    fireEvent.click(scriptOption);
+
+    await waitFor(() => {
+      expect(api.analyzeScriptById).toHaveBeenCalledWith("script-101");
+      expect(screen.getAllByText("5 Lighting Hacks with Phone").length).toBeGreaterThanOrEqual(1);
+      expect(screen.getByText("87")).toBeInTheDocument();
+    });
+  });
+
+  it("displays empty script state with studio link when no scripts exist", async () => {
+    vi.mocked(api.getScripts).mockResolvedValue([]);
+
+    render(
+      <ScriptSelector
+        currentScriptId={null}
+        onSelectScriptId={vi.fn()}
+        onAnalyzeSample={vi.fn()}
+        isLoading={false}
+      />
+    );
+
+    await waitFor(() => {
+      expect(api.getScripts).toHaveBeenCalled();
+    });
+
+    const triggerBtn = screen.getByRole("button", {
+      name: /select script to analyze/i,
+    });
+    fireEvent.click(triggerBtn);
+
+    expect(
+      screen.getByText("No saved screenplays found in Script Studio.")
+    ).toBeInTheDocument();
+    expect(screen.getByText("Create in Script Studio")).toBeInTheDocument();
+  });
+
+  it("renders non-collapsing loading state during script analysis", async () => {
+    vi.mocked(api.analyzeScript).mockResolvedValue(mockAnalysis);
+
+    render(<RetentionWorkspace initialScriptId={null} />);
+
+    // Wait for initial analysis to complete
+    await waitFor(() => {
+      expect(screen.getAllByText("Why 24fps Feels Like Cinema").length).toBeGreaterThanOrEqual(1);
+      expect(screen.getAllByText("91")[0]).toBeInTheDocument();
+    });
+
+    // Now mock a slow re-analysis
+    let resolveReanalysis: (val: any) => void;
+    const reanalysisPromise = new Promise((resolve) => {
+      resolveReanalysis = resolve;
+    });
+    vi.mocked(api.analyzeScript).mockReturnValue(reanalysisPromise as any);
+
+    const reanalyzeBtn = screen.getByRole("button", { name: /re-analyze/i });
+    fireEvent.click(reanalyzeBtn);
+
+    // Shows smooth update banner while keeping the score dashboard mounted
+    expect(
+      screen.getByText(/Updating 9-dimension retention audit for/)
+    ).toBeInTheDocument();
+    expect(screen.getAllByText("91")[0]).toBeInTheDocument();
+
+    // Resolve re-analysis
+    await act(async () => {
+      resolveReanalysis!(mockAnalysis);
+    });
+
+    await waitFor(() => {
+      expect(
+        screen.queryByText(/Updating 9-dimension retention audit for/)
+      ).not.toBeInTheDocument();
+    });
+  });
+
+  it("displays dismissible error banner when script analysis fails", async () => {
+    vi.mocked(api.analyzeScriptById).mockRejectedValue(
+      new Error("Script ID not found in database")
+    );
+
+    render(<RetentionWorkspace initialScriptId="invalid-script-id" />);
+
+    await waitFor(() => {
+      expect(
+        screen.getByText("Script ID not found in database")
+      ).toBeInTheDocument();
+      expect(screen.getByText("Analysis Error:")).toBeInTheDocument();
+    });
+
+    const dismissBtn = screen.getByRole("button", { name: /dismiss/i });
+    fireEvent.click(dismissBtn);
+
+    expect(
+      screen.queryByText("Script ID not found in database")
+    ).not.toBeInTheDocument();
+  });
+
+  it("verifies accessible ARIA, keyboard Escape dismissal, and overscroll-contain", async () => {
+    vi.mocked(api.getScripts).mockResolvedValue(mockSavedScripts);
+
+    render(
+      <ScriptSelector
+        currentScriptId="script-101"
+        onSelectScriptId={vi.fn()}
+        onAnalyzeSample={vi.fn()}
+        isLoading={false}
+      />
+    );
+
+    await waitFor(() => {
+      expect(api.getScripts).toHaveBeenCalled();
+    });
+
+    const triggerBtn = screen.getByRole("button", {
+      name: /select script to analyze/i,
+    });
+    expect(triggerBtn).toHaveAttribute("aria-haspopup", "listbox");
+    expect(triggerBtn).toHaveAttribute("aria-expanded", "false");
+
+    // Open dropdown
+    fireEvent.click(triggerBtn);
+    expect(triggerBtn).toHaveAttribute("aria-expanded", "true");
+
+    const listbox = screen.getByRole("listbox", { name: /saved screenplays/i });
+    expect(listbox).toBeInTheDocument();
+    expect(listbox).toHaveClass("overscroll-contain");
+
+    // Options have role="option" and aria-selected
+    const options = screen.getAllByRole("option");
+    expect(options).toHaveLength(2);
+    expect(options[0]).toHaveAttribute("aria-selected", "true");
+    expect(options[1]).toHaveAttribute("aria-selected", "false");
+
+    // Test Escape key closes dropdown
+    fireEvent.keyDown(document, { key: "Escape" });
+    expect(triggerBtn).toHaveAttribute("aria-expanded", "false");
   });
 });
