@@ -1,51 +1,99 @@
-# CINEHA AI — 3D Animation & Visualization System
+# CINEHA AI — 3D Animation & Visualization System (Phase 8)
 
-This document outlines the architecture, performance targets, and accessibility protocols of the 3D visualization system implemented with **Three.js**, **React Three Fiber (R3F)**, and **@react-three/drei**.
+This document outlines the architecture, performance safeguards, accessibility protocols, and workflow state contracts of the 3D visualization system implemented with **Three.js**, **React Three Fiber (R3F)**, and **@react-three/drei**.
 
 ---
 
 ## 1. System Objectives
 
-The 3D system is not merely cosmetic; it is an intuitive pedagogical tool designed to explain:
-1. **Multi-Agent Orchestration Workflow:** Visualizes active data passing between the Orchestrator, Hook Agent, Script Agent, Reviewer, and Optimizer.
-2. **Content Creation Pipeline:** Guides the creator through the mental shift from Idea $\rightarrow$ Script $\rightarrow$ Shooting $\rightarrow$ Publishing.
-3. **Execution State Telemetry:** Reflects real agent states (`idle`, `processing`, `completed`, `error`) via dynamic shaders, node illumination, and particle pulses.
+The 3D system serves as an intuitive, interactive pedagogical tool explaining the CINEHA AI multi-agent orchestration architecture:
+1. **Multi-Agent Orchestration Workflow:** Visualizes the sequential data passing between User Ingestion, Orchestrator, Research, Hook Generator, Script Studio, Retention Analyzer, Script Optimizer, and Final Production Output.
+2. **Honest Execution State Telemetry:** Distinguishes between static architectural blueprint representation and live agent execution telemetry. Does not fake backend progress.
+3. **Inclusive Accessibility Fallback:** Provides an accessible, semantic 2D HTML/SVG representation for screen readers, low-capability environments, WebGL failures, and reduced-motion users.
 
 ---
 
 ## 2. Component Architecture
 
+Implemented under `apps/web/components/three/` and `apps/web/types/workflow.ts`:
+
 ```
-apps/web/components/three/
-├── WorkflowCanvas.tsx             # Root WebGL Canvas with camera & lighting
-├── WorkflowScene.tsx              # Scene container with OrbitControls / Float
-├── nodes/
-│   ├── AgentNodeMesh.tsx          # 3D Node representing a distinct AI Agent
-│   ├── ConnectionPulse.tsx        # Dynamic Bezier curve with flowing pulse particles
-│   └── NodeStatusRing.tsx         # Orbiting luminous ring indicating agent state
-├── pipeline/
-│   ├── ContentPipeline3D.tsx      # 3D stages for idea-to-publish tracking
-│   └── CameraStageRig.tsx         # Smooth focal shifts between active nodes
-└── fallback/
-    ├── Accessible2DWorkflow.tsx   # Semantic SVG/HTML equivalent for screen readers & low-spec
-    └── ThreeCanvasErrorBoundary.tsx # Error boundary with automatic fallback swap
+apps/web/
+├── types/
+│   └── workflow.ts                    # Typed workflow state, node, and connection contracts
+├── hooks/
+│   └── useWorkflowState.ts            # Custom hook managing selection, presets, motion, and fallback
+├── components/three/
+│   ├── WorkflowCanvas.tsx             # Canvas wrapper with dpr limit, lighting & dynamic import
+│   ├── WorkflowScene.tsx              # Scene with OrbitControls, lighting, nodes, and splines
+│   ├── WorkflowNode.tsx               # 3D Node mesh with polyhedral cage, glowing core, status ring & HTML label
+│   ├── WorkflowConnections.tsx        # Quadratic Bezier spline curves with traveling pulse packets
+│   ├── WorkflowParticles.tsx          # Lightweight ambient background floating particles
+│   ├── WorkflowNodeDetailPanel.tsx    # Responsive side/bottom inspector for agent contracts & artifacts
+│   ├── WorkflowControls.tsx           # Toolbar with 3D/2D switch, presets, and status indicators
+│   ├── Accessible2DWorkflow.tsx       # Semantic HTML <ol> fallback with status badges & ARIA attributes
+│   ├── ThreeCanvasErrorBoundary.tsx   # React Error Boundary catching WebGL/Three.js context failures
+│   ├── WorkflowWorkspace.tsx          # Top-level orchestrator container for /workflow
+│   └── index.ts                       # Barrel export
+└── app/workflow/
+    └── page.tsx                       # Production Next.js route with PageHeader & Suspense
 ```
 
 ---
 
-## 3. Shader & Visual State Logic
+## 3. Workflow State & Node Model
 
-- **Idle State:** Cool slate glow (`#334155`), slow harmonic breathing pulse ($0.5\text{Hz}$).
-- **Active / Processing State:** Radiant indigo-violet aura (`#6366F1` $\rightarrow$ `#A855F7`), accelerated particle emitter firing along the spline toward the next downstream node.
-- **Success / Completed State:** Emerald beacon (`#10B981`) with static lock.
-- **Error / Fault State:** Crimson warning pulse (`#EF4444`) with camera shake impulse.
+### Supported Statuses
+```typescript
+type WorkflowNodeStatus = "idle" | "waiting" | "processing" | "completed" | "error";
+```
+
+### Primary Workflow Nodes
+| Stage | ID | Name | Role | Primary Responsibility |
+|---|---|---|---|---|
+| 1 | `user_request` | **User Request** | Content Prompt & Creator Persona | Ingestion of topic, target platform, duration, and persona |
+| 2 | `orchestrator` | **Orchestrator Agent** | System Brain & Delegation | Decomposes creative brief and dispatches subagents |
+| 3 | `research` | **Research Agent** | Topic & Trend Intelligence | Pattern synthesis, competitor pacing & citations (Phase 10) |
+| 4 | `hook` | **Hook Generator** | 0–3s Retention Architecture | 9-taxonomy psychological opening hooks (Phase 5) |
+| 5 | `script` | **Script Studio Agent** | 2-Column Screenplay Generation | Screenplay choreography (VO, Visual, B-Roll, SFX) (Phase 6) |
+| 6 | `review` | **Retention Analyzer** | 9-Dimension Retention Auditor | Pacing, word velocity, filler detection & scoring (Phase 7A) |
+| 7 | `optimizer` | **Script Optimizer** | Retention & Pacing Rewriter | 6-goal optimization and version branching (Phase 7B) |
+| 8 | `final_output` | **Production Ready Screenplay** | Final Delivery Asset | Formatted teleprompter script, visual storyboard & export |
 
 ---
 
-## 4. Performance & Hardware Adaptation
+## 4. Visual State & Shader Logic
 
-1. **Lazy Loading:** 3D canvases are imported dynamically via `next/dynamic` with `ssr: false` to ensure zero hydration mismatch and minimal initial bundle size.
-2. **Frame Budgeting:** Fixed pixel ratio clamped to `Math.min(window.devicePixelRatio, 2)` to avoid GPU strain on Retina screens.
-3. **Frustum & Occlusion Culling:** Three.js objects outside the active view cone are automatically culled.
-4. **Hardware Detection:** If WebGL 2 is unsupported or GPU initialization errors are caught, the component cleanly unmounts and renders the `Accessible2DWorkflow` without layout disruption.
-5. **Reduced Motion:** Observes `@media (prefers-reduced-motion: reduce)`. When triggered, all particle loops and camera transitions are halted, rendering static highlighted nodes.
+- **Idle / Standby State:** Neutral slate wireframe (`#64748b`), subtle breathing float ($0.5\text{Hz}$).
+- **Active / Processing State:** Radiant cyan core (`#06b6d4`), accelerated status ring rotation, and moving data packets traveling along downstream connection splines.
+- **Completed State:** Emerald beacon (`#10b981`), static lock with high-contrast badge.
+- **Waiting State:** Warm amber glow (`#f59e0b`), stationary waiting halo.
+- **Error / Fault State:** Crimson warning pulse (`#ef4444`) with high-contrast error banner.
+
+---
+
+## 5. Performance Safeguards
+
+1. **Lazy Loading / SSR Boundary:** `WorkflowCanvas` is dynamically imported with `next/dynamic` (`ssr: false`) to prevent hydration mismatches and minimize initial page bundle cost.
+2. **Device Pixel Ratio Clamping:** `dpr={[1, 2]}` prevents excessive GPU fillrate strain on high-DPI displays.
+3. **Lightweight Geometries:** Primitives use low-polygon geometries (octahedrons and low-segment spheres) with hardware-accelerated materials.
+4. **Bounded OrbitControls:** Constrained min/max polar angles and distances prevent camera flipping or losing orientation.
+5. **Particle Conservation:** Particle count capped at 90 points with single-buffer geometry.
+
+---
+
+## 6. Accessibility & WebGL Fallback Protocols
+
+1. **Semantic HTML 2D Fallback:** `Accessible2DWorkflow.tsx` renders a semantic `<ol>` with `aria-label="CINEHA AI Content Generation Workflow Pipeline"`.
+2. **Error Boundary Fallback:** `ThreeCanvasErrorBoundary.tsx` catches any WebGL context loss or Three.js runtime exception and seamlessly renders the 2D diagram without crashing.
+3. **Reduced Motion (`prefers-reduced-motion`):** Automatically halts continuous camera rotation, node floating, ring spinning, and particle drift, rendering static highlighted nodes.
+4. **Manual Switcher:** Users can toggle between "3D Stage" and "2D Diagram" at any time from the controls toolbar.
+
+---
+
+## 7. Current Telemetry Status & Future Multi-Agent Orchestrator Integration
+
+- **Current Architecture:** Current AI capabilities (Hooks, Script Studio, Retention Analyzer, Optimizer) execute synchronously via discrete FastAPI endpoints.
+- **Live Telemetry Flag:** The workflow visualizer explicitly sets `isLiveTelemetry: false` by default, presenting an honest architectural blueprint.
+- **Pedagogical Presets:** Includes "Idle Blueprint" (real default), "Pipeline Demo" (interactive simulation), and "Alert Demo" (error recovery showcase).
+- **Future Integration Point:** In Phase 9/11 (Multi-Agent System), WebSocket or SSE event streams will feed directly into `useWorkflowState` without modifying the 3D rendering components.

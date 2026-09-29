@@ -123,6 +123,63 @@ This document records chronological development checkpoints, environment finding
   8. Added frontend unit tests (`apps/web/tests/hooks.test.tsx`) covering card rendering, copy feedback, and save toggles (14 frontend tests passing).
   9. Verified production compilation via `next build` (zero TypeScript errors) and tested responsiveness across 375px, 768px, 1024px, and 1440px.
 
+---
+
+## Log Entry 007: Phase 6 — AI Script Studio
+- **Date:** 2026-09-28
+- **Phase:** Phase 6 (AI Script Studio)
+- **Author:** Antigravity Architect / Pair Programmer
+- **Summary:**
+  Implemented complete 2-column screenplay generation (VO + Visual Cues, B-Roll, On-Screen Text, Audio Direction, Timing) with immutable versioning tree in SQLite, `ScriptAgent`, Pydantic schemas, and full Studio workspace. 25 backend tests and 23 frontend tests passing.
+
+---
+
+## Log Entry 008: Phase 7 Part A — Script Retention Analyzer
+- **Date:** 2026-09-28
+- **Phase:** Phase 7 Part A (Script Retention Analyzer)
+- **Author:** Antigravity Architect / Pair Programmer
+- **Summary:**
+  Built 9-dimension diagnostic retention auditor (`RetentionAnalyzerAgent`), calculating overall retention score (0–100), word density velocity (wps), filler phrase detection, and weak points/recommendations. Added `/analyzer` route and visual components (`RetentionScoreGauge`, `CategoryScoresGrid`, `SegmentTimelineAnalysis`, `WeakPointsAndRecommendations`). 25 backend tests and 30 frontend tests passing.
+
+---
+
+## Log Entry 009: Phase 7 Part B — Script Optimizer
+- **Date:** 2026-09-28
+- **Phase:** Phase 7 Part B (Script Optimizer)
+- **Author:** Antigravity Architect / Pair Programmer
+- **Summary:**
+  Implemented goal-driven screenplay rewriter (`ScriptOptimizerAgent`) with 6 optimization vectors (Hook, Pacing, Filler, Curiosity, CTA, General Retention). Features preview immobility, before/after score delta comparison, filterable audit trail (`changes_made`), responsive side-by-side screenplay diffs, and explicit commit to immutable `ScriptVersion`. 29 backend tests and 36 frontend tests passing.
+
+---
+
+## Log Entry 010: Phase 8 — 3D Workflow Visualization
+- **Date:** 2026-09-29
+- **Phase:** Phase 8 (3D Workflow Visualization)
+- **Author:** Antigravity Architect / Pair Programmer
+- **Summary of Implementation:**
+  Built the CINEHA AI 3D Workflow Visualization system communicating the multi-agent pipeline:
+  1. Installed React 18-compatible Three.js ecosystem: `three@^0.165.0`, `@types/three@^0.165.0`, `@react-three/fiber@^8.18.0`, and `@react-three/drei@^9.122.0`.
+  2. Defined strictly typed workflow contracts in `apps/web/types/workflow.ts` covering 8 sequential stages (`user_request`, `orchestrator`, `research`, `hook`, `script`, `review`, `optimizer`, `final_output`) and 5 discrete statuses (`idle`, `waiting`, `processing`, `completed`, `error`).
+  3. Created `useWorkflowState` custom hook managing node selection, presets, motion detection, and fallback resolution.
+  4. Built 3D visual components under `apps/web/components/three/`:
+     - `WorkflowCanvas.tsx`: WebGL Canvas with devicePixelRatio clamping (`[1, 2]`), lighting, and dynamic SSR boundary.
+     - `WorkflowScene.tsx`: Scene with OrbitControls, lighting, and ambient dust field.
+     - `WorkflowNode.tsx`: 3D node meshes with polyhedral cages, glowing core spheres, status rings, and HTML 3D labels.
+     - `WorkflowConnections.tsx`: Quadratic Bezier curves with flowing data-pulse particles.
+     - `WorkflowParticles.tsx`: Ambient 90-point drifting particle system.
+     - `WorkflowNodeDetailPanel.tsx`: Responsive inspector displaying agent role, responsibilities, input/output artifacts, and tool links.
+     - `WorkflowControls.tsx`: Toolbar with 3D/2D switcher and scenario presets.
+     - `Accessible2DWorkflow.tsx`: Mandatory semantic HTML `<ol>` fallback for screen readers and non-WebGL environments.
+     - `ThreeCanvasErrorBoundary.tsx`: Error boundary catching WebGL context loss and automatically showing 2D fallback.
+     - `WorkflowWorkspace.tsx`: Top-level orchestrator container.
+  5. Added `/workflow` page in `apps/web/app/workflow/page.tsx` and registered `3D Workflow` in `PRIMARY_NAV_ITEMS` (`apps/web/lib/navigation.ts`).
+  6. Verified `prefers-reduced-motion` compliance (halts animations/rotations while preserving full workflow information).
+  7. Added comprehensive unit tests in `apps/web/tests/workflow.test.tsx` (11 tests covering navigation, state contracts, 2D fallback, node details, controls, and WebGL error handling).
+  8. Full test suite passing (29 backend tests, 47 frontend tests). TypeScript compilation zero errors (`npx tsc --noEmit`), production build clean (`14/14 static pages compiled`).
+- **Known Limitations & Future Work:**
+  Current implementation visualizes the authentic idle architecture blueprint and interactive simulation presets without fabricating live agent telemetry. Live streaming execution telemetry will be integrated in Phase 9/11 with the background orchestrator.
+
+
 
 
 

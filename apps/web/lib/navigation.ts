@@ -9,6 +9,7 @@ import {
   Calendar,
   User,
   Settings,
+  Network,
   LucideIcon,
 } from "lucide-react";
 
@@ -55,6 +56,13 @@ export const PRIMARY_NAV_ITEMS: NavItem[] = [
     icon: GitCompare,
     description: "Side-by-side diff studio & script rewriting",
     badge: "Phase 7",
+  },
+  {
+    label: "3D Workflow",
+    href: "/workflow",
+    icon: Network,
+    description: "Interactive multi-agent orchestration pipeline",
+    badge: "Phase 8",
   },
   {
     label: "Trend Research",
