@@ -14,8 +14,11 @@ import { CategoryScoresGrid } from "./CategoryScoresGrid";
 import { WeakPointsAndRecommendations } from "./WeakPointsAndRecommendations";
 import { SegmentTimelineAnalysis } from "./SegmentTimelineAnalysis";
 import { ScriptSelector } from "./ScriptSelector";
+import { UnifiedScriptInput } from "../scripts/UnifiedScriptInput";
 import { api } from "../../lib/api";
 import type { ScriptAnalysisResponse, ScriptAnalysisRequest } from "@/types/analyzer";
+import type { NormalizedScriptInput } from "@/types/scriptInput";
+import { ListFilter } from "lucide-react";
 
 export const SAMPLE_PRESETS: Record<"viral" | "filler" | "cinematic", ScriptAnalysisRequest> = {
   viral: {
@@ -172,6 +175,8 @@ export function RetentionWorkspace({ initialScriptId = null }: RetentionWorkspac
   const [activePreset, setActivePreset] = useState<"viral" | "filler" | "cinematic" | null>(
     initialScriptId ? null : "viral"
   );
+  const [inputMode, setInputMode] = useState<"selector" | "unified">("selector");
+  const [customScriptTitle, setCustomScriptTitle] = useState<string | null>(null);
   const [analysis, setAnalysis] = useState<ScriptAnalysisResponse | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
@@ -181,6 +186,7 @@ export function RetentionWorkspace({ initialScriptId = null }: RetentionWorkspac
     setError(null);
     setCurrentScriptId(scriptId);
     setActivePreset(null);
+    setCustomScriptTitle(null);
     try {
       const data = await api.analyzeScriptById(scriptId);
       setAnalysis(data);
@@ -198,6 +204,7 @@ export function RetentionWorkspace({ initialScriptId = null }: RetentionWorkspac
       setError(null);
       setCurrentScriptId(null);
       setActivePreset(sampleKey);
+      setCustomScriptTitle(null);
       try {
         const samplePayload = SAMPLE_PRESETS[sampleKey];
         const data = await api.analyzeScript(samplePayload);
@@ -205,6 +212,34 @@ export function RetentionWorkspace({ initialScriptId = null }: RetentionWorkspac
       } catch (err: any) {
         console.error("Failed to analyze sample script:", err);
         setError(err?.message || "Failed to run sample analysis.");
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    []
+  );
+
+  const runUnifiedAnalysis = useCallback(
+    async (normalized: NormalizedScriptInput, title?: string) => {
+      setIsLoading(true);
+      setError(null);
+      setCurrentScriptId(null);
+      setActivePreset(null);
+      setCustomScriptTitle(title || "Imported Screenplay");
+      try {
+        const payload: ScriptAnalysisRequest = {
+          title: title || "Imported Screenplay",
+          script_text: normalized.text,
+          source_type: normalized.sourceType,
+          language: normalized.language || "English",
+          platform: "Instagram Reels",
+          duration_seconds: normalized.metadata?.duration_seconds || 30,
+        };
+        const data = await api.analyzeScript(payload);
+        setAnalysis(data);
+      } catch (err: any) {
+        console.error("Failed to analyze normalized script:", err);
+        setError(err?.message || "Failed to analyze script. Please verify script content.");
       } finally {
         setIsLoading(false);
       }
@@ -255,8 +290,11 @@ export function RetentionWorkspace({ initialScriptId = null }: RetentionWorkspac
           onClick={() => {
             if (currentScriptId) {
               runAnalysis(currentScriptId);
-            } else {
-              runSampleAnalysis(activePreset || "viral");
+            } else if (activePreset) {
+              runSampleAnalysis(activePreset);
+            } else if (analysis) {
+              // Re-run with sample or existing analysis
+              runSampleAnalysis("viral");
             }
           }}
           className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold text-slate-950 bg-gradient-to-r from-amber-400 to-orange-400 hover:from-amber-300 hover:to-orange-300 shadow-md shadow-amber-500/20 transition-all active:scale-95 disabled:opacity-50"
@@ -266,15 +304,50 @@ export function RetentionWorkspace({ initialScriptId = null }: RetentionWorkspac
         </button>
       </div>
 
-      {/* Script Selector & Preset Bar */}
-      <ScriptSelector
-        currentScriptId={currentScriptId}
-        onSelectScriptId={handleSelectScript}
-        onAnalyzeSample={runSampleAnalysis}
-        isLoading={isLoading}
-        activeScriptTitle={analysis?.title}
-        activePreset={activePreset}
-      />
+      {/* Input Mode Tabs */}
+      <div className="flex items-center gap-2 p-1 rounded-xl bg-slate-900/60 border border-white/10 w-fit">
+        <button
+          type="button"
+          onClick={() => setInputMode("selector")}
+          className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+            inputMode === "selector"
+              ? "bg-cyan-500 text-slate-950 font-bold shadow-md shadow-cyan-500/20"
+              : "text-slate-400 hover:text-white"
+          }`}
+        >
+          <ListFilter className="w-3.5 h-3.5" />
+          <span>Saved Scripts & Presets</span>
+        </button>
+        <button
+          type="button"
+          onClick={() => setInputMode("unified")}
+          className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+            inputMode === "unified"
+              ? "bg-cyan-500 text-slate-950 font-bold shadow-md shadow-cyan-500/20"
+              : "text-slate-400 hover:text-white"
+          }`}
+        >
+          <Sparkles className="w-3.5 h-3.5" />
+          <span>Upload / Paste Script (OCR)</span>
+        </button>
+      </div>
+
+      {/* Script Source Mode Switch */}
+      {inputMode === "selector" ? (
+        <ScriptSelector
+          currentScriptId={currentScriptId}
+          onSelectScriptId={handleSelectScript}
+          onAnalyzeSample={runSampleAnalysis}
+          isLoading={isLoading}
+          activeScriptTitle={customScriptTitle || analysis?.title}
+          activePreset={activePreset}
+        />
+      ) : (
+        <UnifiedScriptInput
+          onAnalyzeScript={runUnifiedAnalysis}
+          isAnalyzing={isLoading}
+        />
+      )}
 
       {/* Error Banner */}
       {error && (

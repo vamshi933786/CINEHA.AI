@@ -1,10 +1,18 @@
 import uuid
 from typing import List, Optional
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File, Form
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from sqlalchemy.orm import selectinload
 from app.core.database import get_db
+from app.schemas.extraction import NormalizedScriptResponse, SaveImportedScriptRequest
+from app.services.document_extractor import (
+    extract_from_text,
+    extract_from_pdf,
+    extract_from_docx,
+    extract_from_image,
+)
+from app.services.script_parser import parse_script_text_to_segments
 from app.models.creator_profile import CreatorProfile
 from app.models.script import Script, ScriptVersion
 from app.schemas.script import (
@@ -320,3 +328,120 @@ async def save_optimized_endpoint(
         payload=payload,
         db=db,
     )
+
+
+@router.post(
+    "/scripts/extract",
+    response_model=NormalizedScriptResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Extract & Normalize Script from Input",
+    description="Extracts normalized script text from plain text, PDF, DOCX, or Image OCR.",
+)
+async def extract_script_endpoint(
+    source_type: str = Form(..., description="Source type: text, pdf, docx, or image"),
+    text: Optional[str] = Form(None, description="Raw text if source_type is text"),
+    language: str = Form("English", description="Script language: English, Telugu, Tanglish"),
+    file: Optional[UploadFile] = File(None, description="Uploaded document or image file"),
+) -> NormalizedScriptResponse:
+    source_lower = source_type.lower().strip()
+    if source_lower == "text":
+        if not text or not text.strip():
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="No script text provided to extract.",
+            )
+        result = extract_from_text(text=text, language=language)
+    elif source_lower in ("pdf", "docx", "image"):
+        if not file:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"File upload is required for {source_lower.upper()} extraction.",
+            )
+        file_bytes = await file.read()
+        filename = file.filename or f"uploaded.{source_lower}"
+
+        if source_lower == "pdf":
+            result = extract_from_pdf(pdf_bytes=file_bytes, filename=filename, language=language)
+        elif source_lower == "docx":
+            result = extract_from_docx(docx_bytes=file_bytes, filename=filename, language=language)
+        else:  # image
+            result = await extract_from_image(image_bytes=file_bytes, filename=filename, language=language)
+    else:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Unsupported source type '{source_type}'. Must be text, pdf, docx, or image.",
+        )
+
+    return NormalizedScriptResponse.model_validate(result.to_dict())
+
+
+@router.post(
+    "/scripts/save-imported",
+    response_model=ScriptResponse,
+    status_code=status.HTTP_201_CREATED,
+    summary="Save Imported Script",
+    description="Saves a normalized script directly into the database as Version 1.",
+)
+async def save_imported_script(
+    payload: SaveImportedScriptRequest,
+    db: AsyncSession = Depends(get_db),
+) -> ScriptResponse:
+    result = await db.execute(
+        select(CreatorProfile).order_by(CreatorProfile.created_at.desc()).limit(1)
+    )
+    db_profile = result.scalar_one_or_none()
+
+    parsed_hook, parsed_cta, segments = parse_script_text_to_segments(
+        payload.text, duration_seconds=payload.duration_seconds or 30
+    )
+
+    script_id = str(uuid.uuid4())
+    version_id = str(uuid.uuid4())
+
+    resolved_tone = (
+        db_profile.content_tones[0]
+        if (db_profile and db_profile.content_tones)
+        else "Cinematic"
+    )
+
+    script = Script(
+        id=script_id,
+        profile_id=db_profile.id if db_profile else None,
+        title=payload.title.strip(),
+        topic=payload.topic.strip() if payload.topic else payload.title.strip(),
+        platform=payload.platform or "Instagram Reels",
+        language=payload.language or "English",
+        duration_seconds=payload.duration_seconds or 30,
+        tone=resolved_tone,
+        hook=parsed_hook or payload.title.strip(),
+        segments=segments,
+        cta=parsed_cta or "Follow for more",
+        provider_used="unified_input_import",
+        current_version=1,
+    )
+    db.add(script)
+
+    script_version = ScriptVersion(
+        id=version_id,
+        script_id=script_id,
+        version_number=1,
+        title=payload.title.strip(),
+        segments=segments,
+        hook=parsed_hook or payload.title.strip(),
+        cta=parsed_cta or "Follow for more",
+        change_summary="Imported via Unified Script Input",
+        provider_used="unified_input_import",
+    )
+    db.add(script_version)
+
+    await db.commit()
+
+    stmt = (
+        select(Script)
+        .options(selectinload(Script.versions))
+        .where(Script.id == script_id)
+    )
+    res = await db.execute(stmt)
+    saved = res.scalar_one()
+
+    return ScriptResponse.model_validate(saved)

@@ -76,6 +76,27 @@ class RetentionAnalyzerAgent:
             if request.language:
                 language = request.language
 
+        # 3. If normalized script_text provided, parse into structured segments
+        elif request.script_text and request.script_text.strip():
+            from app.services.script_parser import parse_script_text_to_segments
+            parsed_hook, parsed_cta, parsed_segments = parse_script_text_to_segments(
+                request.script_text, duration_seconds=duration_seconds
+            )
+            segments = parsed_segments
+            hook = request.hook or parsed_hook
+            cta = request.cta or parsed_cta
+            if request.title:
+                title = request.title
+            else:
+                first_line = request.script_text.strip().split("\n")[0][:60].strip()
+                title = first_line if first_line else "Imported Script"
+            if request.topic:
+                topic = request.topic
+            if request.platform:
+                platform = request.platform
+            if request.language:
+                language = request.language
+
         if not segments:
             raise HTTPException(
                 status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,

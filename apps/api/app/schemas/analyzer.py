@@ -46,6 +46,8 @@ class ScriptAnalysisRequest(BaseModel):
     hook: Optional[str] = Field(default=None, description="Opening hook line")
     segments: Optional[List[ScriptSegmentSchema]] = Field(default=None, description="Array of time-coded beats")
     cta: Optional[str] = Field(default=None, description="Closing call to action")
+    script_text: Optional[str] = Field(default=None, description="Normalized script text for direct analysis")
+    source_type: Optional[str] = Field(default=None, description="Source format: text, pdf, docx, or image")
 
 
 class ScriptAnalysisResponse(BaseModel):

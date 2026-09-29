@@ -23,6 +23,11 @@ import type {
   ScriptOptimizationResponse,
   SaveOptimizedScriptRequest,
 } from "../types/optimizer";
+import type {
+  NormalizedScriptResponse,
+  SaveImportedScriptRequest,
+  ScriptSourceType,
+} from "../types/scriptInput";
 
 export class ApiClient {
   private baseUrl: string;
@@ -372,6 +377,82 @@ export class ApiClient {
 
     if (!response.ok) {
       let errorMessage = `Failed to save optimized script (status: ${response.status})`;
+      try {
+        const errorJson = await response.json();
+        if (errorJson.detail) {
+          if (Array.isArray(errorJson.detail)) {
+            errorMessage = errorJson.detail
+              .map((d: any) => d.msg || JSON.stringify(d))
+              .join(", ");
+          } else {
+            errorMessage = errorJson.detail;
+          }
+        }
+      } catch (_) {}
+      throw new Error(errorMessage);
+    }
+
+    const data = await response.json();
+    return data as Script;
+  }
+
+  async extractScript(params: {
+    file?: File | Blob;
+    sourceType: ScriptSourceType;
+    text?: string;
+    language?: string;
+  }): Promise<NormalizedScriptResponse> {
+    const formData = new FormData();
+    formData.append("source_type", params.sourceType);
+    if (params.text) {
+      formData.append("text", params.text);
+    }
+    if (params.language) {
+      formData.append("language", params.language);
+    }
+    if (params.file) {
+      formData.append("file", params.file);
+    }
+
+    const response = await fetch(`${this.baseUrl}/scripts/extract`, {
+      method: "POST",
+      body: formData,
+    });
+
+    if (!response.ok) {
+      let errorMessage = `Extraction failed (status: ${response.status})`;
+      try {
+        const errorJson = await response.json();
+        if (errorJson.detail) {
+          if (Array.isArray(errorJson.detail)) {
+            errorMessage = errorJson.detail
+              .map((d: any) => d.msg || JSON.stringify(d))
+              .join(", ");
+          } else {
+            errorMessage = errorJson.detail;
+          }
+        }
+      } catch (_) {}
+      throw new Error(errorMessage);
+    }
+
+    const data = await response.json();
+    return data as NormalizedScriptResponse;
+  }
+
+  async saveImportedScript(
+    payload: SaveImportedScriptRequest
+  ): Promise<Script> {
+    const response = await fetch(`${this.baseUrl}/scripts/save-imported`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(payload),
+    });
+
+    if (!response.ok) {
+      let errorMessage = `Failed to save imported script (status: ${response.status})`;
       try {
         const errorJson = await response.json();
         if (errorJson.detail) {

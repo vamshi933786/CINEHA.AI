@@ -34,6 +34,8 @@ export interface ScriptAnalysisRequest {
   hook?: string;
   segments?: ScriptSegment[];
   cta?: string;
+  script_text?: string;
+  source_type?: string;
 }
 
 export interface ScriptAnalysisResponse {
