@@ -17,6 +17,7 @@ import {
 import { VideoDropzone, VideoMetadata } from "./VideoDropzone";
 import { TranscriptEditor } from "./TranscriptEditor";
 import { LanguageProcessingSection } from "./LanguageProcessingSection";
+import { CaptionCueWorkspace } from "./CaptionCueWorkspace";
 import { api } from "@/lib/api";
 import {
   TranscriptionResponse,
@@ -549,6 +550,17 @@ export function CaptionStudioWorkspace() {
               onApplyProcessed={handleApplyProcessed}
               onRevertOriginal={handleRevertOriginal}
               isProcessedActive={isProcessedActive}
+              disabled={isTranscribing}
+            />
+          )}
+
+          {/* 6. Caption Cue Generation & Plain Caption Video Preview */}
+          {originalTranscription && (
+            <CaptionCueWorkspace
+              activeTranscription={activeTranscription}
+              originalTranscription={originalTranscription}
+              isProcessedActive={isProcessedActive}
+              videoPreviewUrl={previewUrl}
               disabled={isTranscribing}
             />
           )}

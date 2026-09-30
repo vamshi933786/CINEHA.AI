@@ -57,18 +57,88 @@ class TranscriptionResult(BaseModel):
     metadata: Dict[str, Any] = Field(default_factory=dict, description="Diagnostic and provider metadata")
 
 
-class CaptionCue(BaseModel):
-    """Downstream caption cue consumed by styling and motion graphic rendering engines."""
+class CaptionCueWord(BaseModel):
+    """Word-level timing token embedded within a caption cue."""
     model_config = ConfigDict(extra="ignore")
 
-    id: str = Field(..., description="Unique cue ID")
-    segment_id: str = Field(..., description="Parent segment ID")
-    start_time: float = Field(..., ge=0.0, description="Cue start timestamp")
-    end_time: float = Field(..., ge=0.0, description="Cue end timestamp")
-    text: str = Field(..., description="Visible caption phrase or word")
-    words: List[TranscriptWord] = Field(default_factory=list, description="Word-level timings within cue")
+    text: str = Field(..., description="Word text")
+    start_time: float = Field(..., ge=0.0, description="Start timestamp in seconds")
+    end_time: float = Field(..., ge=0.0, description="End timestamp in seconds")
+    confidence: Optional[float] = Field(default=None, ge=0.0, le=1.0, description="Confidence score")
+
+
+class CaptionCueSettings(BaseModel):
+    """Configurable layout and timing constraints for deterministic caption cue generation."""
+    model_config = ConfigDict(extra="ignore")
+
+    max_characters_per_line: int = Field(default=36, ge=10, le=80, description="Maximum characters per visual line")
+    max_lines: int = Field(default=2, ge=1, le=4, description="Maximum lines per caption cue")
+    minimum_cue_duration: float = Field(default=0.8, ge=0.1, le=10.0, description="Minimum duration in seconds")
+    maximum_cue_duration: float = Field(default=4.0, ge=0.5, le=30.0, description="Maximum duration in seconds")
+    preferred_words_per_cue: int = Field(default=6, ge=1, le=25, description="Target word count per cue")
+    gap_threshold: float = Field(default=0.5, ge=0.0, le=5.0, description="Speech pause threshold in seconds to break cue")
+
+
+class CaptionCue(BaseModel):
+    """Timed, display-ready caption cue with layout lines and optional word timings."""
+    model_config = ConfigDict(extra="ignore")
+
+    id: str = Field(..., description="Unique cue ID (e.g. cue_0, cue_1)")
+    text: str = Field(..., description="Complete caption text for this cue")
+    start_time: float = Field(..., ge=0.0, description="Cue start timestamp in seconds")
+    end_time: float = Field(..., ge=0.0, description="Cue end timestamp in seconds")
+    duration: float = Field(..., ge=0.0, description="Cue duration in seconds")
+    language: str = Field(default="English", description="Language name")
+    language_code: str = Field(default="en", description="Language code")
+    lines: List[str] = Field(default_factory=list, description="Visual line breaks for screen rendering")
+    source_segment_ids: List[str] = Field(default_factory=list, description="IDs of source segments composing this cue")
+    segment_id: Optional[str] = Field(default=None, description="Primary parent segment ID for backward compatibility")
+    words: List[CaptionCueWord] = Field(default_factory=list, description="Word timings when valid timing exists")
+    manually_edited: bool = Field(default=False, description="Whether this cue text/timing was manually edited by creator")
     position: Optional[Dict[str, Any]] = Field(default=None, description="Spatial position/alignment on screen")
-    style: Optional[Dict[str, Any]] = Field(default=None, description="Visual typography & animation attributes")
+    style: Optional[Dict[str, Any]] = Field(default=None, description="Visual typography attributes")
+    metadata: Dict[str, Any] = Field(default_factory=dict, description="Diagnostic and generator metadata")
+
+
+class CaptionCueGenerationRequest(BaseModel):
+    """Payload to generate synchronized caption cues from active transcript segments."""
+    model_config = ConfigDict(extra="ignore")
+
+    segments: List[TranscriptSegment] = Field(..., description="Active transcript segments to convert into cues")
+    language: str = Field(default="English", description="Language name of active transcript")
+    language_code: Optional[str] = Field(default="en", description="Language code of active transcript")
+    is_transliteration: bool = Field(default=False, description="Whether active transcript is Romanized transliteration")
+    script_type: str = Field(default="Latin", description="Writing script (Latin, Telugu, Devanagari)")
+    caption_source_type: Literal["original", "translated", "transliterated"] = Field(
+        default="original", description="Source nature of active transcript"
+    )
+    settings: Optional[CaptionCueSettings] = Field(
+        default=None, description="Custom cue settings (defaults used if omitted)"
+    )
+
+
+class CaptionCueGenerationResult(BaseModel):
+    """Result of deterministic caption cue generation."""
+    model_config = ConfigDict(extra="ignore")
+
+    cues: List[CaptionCue] = Field(default_factory=list, description="Ordered caption cues")
+    cue_count: int = Field(default=0, ge=0, description="Total number of cues generated")
+    total_caption_duration: float = Field(default=0.0, ge=0.0, description="Total active duration of cues")
+    timing_granularity: Literal["word", "segment"] = Field(
+        default="segment", description="Whether cues are synchronized at word or segment level"
+    )
+    settings_used: CaptionCueSettings = Field(..., description="Settings applied during generation")
+    caption_source_type: str = Field(default="original", description="Origin of active transcript")
+    warnings: List[str] = Field(default_factory=list, description="Advisory warnings")
+    metadata: Dict[str, Any] = Field(default_factory=dict, description="Metadata and diagnostics")
+
+
+class CaptionCueGenerationResponse(BaseModel):
+    """HTTP response contract for caption cue generation endpoint."""
+    model_config = ConfigDict(extra="ignore")
+
+    result: CaptionCueGenerationResult = Field(..., description="Generated caption cues and metadata")
+    notice: Optional[str] = Field(default=None, description="Advisory message if applicable")
 
 
 class CaptionProject(BaseModel):

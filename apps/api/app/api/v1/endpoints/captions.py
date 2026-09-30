@@ -8,6 +8,8 @@ from app.schemas.captions import (
     LanguageProcessingRequest,
     LanguageProcessingResponse,
     LanguageProcessingResult,
+    CaptionCueGenerationRequest,
+    CaptionCueGenerationResponse,
 )
 from app.services.caption_service import CaptionService
 from app.services.transcription_provider import (
@@ -179,4 +181,14 @@ async def transliterate_captions(payload: LanguageProcessingRequest):
     """
     payload.processing_mode = "transliteration"
     return await caption_service.process_language(payload)
+
+
+@router.post("/captions/generate-cues", response_model=CaptionCueGenerationResponse)
+async def generate_caption_cues(payload: CaptionCueGenerationRequest):
+    """
+    Generate display-ready, synchronized caption cues from active transcript segments.
+    Uses deterministic layout, word boundary, and timing rules without LLM.
+    """
+    return caption_service.generate_cues(payload)
+
 

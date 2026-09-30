@@ -33,6 +33,11 @@ from app.schemas.captions import (
     TranscriptSegment,
     TranscriptionResult,
     CaptionCue,
+    CaptionCueWord,
+    CaptionCueSettings,
+    CaptionCueGenerationRequest,
+    CaptionCueGenerationResult,
+    CaptionCueGenerationResponse,
     CaptionProject,
     TranscriptionResponse,
 )
@@ -63,6 +68,11 @@ __all__ = [
     "TranscriptSegment",
     "TranscriptionResult",
     "CaptionCue",
+    "CaptionCueWord",
+    "CaptionCueSettings",
+    "CaptionCueGenerationRequest",
+    "CaptionCueGenerationResult",
+    "CaptionCueGenerationResponse",
     "CaptionProject",
     "TranscriptionResponse",
 ]

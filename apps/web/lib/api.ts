@@ -35,6 +35,8 @@ import type {
   LanguageProcessingRequest,
   LanguageProcessingResponse,
   LanguagePairsResponse,
+  CaptionCueGenerationRequest,
+  CaptionCueGenerationResponse,
 } from "../types/caption";
 
 export class ApiClient {
@@ -605,6 +607,38 @@ export class ApiClient {
 
     const data = await response.json();
     return data as LanguagePairsResponse;
+  }
+
+  async generateCaptionCues(
+    payload: CaptionCueGenerationRequest
+  ): Promise<CaptionCueGenerationResponse> {
+    const response = await fetch(`${this.baseUrl}/captions/generate-cues`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(payload),
+    });
+
+    if (!response.ok) {
+      let errorMessage = `Caption cue generation failed (status: ${response.status})`;
+      try {
+        const errorJson = await response.json();
+        if (errorJson.detail) {
+          if (Array.isArray(errorJson.detail)) {
+            errorMessage = errorJson.detail
+              .map((d: any) => d.msg || JSON.stringify(d))
+              .join(", ");
+          } else {
+            errorMessage = errorJson.detail;
+          }
+        }
+      } catch (_) {}
+      throw new Error(errorMessage);
+    }
+
+    const data = await response.json();
+    return data as CaptionCueGenerationResponse;
   }
 }
 

@@ -39,15 +39,72 @@ export interface TranscriptionResult {
   metadata?: Record<string, any>;
 }
 
-export interface CaptionCue {
-  id: string;
-  segment_id: string;
+export interface CaptionCueWord {
+  text: string;
   start_time: number;
   end_time: number;
+  confidence?: number | null;
+}
+
+export interface CaptionCueSettings {
+  max_characters_per_line: number;
+  max_lines: number;
+  minimum_cue_duration: number;
+  maximum_cue_duration: number;
+  preferred_words_per_cue: number;
+  gap_threshold: number;
+}
+
+export interface CaptionCue {
+  id: string;
   text: string;
-  words?: TranscriptWord[];
+  start_time: number;
+  end_time: number;
+  duration: number;
+  language: string;
+  language_code: string;
+  lines: string[];
+  source_segment_ids: string[];
+  segment_id?: string | null;
+  words?: CaptionCueWord[];
+  manually_edited: boolean;
   position?: Record<string, any> | null;
   style?: Record<string, any> | null;
+  metadata?: Record<string, any>;
+}
+
+export interface CaptionCueGenerationRequest {
+  segments: TranscriptSegment[];
+  language: string;
+  language_code?: string;
+  is_transliteration?: boolean;
+  script_type?: string;
+  caption_source_type: "original" | "translated" | "transliterated";
+  settings?: CaptionCueSettings;
+}
+
+export interface CaptionCueGenerationResult {
+  cues: CaptionCue[];
+  cue_count: number;
+  total_caption_duration: number;
+  timing_granularity: "word" | "segment";
+  settings_used: CaptionCueSettings;
+  caption_source_type: string;
+  warnings: string[];
+  metadata: Record<string, any>;
+}
+
+export interface CaptionCueGenerationResponse {
+  result: CaptionCueGenerationResult;
+  notice?: string | null;
+}
+
+export interface CaptionAppearanceSettings {
+  alignment: "left" | "center" | "right";
+  vertical_position: "top" | "center" | "bottom";
+  font_size: "small" | "medium" | "large";
+  background: "none" | "box";
+  show_safe_area: boolean;
 }
 
 export interface CaptionProject {

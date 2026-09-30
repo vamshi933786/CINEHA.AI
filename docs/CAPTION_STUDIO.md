@@ -353,7 +353,94 @@ Language processing uses an extensible provider hierarchy rooted in `BaseLanguag
 
 ---
 
-## 9. Security & Privacy
+---
+
+## 9. Caption Cue Generation & Synchronized Plain Caption Preview
+
+### 9.1. Caption Cue Domain Contract (`CaptionCue`)
+
+`CaptionCue` bridges the gap between raw speech transcripts and visual display rendering:
+
+```typescript
+interface CaptionCue {
+  id: string;                      // Stable identifier: e.g. "cue_0"
+  text: string;                    // Normalized caption phrase
+  start_time: number;              // In seconds (ge=0.0)
+  end_time: number;                // In seconds (end_time > start_time)
+  duration: number;                // Duration in seconds (round(end - start, 3))
+  language: string;                // Language name (English, Telugu, Hindi, Tanglish)
+  language_code: string;           // Language tag (en, te, hi, te-Latn)
+  lines: string[];                 // Screen layout lines (max_lines = 1..3)
+  source_segment_ids: string[];    // Parent segment lineage
+  words?: CaptionCueWord[];        // Sub-word timestamps when valid timing exists
+  manually_edited: boolean;        // True if text or timing was modified by creator
+  position?: Record<string, any>;  // Screen coordinate placement
+  style?: Record<string, any>;     // Visual styling attributes
+  metadata?: Record<string, any>;  // Word count, character count, generator stats
+}
+```
+
+### 9.2. Deterministic Cue Generation Algorithm
+
+Caption cues are derived strictly through deterministic linguistic and cadence heuristics without LLM latency or non-determinism:
+
+1. **Word-Timing Path**:
+   - Activated when valid word timestamps (`w.end_time > w.start_time`) exist on segments.
+   - Evaluates natural word groupings based on:
+     - `preferred_words_per_cue` (default 6 words)
+     - `gap_threshold` (pauses ≥ 0.5s trigger automatic cue boundaries)
+     - Punctuation cues (periods, commas, semicolons, question marks, and Indic danda `।` `॥`)
+     - Duration caps (`minimum_cue_duration = 0.8s`, `maximum_cue_duration = 4.0s`)
+     - Total character constraints (`max_characters_per_line * max_lines`)
+   - Emits micro-cues synchronized to exact spoken word boundaries.
+
+2. **Segment-Only Path**:
+   - Activated when word timestamps are unavailable (e.g. translated/transliterated text or raw segments).
+   - Generates cues directly from frame-accurate segment boundaries.
+   - **Zero Fabrication**: Word timestamps are strictly omitted (`words = []`).
+
+3. **Line Breaking Rules**:
+   - Configurable limits: `max_lines` (default 2) and `max_characters_per_line` (default 36).
+   - When 2 lines are configured, employs balanced line-length scoring to prevent single orphan words on the trailing line.
+   - Preserves multi-lingual Unicode: English, Telugu script (`\u0c00`–`\u0c7f`), Hindi Devanagari (`\u0900`–`\u097f`), and Tanglish without character corruption or split grapheme clusters.
+
+4. **Sanitization Guarantees**:
+   - Monotonic start time ordering.
+   - Clamping overlapping cues: `cue[i].end_time = cue[i+1].start_time`.
+   - Positive non-zero duration: `duration >= 0.05s`.
+
+### 9.3. Active Transcript Source & Non-Destructive Workflow
+
+The generator operates on whichever transcript is currently active in the workspace:
+- **Original Source**: English, Telugu, or Hindi verbatim transcript.
+- **Translated Source**: Translated text applied to active captions.
+- **Transliterated Source**: Phonetic Romanized script (Tanglish `te-Latn`).
+
+The UI explicitly displays the active source nature (`Caption Source: Original / Translated / Transliterated`).
+
+### 9.4. Synchronized Plain Caption Video Preview
+
+- **Accurate Video Synchronization**: Connects to the HTML5 `<video>` element's `currentTime` via `onTimeUpdate` and `onSeeked` listeners.
+- **Active Cue Detection**: At playback timestamp $T$, queries:
+  $$\text{cue.start\_time} \le T < \text{cue.end\_time}$$
+  and overlays the active cue. When $T$ lies outside all cue intervals, no caption is displayed.
+- **Plain Presentation Controls**:
+  - Text alignment: Left, Center, Right
+  - Vertical position: Top, Center, Bottom
+  - Font size: Small, Medium, Large
+  - Background: None (transparent with text shadow) vs Subtle Box (`bg-black/85`)
+- **9:16 Vertical Safe Area Guide**: An optional visual overlay marking vertical video top headers, bottom description/music tags, and right social action rails to assist creators in positioning captions.
+
+### 9.5. Manual Editing & Regeneration Safety
+
+- **Text & Timing Editing**: Creators can edit caption text (recomputing visual lines without shifting timestamps) or adjust numeric start/end timestamps with instant validation ($0 \le \text{start} < \text{end}$).
+- **Edited Tag**: Manually edited cues are flagged with `manually_edited = true`.
+- **Regeneration Guard**: If manual edits exist, clicking "Regenerate Captions" triggers an explicit confirmation dialog before overwriting edits.
+- **Seek on Click**: Selecting any cue card in the editor immediately seeks the video player to that cue's start timestamp for verification.
+
+---
+
+## 10. Security & Privacy
 
 1. **No Filesystem Path Leakage**: Internal server paths (e.g., `/tmp/...` or OS paths) are never returned in API responses or logs.
 2. **In-Memory Streaming**: Uploaded video files are processed as byte streams and discarded immediately after transcription; no unmanaged temporary files are persisted to disk.
@@ -362,10 +449,11 @@ Language processing uses an extensible provider hierarchy rooted in `BaseLanguag
 
 ---
 
-## 10. Future Pipeline Milestones
+## 11. Future Pipeline Milestones
 
-The foundation established in Tasks 5, 6, and 7 unblocks subsequent phases:
+The foundation established in Tasks 5 through 8 unblocks subsequent phases:
 - **Phase 9.1**: Caption Styling & Font Selection (Subtitles preset, colors, stroke, drop shadow).
 - **Phase 9.2**: Motion-Graphic Word Highlighting (Kinetic pop-in, karaoke-style active word highlighting).
 - **Phase 9.3**: Video Compositor & Export Engine (Burned-in MP4 video rendering, SRT, and VTT download).
+
 

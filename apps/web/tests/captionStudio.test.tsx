@@ -22,6 +22,7 @@ vi.mock("../lib/api", () => ({
     getCaptionLanguages: vi.fn(),
     getCaptionProviders: vi.fn(),
     processLanguage: vi.fn(),
+    generateCaptionCues: vi.fn(),
   },
 }));
 
@@ -577,4 +578,68 @@ describe("Caption Studio — Video Input & Transcription", () => {
     );
     expect(segTextarea.value).toContain("Stop shooting at 60fps!");
   });
+
+  it("integrates CaptionCueWorkspace in workspace and triggers caption cue generation", async () => {
+    vi.mocked(api.transcribeVideo).mockResolvedValue(mockTranscriptionResponse);
+    vi.mocked(api.generateCaptionCues).mockResolvedValue({
+      result: {
+        cues: [
+          {
+            id: "cue_0",
+            text: "Stop shooting at 60fps!",
+            start_time: 0.0,
+            end_time: 3.5,
+            duration: 3.5,
+            language: "English",
+            language_code: "en",
+            lines: ["Stop shooting at 60fps!"],
+            source_segment_ids: ["seg_0"],
+            manually_edited: false,
+          },
+        ],
+        cue_count: 1,
+        total_caption_duration: 3.5,
+        timing_granularity: "word",
+        settings_used: {
+          max_characters_per_line: 36,
+          max_lines: 2,
+          minimum_cue_duration: 0.8,
+          maximum_cue_duration: 4.0,
+          preferred_words_per_cue: 6,
+          gap_threshold: 0.5,
+        },
+        caption_source_type: "original",
+        warnings: [],
+        metadata: {},
+      },
+    });
+
+    render(<CaptionStudioWorkspace />);
+
+    const validFile = new File([new ArrayBuffer(5000)], "sample_reel.mp4", {
+      type: "video/mp4",
+    });
+    fireEvent.change(screen.getByLabelText("Upload video file"), {
+      target: { files: [validFile] },
+    });
+    fireEvent.click(screen.getByRole("button", { name: /Transcribe Video Speech/i }));
+
+    await waitFor(() => {
+      expect(
+        screen.getByText("5. Caption Cue Generation & Plain Video Preview")
+      ).toBeInTheDocument();
+    });
+
+    // Trigger generate captions inside the workspace
+    const generateBtn = screen.getByRole("button", {
+      name: /Generate synchronized captions/i,
+    });
+    fireEvent.click(generateBtn);
+
+    await waitFor(() => {
+      expect(api.generateCaptionCues).toHaveBeenCalledTimes(1);
+      expect(screen.getByText("1 Cue")).toBeInTheDocument();
+    });
+  });
 });
+

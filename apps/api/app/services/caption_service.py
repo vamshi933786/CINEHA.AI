@@ -7,6 +7,8 @@ from app.schemas.captions import (
     TranscriptionResult,
     LanguageProcessingRequest,
     LanguageProcessingResponse,
+    CaptionCueGenerationRequest,
+    CaptionCueGenerationResponse,
 )
 from app.services.video_validator import validate_video_upload
 from app.services.transcription_provider import get_transcription_provider
@@ -98,5 +100,25 @@ class CaptionService:
         return LanguageProcessingResponse(
             result=result,
             notice=result.notice,
+        )
+
+    def generate_cues(
+        self,
+        request: CaptionCueGenerationRequest,
+    ) -> CaptionCueGenerationResponse:
+        """
+        Generate display-ready, synchronized caption cues from active transcript segments.
+        Applies deterministic layout, punctuation and duration rules without LLM.
+        """
+        from app.services.caption_cue_generator import CaptionCueGeneratorService
+
+        result = CaptionCueGeneratorService.generate_cues(request)
+        notice = None
+        if result.warnings:
+            notice = "; ".join(result.warnings)
+
+        return CaptionCueGenerationResponse(
+            result=result,
+            notice=notice,
         )
 
