@@ -20,6 +20,7 @@ vi.mock("../lib/api", () => ({
   api: {
     transcribeVideo: vi.fn(),
     getCaptionLanguages: vi.fn(),
+    getCaptionProviders: vi.fn(),
   },
 }));
 
@@ -94,6 +95,26 @@ const mockTranscriptionResponse: TranscriptionResponse = {
 describe("Caption Studio — Video Input & Transcription", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.mocked(api.getCaptionProviders).mockResolvedValue({
+      default_provider: "mock",
+      is_production_configured: false,
+      providers: [
+        {
+          id: "mock",
+          name: "Development Mock",
+          is_production: false,
+          is_configured: true,
+          description: "Offline screenplay heuristics",
+        },
+        {
+          id: "production",
+          name: "OpenAI Whisper",
+          is_production: true,
+          is_configured: false,
+          description: "Production neural speech recognition",
+        },
+      ],
+    });
   });
 
   it("renders CaptionStudioPage with header, 100 MB badge, and dropzone", () => {
@@ -199,7 +220,7 @@ describe("Caption Studio — Video Input & Transcription", () => {
 
     // Await transcription results
     await waitFor(() => {
-      expect(api.transcribeVideo).toHaveBeenCalledWith(validFile, "English", undefined);
+      expect(api.transcribeVideo).toHaveBeenCalledWith(validFile, "English", undefined, "mock");
       expect(screen.getByText("Interactive Transcript Editor")).toBeInTheDocument();
       expect(screen.getByText("Development Transcription Mode")).toBeInTheDocument();
     });
@@ -279,5 +300,197 @@ describe("Caption Studio — Video Input & Transcription", () => {
         screen.getByText(/Uploaded video container header is corrupted or unreadable/i)
       ).toBeInTheDocument();
     });
+  });
+
+  it("displays provider selection and handles switching between Development Mock and OpenAI Whisper", async () => {
+    render(<CaptionStudioWorkspace />);
+
+    // Verify both providers rendered
+    expect(screen.getByText("Development Mock")).toBeInTheDocument();
+    expect(screen.getByText("OpenAI Whisper")).toBeInTheDocument();
+
+    // Click OpenAI Whisper
+    const whisperBtn = screen.getByRole("button", { name: /OpenAI Whisper/i });
+    fireEvent.click(whisperBtn);
+
+    // Should display missing config alert since is_production_configured is false
+    expect(
+      screen.getByText(
+        /Production transcription is not configured. Configure the transcription provider credentials or switch to Development Mode./i
+      )
+    ).toBeInTheDocument();
+
+    // Switch back to Development Mock
+    const mockBtn = screen.getByRole("button", { name: /Development Mock/i });
+    fireEvent.click(mockBtn);
+
+    // Advisory warning should be gone
+    expect(
+      screen.queryByText(
+        /Production transcription is not configured. Configure the transcription provider credentials or switch to Development Mode./i
+      )
+    ).not.toBeInTheDocument();
+  });
+
+  it("prevents transcription and displays alert when unconfigured production provider is selected", async () => {
+    render(<CaptionStudioWorkspace />);
+
+    const validFile = new File([new ArrayBuffer(5000)], "sample_reel.mp4", {
+      type: "video/mp4",
+    });
+    fireEvent.change(screen.getByLabelText("Upload video file"), {
+      target: { files: [validFile] },
+    });
+
+    // Select OpenAI Whisper
+    const whisperBtn = screen.getByRole("button", { name: /OpenAI Whisper/i });
+    fireEvent.click(whisperBtn);
+
+    // Click Transcribe
+    const transcribeBtn = screen.getByRole("button", { name: /Transcribe Video Speech/i });
+    fireEvent.click(transcribeBtn);
+
+    // Error banner should be displayed and api.transcribeVideo should NOT be called
+    expect(
+      screen.getAllByText(
+        /Production transcription is not configured. Configure the transcription provider credentials or switch to Development Mode./i
+      ).length
+    ).toBeGreaterThan(0);
+    expect(api.transcribeVideo).not.toHaveBeenCalled();
+  });
+
+  it("successfully transcribes with production Whisper provider and displays production status banner", async () => {
+    vi.mocked(api.getCaptionProviders).mockResolvedValue({
+      default_provider: "production",
+      is_production_configured: true,
+      providers: [
+        {
+          id: "mock",
+          name: "Development Mock",
+          is_production: false,
+          is_configured: true,
+          description: "Offline screenplay heuristics",
+        },
+        {
+          id: "production",
+          name: "OpenAI Whisper",
+          is_production: true,
+          is_configured: true,
+          description: "Production neural speech recognition",
+        },
+      ],
+    });
+
+    const productionResponse: TranscriptionResponse = {
+      project_id: "proj_prod_123",
+      caption_source: {
+        source_type: "video_upload",
+        filename: "prod_video.mp4",
+        file_size_bytes: 20000,
+        mime_type: "video/mp4",
+        duration_seconds: 12.0,
+      },
+      transcription: {
+        language: "English",
+        language_code: "en",
+        is_transliteration: false,
+        script_type: "Latin",
+        full_text: "Welcome to CINEHA AI production speech recognition.",
+        segments: [
+          {
+            id: "seg_0",
+            text: "Welcome to CINEHA AI production speech recognition.",
+            start_time: 0.0,
+            end_time: 3.5,
+            words: [
+              { text: "Welcome", start_time: 0.0, end_time: 0.5 },
+              { text: "to", start_time: 0.5, end_time: 0.7 },
+              { text: "CINEHA", start_time: 0.7, end_time: 1.2 },
+            ],
+            confidence: 0.97,
+          },
+        ],
+        duration_seconds: 3.5,
+        provider_name: "openai_whisper_api",
+        is_production_provider: true,
+        confidence: 0.97,
+        metadata: {
+          model: "whisper-1",
+          word_timings_available: true,
+        },
+      },
+      notice: null,
+    };
+
+    vi.mocked(api.transcribeVideo).mockResolvedValue(productionResponse);
+
+    render(<CaptionStudioWorkspace />);
+
+    // Wait for providers to load and confirm configured state
+    expect(await screen.findByText("Production Key Configured")).toBeInTheDocument();
+
+    const validFile = new File([new ArrayBuffer(5000)], "prod_video.mp4", {
+      type: "video/mp4",
+    });
+    fireEvent.change(screen.getByLabelText("Upload video file"), {
+      target: { files: [validFile] },
+    });
+
+    // Select OpenAI Whisper
+    const whisperBtn = screen.getByRole("button", { name: /OpenAI Whisper/i });
+    fireEvent.click(whisperBtn);
+
+    const transcribeBtn = screen.getByRole("button", { name: /Transcribe Video Speech/i });
+    fireEvent.click(transcribeBtn);
+
+    await waitFor(() => {
+      expect(api.transcribeVideo).toHaveBeenCalledWith(validFile, "English", undefined, "production");
+      expect(screen.getByText("Production Speech-to-Text Active")).toBeInTheDocument();
+      expect(screen.getByText("openai_whisper_api")).toBeInTheDocument();
+      // Development warning must NOT be shown
+      expect(screen.queryByText("Development Transcription Mode")).not.toBeInTheDocument();
+    });
+  });
+
+  it("displays 'Word timings available' badge when word timings are present in TranscriptEditor", () => {
+    const mockUpdate = vi.fn();
+    render(
+      <TranscriptEditor
+        transcription={mockTranscriptionResponse.transcription}
+        onUpdateTranscription={mockUpdate}
+      />
+    );
+
+    expect(screen.getByText("Word timings available")).toBeInTheDocument();
+    expect(screen.queryByText("Segment timings only")).not.toBeInTheDocument();
+  });
+
+  it("displays 'Segment timings only' badge when word timings are absent in TranscriptEditor", () => {
+    const mockUpdate = vi.fn();
+    const segmentOnlyTranscription: TranscriptionResult = {
+      ...mockTranscriptionResponse.transcription,
+      segments: [
+        {
+          id: "seg_0",
+          text: "Audio transcribed with segment timestamps only.",
+          start_time: 0.0,
+          end_time: 4.0,
+          words: [],
+        },
+      ],
+      metadata: {
+        word_timings_available: false,
+      },
+    };
+
+    render(
+      <TranscriptEditor
+        transcription={segmentOnlyTranscription}
+        onUpdateTranscription={mockUpdate}
+      />
+    );
+
+    expect(screen.getByText("Segment timings only")).toBeInTheDocument();
+    expect(screen.queryByText("Word timings available")).not.toBeInTheDocument();
   });
 });

@@ -28,9 +28,11 @@ class CaptionService:
         mime_type: Optional[str] = None,
         language: str = "English",
         duration_seconds: Optional[float] = None,
+        provider_type: Optional[str] = None,
     ) -> TranscriptionResponse:
         """
         Validate video file and transcribe audio into timed segments.
+        Supports explicit provider selection ('mock' or 'production' / 'whisper').
         """
         # 1. Validate video container, extension, and file size (<= 100 MB)
         validation = validate_video_upload(
@@ -39,15 +41,20 @@ class CaptionService:
             declared_mime_type=mime_type,
         )
 
-        # 2. Transcribe via active provider
-        transcription: TranscriptionResult = await self.provider.transcribe(
+        # 2. Select requested provider (or default)
+        active_provider = self.provider
+        if provider_type:
+            active_provider = get_transcription_provider(provider_type)
+
+        # 3. Transcribe via active provider
+        transcription: TranscriptionResult = await active_provider.transcribe(
             video_bytes=video_bytes,
             filename=validation.filename,
             language=language,
             duration_seconds=duration_seconds,
         )
 
-        # 3. Create CaptionSource metadata (never exposing server internal file paths)
+        # 4. Create CaptionSource metadata (never exposing server internal file paths)
         caption_source = CaptionSource(
             source_type="video_upload",
             filename=validation.filename,
@@ -59,6 +66,7 @@ class CaptionService:
 
         project_id = f"proj_{uuid.uuid4().hex[:12]}"
 
+        # Truthful notice behavior: only present in development/mock mode
         notice = None
         if not transcription.is_production_provider:
             notice = (

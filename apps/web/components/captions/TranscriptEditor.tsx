@@ -83,6 +83,11 @@ export function TranscriptEditor({
     ? transcription.full_text.trim().split(/\s+/).length
     : 0;
 
+  const hasWordTimings = Boolean(
+    transcription.metadata?.word_timings_available ??
+      transcription.segments.some((seg) => seg.words && seg.words.length > 0)
+  );
+
   return (
     <div className="rounded-2xl border border-[#232738] bg-[#12131a] shadow-xl overflow-hidden">
       {/* Editor Header */}
@@ -92,13 +97,22 @@ export function TranscriptEditor({
             <Edit3 className="w-4 h-4" />
           </div>
           <div>
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               <h3 className="text-sm font-semibold text-slate-100">
                 Interactive Transcript Editor
               </h3>
               <span className="px-2 py-0.5 rounded text-[10px] font-mono font-medium bg-cyan-500/10 border border-cyan-500/30 text-cyan-300">
                 {transcription.segments.length} Timed Cues
               </span>
+              {hasWordTimings ? (
+                <span className="px-2 py-0.5 rounded text-[10px] font-mono font-medium bg-emerald-500/10 border border-emerald-500/30 text-emerald-300">
+                  Word timings available
+                </span>
+              ) : (
+                <span className="px-2 py-0.5 rounded text-[10px] font-mono font-medium bg-amber-500/10 border border-amber-500/30 text-amber-300">
+                  Segment timings only
+                </span>
+              )}
             </div>
             <p className="text-xs text-slate-400">
               Timestamps remain immutable while you correct names, jargon, or phrasing.
@@ -287,6 +301,13 @@ export function TranscriptEditor({
             Language:{" "}
             <strong className="text-cyan-300 font-medium">
               {transcription.language}
+            </strong>
+          </span>
+          <span>•</span>
+          <span>
+            Timings:{" "}
+            <strong className="text-slate-200 font-mono">
+              {hasWordTimings ? "Word + Segment" : "Segment Only"}
             </strong>
           </span>
         </div>

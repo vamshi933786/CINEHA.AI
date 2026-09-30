@@ -24,6 +24,28 @@ class Settings(BaseSettings):
     GEMINI_API_KEY: str = ""
     OPENAI_API_KEY: str = ""
 
+    # Caption Studio & Speech Transcription Providers
+    TRANSCRIPTION_PROVIDER: str = Field(
+        default="mock",
+        description="Transcription provider: 'mock' or 'whisper' / 'production'",
+    )
+    WHISPER_API_KEY: str = Field(
+        default="",
+        description="Dedicated API key for Whisper speech-to-text (falls back to OPENAI_API_KEY if unset)",
+    )
+    WHISPER_MODEL: str = Field(
+        default="whisper-1",
+        description="Speech recognition model identifier",
+    )
+    WHISPER_API_URL: str = Field(
+        default="https://api.openai.com/v1/audio/transcriptions",
+        description="HTTP endpoint for speech transcription API",
+    )
+    FFMPEG_PATH: str = Field(
+        default="",
+        description="Optional custom path to ffmpeg binary (auto-detected if unset)",
+    )
+
     @property
     def cors_origins(self) -> List[str]:
         if not self.ALLOWED_ORIGINS:

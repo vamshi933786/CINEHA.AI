@@ -1,12 +1,16 @@
 import logging
 from typing import Optional, Dict, Any, List
 from fastapi import APIRouter, UploadFile, File, Form, HTTPException, status
+from app.core.config import settings
 from app.schemas.captions import (
     TranscriptionResponse,
     TranscriptionResult,
 )
 from app.services.caption_service import CaptionService
-from app.services.transcription_provider import LANGUAGE_CONFIGS
+from app.services.transcription_provider import (
+    LANGUAGE_CONFIGS,
+    is_production_transcription_configured,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -32,15 +36,46 @@ async def get_supported_caption_languages():
     return {"languages": languages_list}
 
 
+@router.get("/captions/providers", response_model=Dict[str, Any])
+async def get_caption_providers():
+    """
+    Return available transcription providers and their configuration status.
+    Exposes whether production credentials (Whisper/OpenAI) are configured.
+    """
+    is_configured = is_production_transcription_configured()
+    return {
+        "default_provider": settings.TRANSCRIPTION_PROVIDER,
+        "is_production_configured": is_configured,
+        "providers": [
+            {
+                "id": "mock",
+                "name": "Development Mock",
+                "is_production": False,
+                "is_configured": True,
+                "description": "Deterministic simulated screenplay cues for offline testing without cloud credentials",
+            },
+            {
+                "id": "production",
+                "name": "OpenAI Whisper",
+                "is_production": True,
+                "is_configured": is_configured,
+                "description": "Production neural speech-to-text with word-level timestamps and multi-lingual audio extraction",
+            },
+        ],
+    }
+
+
 @router.post("/captions/transcribe", response_model=TranscriptionResponse)
 async def transcribe_video(
     file: UploadFile = File(..., description="Video file (MP4, MOV, WebM up to 100MB)"),
     language: str = Form("English", description="Source spoken language (English, Telugu, Hindi, Tanglish)"),
     duration_seconds: Optional[float] = Form(None, description="Optional hinted duration in seconds"),
+    provider: Optional[str] = Form(None, description="Optional provider override: 'mock' or 'production' / 'whisper'"),
 ):
     """
     Ingest and transcribe an uploaded video file.
     Validates container header, format, and 100MB size limit.
+    Extracts audio stream and invokes selected provider (development mock or production Whisper).
     Returns normalized timed segments, word timings, and truthful provider status.
     """
     if not file or not file.filename:
@@ -64,4 +99,5 @@ async def transcribe_video(
         mime_type=file.content_type,
         language=language,
         duration_seconds=duration_seconds,
+        provider_type=provider,
     )

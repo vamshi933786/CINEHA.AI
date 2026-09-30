@@ -31,6 +31,7 @@ import type {
 import type {
   TranscriptionResponse,
   SupportedLanguageInfo,
+  CaptionProvidersResponse,
 } from "../types/caption";
 
 export class ApiClient {
@@ -484,13 +485,17 @@ export class ApiClient {
   async transcribeVideo(
     file: File,
     language: string = "English",
-    durationSeconds?: number
+    durationSeconds?: number,
+    provider?: string
   ): Promise<TranscriptionResponse> {
     const formData = new FormData();
     formData.append("file", file);
     formData.append("language", language);
     if (durationSeconds !== undefined && durationSeconds !== null) {
       formData.append("duration_seconds", String(durationSeconds));
+    }
+    if (provider) {
+      formData.append("provider", provider);
     }
 
     const response = await fetch(`${this.baseUrl}/captions/transcribe`, {
@@ -533,6 +538,22 @@ export class ApiClient {
 
     const data = await response.json();
     return data;
+  }
+
+  async getCaptionProviders(): Promise<CaptionProvidersResponse> {
+    const response = await fetch(`${this.baseUrl}/captions/providers`, {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error(`Failed to fetch caption providers (status: ${response.status})`);
+    }
+
+    const data = await response.json();
+    return data as CaptionProvidersResponse;
   }
 }
 

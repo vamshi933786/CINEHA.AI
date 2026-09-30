@@ -158,9 +158,82 @@ class BaseTranscriptionProvider(ABC):
    - Strictly sets `is_production_provider = False` and `provider_name = "heuristic_dev_transcription"`.
    - Populates an explicit user-facing notice:
      `"Development Transcription Mode — production speech-to-text provider is not configured. Transcription is simulated based on cinematic screenplay heuristics."`
-2. **`ProductionTranscriptionProviderStub`**:
-   - Adapter boundary for production cloud speech engines (e.g. OpenAI Whisper API, Google Cloud Speech-to-Text v2, Deepgram).
-   - Inspects environment credentials. If credentials are missing, falls back to `MockDevelopmentTranscriptionProvider` without crashing or falsely claiming production status.
+2. **`OpenAIWhisperTranscriptionProvider`**:
+   - Production neural speech-to-text provider adapter utilizing the OpenAI Whisper API (`v1/audio/transcriptions`).
+   - Extracts 16 kHz speech-optimized audio from video containers via `ffmpeg`.
+   - Requests granular word-level and segment-level timestamps via `timestamp_granularities[]=["word", "segment"]`.
+   - Normalizes raw Whisper responses into canonical `TranscriptionResult`, `TranscriptSegment`, and `TranscriptWord` models.
+   - Truthful metadata: populates `is_production_provider = True`, `provider_name = "openai_whisper_api"`, and `word_timings_available`.
+   - Never fabricates synthetic word timestamps if the provider only returns segment timings.
+   - Explicitly rejects unconfigured requests with a 400 error when credentials are missing, preventing deceptive mock substitution.
+3. **`ProductionTranscriptionProviderStub`**:
+   - Backward-compatible stub preserved for fallback scenarios.
+
+---
+
+## 5.1. Audio Extraction Pipeline (FFmpeg)
+
+Because the Whisper STT API accepts lightweight audio files (under 25 MB) rather than multi-gigabyte video containers, the backend extracts the audio track before transmission:
+
+```
+[ Uploaded Video Bytes ] ──> [ Temp Video File (.mp4/.mov/.webm) ]
+                                            │
+                                            ▼
+                           [ FFmpeg 16kHz MP3 Extraction ]
+                           ffmpeg -i input.mp4 -vn -acodec libmp3lame -ar 16000 -ac 1 output.mp3
+                                            │
+                                            ▼
+                           [ Extracted Audio Bytes Read ]
+                                            │
+                                            ▼
+                           [ Guaranteed Cleanup in finally: rm input & output ]
+```
+
+### Extraction Reliability Guarantees:
+- **Zero Disk Leakage**: Input and output files are created in isolated temporary locations and strictly removed in `finally` blocks, even under timeouts or unhandled exceptions.
+- **Audio Stream Detection**: Video files lacking an audio track are identified via error analysis and rejected with an explicit `HTTP 400: "Video has no audio track to transcribe"`.
+- **FFmpeg Discovery**: Automatically discovers `ffmpeg` in system paths, user Anaconda environments (`/opt/anaconda3/bin/ffmpeg`), or custom paths specified by `FFMPEG_PATH`.
+
+---
+
+## 5.2. Configuration & Environment Variables
+
+| Variable | Default | Description |
+|---|---|---|
+| `TRANSCRIPTION_PROVIDER` | `mock` | Default engine: `mock` (development heuristics) or `whisper` / `production` |
+| `WHISPER_API_KEY` | None | OpenAI API key for Whisper transcription (falls back to `OPENAI_API_KEY`) |
+| `WHISPER_MODEL` | `whisper-1` | Target Whisper model ID |
+| `WHISPER_API_URL` | `https://api.openai.com/v1/audio/transcriptions` | Whisper API endpoint URL |
+| `FFMPEG_PATH` | None | Optional absolute path to system `ffmpeg` binary |
+
+---
+
+## 5.3. Provider Inspection Endpoint
+
+`GET /api/v1/captions/providers` exposes active configuration and provider capabilities:
+
+```json
+{
+  "default_provider": "mock",
+  "is_production_configured": false,
+  "providers": [
+    {
+      "id": "mock",
+      "name": "Development Mock",
+      "is_production": false,
+      "is_configured": true,
+      "description": "Deterministic simulated screenplay cues for offline testing without cloud credentials"
+    },
+    {
+      "id": "production",
+      "name": "OpenAI Whisper",
+      "is_production": true,
+      "is_configured": false,
+      "description": "Production neural speech-to-text with word-level timestamps and multi-lingual audio extraction"
+    }
+  ]
+}
+```
 
 ---
 

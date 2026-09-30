@@ -79,6 +79,20 @@ export interface SupportedLanguageInfo {
   description: string;
 }
 
+export interface TranscriptionProviderInfo {
+  id: string;
+  name: string;
+  is_production: boolean;
+  is_configured: boolean;
+  description: string;
+}
+
+export interface CaptionProvidersResponse {
+  default_provider: string;
+  is_production_configured: boolean;
+  providers: TranscriptionProviderInfo[];
+}
+
 export const SUPPORTED_CAPTION_LANGUAGES: SupportedLanguageInfo[] = [
   {
     name: "English",

@@ -12,6 +12,7 @@ import {
   RefreshCw,
   FileCheck,
   ShieldAlert,
+  Cpu,
 } from "lucide-react";
 import { VideoDropzone, VideoMetadata } from "./VideoDropzone";
 import { TranscriptEditor } from "./TranscriptEditor";
@@ -21,6 +22,7 @@ import {
   TranscriptionResult,
   SUPPORTED_CAPTION_LANGUAGES,
   SupportedLanguageInfo,
+  TranscriptionProviderInfo,
 } from "@/types/caption";
 
 export function CaptionStudioWorkspace() {
@@ -28,12 +30,40 @@ export function CaptionStudioWorkspace() {
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [metadata, setMetadata] = useState<VideoMetadata | null>(null);
   const [selectedLanguage, setSelectedLanguage] = useState<string>("English");
+  const [selectedProvider, setSelectedProvider] = useState<string>("mock");
+  const [isProductionConfigured, setIsProductionConfigured] = useState<boolean>(false);
+  const [providers, setProviders] = useState<TranscriptionProviderInfo[]>([]);
   const [isTranscribing, setIsTranscribing] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const [transcriptionResponse, setTranscriptionResponse] =
     useState<TranscriptionResponse | null>(null);
   const [activeTranscription, setActiveTranscription] =
     useState<TranscriptionResult | null>(null);
+
+  useEffect(() => {
+    let isMounted = true;
+    async function loadProviders() {
+      try {
+        const data = await api.getCaptionProviders();
+        if (isMounted && data) {
+          setIsProductionConfigured(Boolean(data.is_production_configured));
+          if (data.providers) {
+            setProviders(data.providers);
+          }
+          if (data.default_provider) {
+            setSelectedProvider(data.default_provider);
+          }
+        }
+      } catch (e) {
+        // Fallback gracefully in test/offline environments
+        console.warn("Could not load caption providers:", e);
+      }
+    }
+    loadProviders();
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   const handleVideoSelected = (file: File | null, meta: VideoMetadata | null) => {
     setSelectedFile(file);
@@ -56,6 +86,13 @@ export function CaptionStudioWorkspace() {
       return;
     }
 
+    if (selectedProvider === "production" && !isProductionConfigured) {
+      setError(
+        "Production transcription is not configured. Configure the transcription provider credentials or switch to Development Mode."
+      );
+      return;
+    }
+
     setIsTranscribing(true);
     setError(null);
 
@@ -64,7 +101,8 @@ export function CaptionStudioWorkspace() {
       const response = await api.transcribeVideo(
         selectedFile,
         selectedLanguage,
-        durationSeconds
+        durationSeconds,
+        selectedProvider
       );
       setTranscriptionResponse(response);
       setActiveTranscription(response.transcription);
@@ -215,6 +253,108 @@ export function CaptionStudioWorkspace() {
           </div>
         </div>
 
+        {/* Provider Selection Row */}
+        <div className="pt-2 border-t border-[#21253a] space-y-3">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+            <div>
+              <label className="text-xs font-semibold text-slate-200 flex items-center gap-1.5">
+                <Cpu className="w-3.5 h-3.5 text-cyan-400" />
+                <span>3. Speech-to-Text Provider Engine</span>
+              </label>
+              <p className="text-[11px] text-slate-400 mt-0.5">
+                Choose between local development simulation and production Whisper STT.
+              </p>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <span
+                className={`px-2 py-0.5 rounded text-[10px] font-mono font-medium ${
+                  isProductionConfigured
+                    ? "bg-emerald-500/10 border border-emerald-500/30 text-emerald-300"
+                    : "bg-slate-800 border border-slate-700 text-slate-400"
+                }`}
+              >
+                {isProductionConfigured
+                  ? "Production Key Configured"
+                  : "Production Key Missing"}
+              </span>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            {/* Development Mock */}
+            <button
+              type="button"
+              onClick={() => setSelectedProvider("mock")}
+              disabled={isTranscribing}
+              className={`p-3.5 rounded-xl border text-left transition flex flex-col justify-between ${
+                selectedProvider === "mock"
+                  ? "border-cyan-500/50 bg-cyan-950/20 text-cyan-200 shadow-sm"
+                  : "border-[#25293d] bg-[#161826] text-slate-300 hover:border-slate-600 hover:bg-[#1b1e30]"
+              } ${isTranscribing ? "opacity-60 cursor-not-allowed" : ""}`}
+            >
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-semibold">Development Mock</span>
+                  <span className="px-1.5 py-0.5 rounded text-[9px] font-mono bg-cyan-500/10 text-cyan-300">
+                    Offline
+                  </span>
+                </div>
+                <span className="text-[10px] font-mono text-emerald-400 font-medium">Ready</span>
+              </div>
+              <p className="text-[11px] text-slate-400 mt-1.5">
+                Instant simulated screenplay cues with mock word timings for rapid local testing without API keys.
+              </p>
+            </button>
+
+            {/* Production Whisper */}
+            <button
+              type="button"
+              onClick={() => setSelectedProvider("production")}
+              disabled={isTranscribing}
+              className={`p-3.5 rounded-xl border text-left transition flex flex-col justify-between ${
+                selectedProvider === "production"
+                  ? "border-cyan-500/50 bg-cyan-950/20 text-cyan-200 shadow-sm"
+                  : "border-[#25293d] bg-[#161826] text-slate-300 hover:border-slate-600 hover:bg-[#1b1e30]"
+              } ${isTranscribing ? "opacity-60 cursor-not-allowed" : ""}`}
+            >
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-semibold">OpenAI Whisper</span>
+                  <span className="px-1.5 py-0.5 rounded text-[9px] font-mono bg-violet-500/10 text-violet-300">
+                    Production
+                  </span>
+                </div>
+                <span
+                  className={`text-[10px] font-mono font-medium ${
+                    isProductionConfigured ? "text-emerald-400" : "text-amber-400"
+                  }`}
+                >
+                  {isProductionConfigured ? "Ready" : "Unconfigured"}
+                </span>
+              </div>
+              <p className="text-[11px] text-slate-400 mt-1.5">
+                Real neural STT via OpenAI Whisper API with word-level timestamps and multi-lingual audio extraction.
+              </p>
+            </button>
+          </div>
+
+          {/* Missing production credentials advisory warning */}
+          {selectedProvider === "production" && !isProductionConfigured && (
+            <div className="p-3 rounded-xl border border-amber-500/30 bg-amber-950/20 text-amber-300 text-xs flex items-start gap-2.5">
+              <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
+              <div>
+                <p className="font-semibold text-amber-200">
+                  Production transcription is not configured. Configure the transcription provider credentials or switch to Development Mode.
+                </p>
+                <p className="text-[11px] text-amber-300/80 mt-0.5">
+                  Set <code className="bg-[#12141e] px-1 py-0.5 rounded text-amber-200 font-mono">WHISPER_API_KEY</code> or <code className="bg-[#12141e] px-1 py-0.5 rounded text-amber-200 font-mono">OPENAI_API_KEY</code> in <code className="font-mono">apps/api/.env</code> to enable live Whisper audio transcription.
+                </p>
+              </div>
+            </div>
+          )}
+        </div>
+
         {/* Transcribe Trigger Action */}
         <div className="pt-2 flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="text-xs text-slate-400 flex items-center gap-1.5">
@@ -235,7 +375,11 @@ export function CaptionStudioWorkspace() {
             {isTranscribing ? (
               <>
                 <Loader2 className="w-4 h-4 animate-spin" />
-                <span>Extracting Audio & Transcribing...</span>
+                <span>
+                  {selectedProvider === "production"
+                    ? "Extracting Audio & Transcribing via Whisper..."
+                    : "Extracting Audio & Transcribing..."}
+                </span>
               </>
             ) : (
               <>
@@ -247,36 +391,108 @@ export function CaptionStudioWorkspace() {
         </div>
       </div>
 
-      {/* Development / Mock Provider Warning Notice */}
-      {transcriptionResponse && (
-        <div className="p-4 rounded-2xl border border-amber-500/40 bg-amber-950/20 text-amber-300 text-xs shadow-lg space-y-2">
-          <div className="flex items-start gap-2.5">
-            <ShieldAlert className="w-5 h-5 text-amber-400 shrink-0 mt-0.5" />
-            <div>
-              <h3 className="font-semibold text-amber-200">
-                Development Transcription Mode
-              </h3>
-              <p className="text-amber-300/90 mt-0.5 leading-relaxed">
-                Production speech-to-text provider is not configured. Audio transcription is simulated based on cinematic screenplay heuristics for {transcriptionResponse.transcription.language}. Micro word-level timestamps and timing bounds are generated for timeline testing.
-              </p>
+      {/* Transcription Provider Status Banner */}
+      {transcriptionResponse &&
+        (transcriptionResponse.notice ? (
+          /* Development / Mock Provider Warning Notice */
+          <div className="p-4 rounded-2xl border border-amber-500/40 bg-amber-950/20 text-amber-300 text-xs shadow-lg space-y-2">
+            <div className="flex items-start gap-2.5">
+              <ShieldAlert className="w-5 h-5 text-amber-400 shrink-0 mt-0.5" />
+              <div>
+                <h3 className="font-semibold text-amber-200">
+                  Development Transcription Mode
+                </h3>
+                <p className="text-amber-300/90 mt-0.5 leading-relaxed">
+                  {transcriptionResponse.notice}
+                </p>
+              </div>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-3 pt-2 text-[11px] border-t border-amber-500/20 text-amber-400/90">
+              <span>
+                Provider:{" "}
+                <strong className="font-mono text-amber-200">
+                  {transcriptionResponse.transcription.provider_name}
+                </strong>
+              </span>
+              <span>•</span>
+              <span>
+                Container:{" "}
+                <strong className="font-mono text-amber-200">
+                  {transcriptionResponse.caption_source.mime_type}
+                </strong>
+              </span>
+              <span>•</span>
+              <span>
+                Confidence:{" "}
+                <strong className="font-mono text-amber-200">
+                  {Math.round(
+                    (transcriptionResponse.transcription.confidence || 0.9) * 100
+                  )}
+                  %
+                </strong>
+              </span>
             </div>
           </div>
+        ) : (
+          /* Production Provider Success Notice */
+          <div className="p-4 rounded-2xl border border-emerald-500/40 bg-emerald-950/20 text-emerald-300 text-xs shadow-lg space-y-2">
+            <div className="flex items-start gap-2.5">
+              <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0 mt-0.5" />
+              <div>
+                <h3 className="font-semibold text-emerald-200">
+                  Production Speech-to-Text Active
+                </h3>
+                <p className="text-emerald-300/90 mt-0.5 leading-relaxed">
+                  Audio successfully extracted from video container and transcribed via{" "}
+                  {transcriptionResponse.transcription.provider_name}. Timed segments and
+                  word-level cues are ready for downstream caption styling.
+                </p>
+              </div>
+            </div>
 
-          <div className="flex flex-wrap items-center gap-3 pt-2 text-[11px] border-t border-amber-500/20 text-amber-400/90">
-            <span>
-              Provider: <strong className="font-mono text-amber-200">{transcriptionResponse.transcription.provider_name}</strong>
-            </span>
-            <span>•</span>
-            <span>
-              Container: <strong className="font-mono text-amber-200">{transcriptionResponse.caption_source.mime_type}</strong>
-            </span>
-            <span>•</span>
-            <span>
-              Confidence: <strong className="font-mono text-amber-200">{Math.round((transcriptionResponse.transcription.confidence || 0.9) * 100)}%</strong>
-            </span>
+            <div className="flex flex-wrap items-center gap-3 pt-2 text-[11px] border-t border-emerald-500/20 text-emerald-400/90">
+              <span>
+                Provider:{" "}
+                <strong className="font-mono text-emerald-200">
+                  {transcriptionResponse.transcription.provider_name}
+                </strong>
+              </span>
+              <span>•</span>
+              <span>
+                Container:{" "}
+                <strong className="font-mono text-emerald-200">
+                  {transcriptionResponse.caption_source.mime_type}
+                </strong>
+              </span>
+              <span>•</span>
+              <span>
+                Duration:{" "}
+                <strong className="font-mono text-emerald-200">
+                  {transcriptionResponse.caption_source.duration_seconds
+                    ? `${transcriptionResponse.caption_source.duration_seconds.toFixed(
+                        1
+                      )}s`
+                    : "Auto"}
+                </strong>
+              </span>
+              {transcriptionResponse.transcription.confidence && (
+                <>
+                  <span>•</span>
+                  <span>
+                    Confidence:{" "}
+                    <strong className="font-mono text-emerald-200">
+                      {Math.round(
+                        transcriptionResponse.transcription.confidence * 100
+                      )}
+                      %
+                    </strong>
+                  </span>
+                </>
+              )}
+            </div>
           </div>
-        </div>
-      )}
+        ))}
 
       {/* Editable Transcript Section */}
       {activeTranscription && (
@@ -284,7 +500,7 @@ export function CaptionStudioWorkspace() {
           <div>
             <h2 className="text-sm font-semibold text-slate-200 flex items-center gap-2">
               <FileCheck className="w-4 h-4 text-cyan-400" />
-              <span>3. Timed Speech Cues & Transcript</span>
+              <span>4. Timed Speech Cues & Transcript</span>
             </h2>
             <p className="text-xs text-slate-400 mt-0.5">
               Review extracted segments. Edit any misheard words directly before passing into the downstream caption styler.
