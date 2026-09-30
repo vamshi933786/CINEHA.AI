@@ -20,6 +20,7 @@ import {
 
 interface OptimizationGoalSelectorProps {
   selectedGoals: OptimizationGoalKey[];
+  recommendedGoals?: OptimizationGoalKey[];
   onToggleGoal: (goal: OptimizationGoalKey) => void;
   onSelectAll: () => void;
   onClearAll: () => void;
@@ -39,6 +40,7 @@ const ICON_MAP: Record<string, React.ElementType> = {
 
 export const OptimizationGoalSelector: React.FC<OptimizationGoalSelectorProps> = ({
   selectedGoals,
+  recommendedGoals = [],
   onToggleGoal,
   onSelectAll,
   onClearAll,
@@ -92,6 +94,7 @@ export const OptimizationGoalSelector: React.FC<OptimizationGoalSelectorProps> =
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 pt-4">
         {SUPPORTED_OPTIMIZATION_GOALS.map((goal) => {
           const isSelected = selectedGoals.includes(goal.key);
+          const isRecommended = recommendedGoals.includes(goal.key);
           const Icon = ICON_MAP[goal.iconName] || Sparkles;
 
           return (
@@ -103,6 +106,8 @@ export const OptimizationGoalSelector: React.FC<OptimizationGoalSelectorProps> =
               className={`text-left p-3.5 rounded-xl border transition-all relative overflow-hidden group flex flex-col justify-between ${
                 isSelected
                   ? "bg-gradient-to-br from-[#1a1f33] to-[#141724] border-cyan-500/50 shadow-lg shadow-cyan-950/30"
+                  : isRecommended
+                  ? "bg-[#181a27] border-amber-500/30 hover:border-amber-400/50"
                   : "bg-[#161823] border-[#242838] hover:border-[#383f58] hover:bg-[#1a1d2d]"
               } ${disabled ? "opacity-50 pointer-events-none" : ""}`}
             >
@@ -111,7 +116,7 @@ export const OptimizationGoalSelector: React.FC<OptimizationGoalSelectorProps> =
               )}
 
               <div className="flex items-start justify-between gap-2 mb-2">
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 flex-wrap">
                   <div
                     className={`w-7 h-7 rounded-lg flex items-center justify-center transition-colors ${
                       isSelected
@@ -128,6 +133,11 @@ export const OptimizationGoalSelector: React.FC<OptimizationGoalSelectorProps> =
                   >
                     {goal.label}
                   </span>
+                  {isRecommended && (
+                    <span className="text-[10px] font-bold text-amber-300 bg-amber-500/15 px-1.5 py-0.2 rounded border border-amber-500/30">
+                      Recommended
+                    </span>
+                  )}
                 </div>
 
                 <div className="shrink-0">

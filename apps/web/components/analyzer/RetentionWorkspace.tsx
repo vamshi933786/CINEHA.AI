@@ -2,12 +2,15 @@
 
 import React, { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   Activity,
   AlertCircle,
   RefreshCw,
   ArrowLeft,
+  ArrowRight,
   Sparkles,
+  ListFilter,
 } from "lucide-react";
 import { RetentionScoreGauge } from "./RetentionScoreGauge";
 import { CategoryScoresGrid } from "./CategoryScoresGrid";
@@ -18,7 +21,11 @@ import { UnifiedScriptInput } from "../scripts/UnifiedScriptInput";
 import { api } from "../../lib/api";
 import type { ScriptAnalysisResponse, ScriptAnalysisRequest } from "@/types/analyzer";
 import type { NormalizedScriptInput } from "@/types/scriptInput";
-import { ListFilter } from "lucide-react";
+import {
+  type OptimizerHandoffPayload,
+  saveOptimizerHandoff,
+  deriveRecommendedOptimizationGoals,
+} from "../../types/optimizer";
 
 export const SAMPLE_PRESETS: Record<"viral" | "filler" | "cinematic", ScriptAnalysisRequest> = {
   viral: {
@@ -171,12 +178,28 @@ interface RetentionWorkspaceProps {
 }
 
 export function RetentionWorkspace({ initialScriptId = null }: RetentionWorkspaceProps) {
+  let router: any = null;
+  try {
+    // eslint-disable-next-line react-hooks/rules-of-hooks
+    router = useRouter();
+  } catch (_) {
+    router = null;
+  }
+
   const [currentScriptId, setCurrentScriptId] = useState<string | null>(initialScriptId);
   const [activePreset, setActivePreset] = useState<"viral" | "filler" | "cinematic" | null>(
     initialScriptId ? null : "viral"
   );
   const [inputMode, setInputMode] = useState<"selector" | "unified">("selector");
   const [customScriptTitle, setCustomScriptTitle] = useState<string | null>(null);
+  const [customScriptText, setCustomScriptText] = useState<string | null>(null);
+  const [customSourceType, setCustomSourceType] = useState<string | null>(null);
+  const [customLanguage, setCustomLanguage] = useState<string | null>("English");
+  const [customDuration, setCustomDuration] = useState<number | null>(30);
+  const [customHook, setCustomHook] = useState<string | null>(null);
+  const [customSegments, setCustomSegments] = useState<any[] | null>(null);
+  const [customCta, setCustomCta] = useState<string | null>(null);
+
   const [analysis, setAnalysis] = useState<ScriptAnalysisResponse | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
@@ -187,6 +210,11 @@ export function RetentionWorkspace({ initialScriptId = null }: RetentionWorkspac
     setCurrentScriptId(scriptId);
     setActivePreset(null);
     setCustomScriptTitle(null);
+    setCustomScriptText(null);
+    setCustomSourceType(null);
+    setCustomHook(null);
+    setCustomSegments(null);
+    setCustomCta(null);
     try {
       const data = await api.analyzeScriptById(scriptId);
       setAnalysis(data);
@@ -204,9 +232,27 @@ export function RetentionWorkspace({ initialScriptId = null }: RetentionWorkspac
       setError(null);
       setCurrentScriptId(null);
       setActivePreset(sampleKey);
-      setCustomScriptTitle(null);
       try {
         const samplePayload = SAMPLE_PRESETS[sampleKey];
+        setCustomScriptTitle(samplePayload.title || null);
+        setCustomHook(samplePayload.hook || null);
+        setCustomCta(samplePayload.cta || null);
+        setCustomSegments(samplePayload.segments || null);
+        setCustomLanguage(samplePayload.language || "English");
+        setCustomDuration(samplePayload.duration_seconds || 30);
+        setCustomSourceType("preset");
+
+        const sampleText = [
+          `HOOK: ${samplePayload.hook}`,
+          "",
+          ...(samplePayload.segments || []).map(
+            (s) => `[${s.start_time} - ${s.end_time}] ${s.section}: ${s.voiceover}`
+          ),
+          "",
+          `CTA: ${samplePayload.cta}`,
+        ].join("\n");
+        setCustomScriptText(sampleText);
+
         const data = await api.analyzeScript(samplePayload);
         setAnalysis(data);
       } catch (err: any) {
@@ -225,10 +271,15 @@ export function RetentionWorkspace({ initialScriptId = null }: RetentionWorkspac
       setError(null);
       setCurrentScriptId(null);
       setActivePreset(null);
-      setCustomScriptTitle(title || "Imported Screenplay");
+      const chosenTitle = title || "Imported Screenplay";
+      setCustomScriptTitle(chosenTitle);
+      setCustomScriptText(normalized.text);
+      setCustomSourceType(normalized.sourceType);
+      setCustomLanguage(normalized.language || "English");
+      setCustomDuration(normalized.metadata?.duration_seconds || 30);
       try {
         const payload: ScriptAnalysisRequest = {
-          title: title || "Imported Screenplay",
+          title: chosenTitle,
           script_text: normalized.text,
           source_type: normalized.sourceType,
           language: normalized.language || "English",
@@ -246,6 +297,53 @@ export function RetentionWorkspace({ initialScriptId = null }: RetentionWorkspac
     },
     []
   );
+
+  const handleOptimizeHandoff = useCallback(() => {
+    if (!analysis) return;
+
+    const recommendedGoals = deriveRecommendedOptimizationGoals(analysis);
+    const handoff: OptimizerHandoffPayload = {
+      scriptId: currentScriptId,
+      title: customScriptTitle || analysis.title || "Screenplay",
+      scriptText: customScriptText || undefined,
+      sourceType: inputMode === "unified" ? (customSourceType || "text") : (currentScriptId ? "saved" : "preset"),
+      language: customLanguage || "English",
+      durationSeconds: customDuration || 30,
+      hook: customHook || undefined,
+      segments: customSegments || undefined,
+      cta: customCta || undefined,
+      analysis,
+      weakPoints: analysis.weak_points || [],
+      recommendations: analysis.recommendations || [],
+      recommendedGoals,
+      timestamp: Date.now(),
+    };
+
+    saveOptimizerHandoff(handoff);
+
+    const targetUrl = currentScriptId
+      ? `/optimizer?script_id=${currentScriptId}&from=analyzer`
+      : "/optimizer?from=analyzer";
+
+    if (router && typeof router.push === "function") {
+      router.push(targetUrl);
+    } else if (typeof window !== "undefined") {
+      window.location.href = targetUrl;
+    }
+  }, [
+    analysis,
+    currentScriptId,
+    customScriptTitle,
+    customScriptText,
+    inputMode,
+    customSourceType,
+    customLanguage,
+    customDuration,
+    customHook,
+    customSegments,
+    customCta,
+    router,
+  ]);
 
   useEffect(() => {
     if (initialScriptId) {
@@ -265,22 +363,24 @@ export function RetentionWorkspace({ initialScriptId = null }: RetentionWorkspac
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-2">
           {currentScriptId && (
-            <>
-              <Link
-                href="/scripts"
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-300 bg-slate-800 hover:bg-slate-700 border border-white/10 transition-colors"
-              >
-                <ArrowLeft className="w-3.5 h-3.5" />
-                <span>Back to Studio</span>
-              </Link>
-              <Link
-                href={`/optimizer?script_id=${currentScriptId}`}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold text-white bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-400 hover:to-blue-400 shadow-md shadow-cyan-500/20 transition-all"
-              >
-                <Sparkles className="w-3.5 h-3.5" />
-                <span>Optimize Screenplay</span>
-              </Link>
-            </>
+            <Link
+              href="/scripts"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-300 bg-slate-800 hover:bg-slate-700 border border-white/10 transition-colors"
+            >
+              <ArrowLeft className="w-3.5 h-3.5" />
+              <span>Back to Studio</span>
+            </Link>
+          )}
+
+          {analysis && (
+            <button
+              type="button"
+              onClick={handleOptimizeHandoff}
+              className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-bold text-slate-950 bg-gradient-to-r from-cyan-400 to-blue-400 hover:from-cyan-300 hover:to-blue-300 shadow-md shadow-cyan-500/20 transition-all active:scale-95"
+            >
+              <Sparkles className="w-3.5 h-3.5" />
+              <span>Optimize Script</span>
+            </button>
           )}
         </div>
 
@@ -408,6 +508,31 @@ export function RetentionWorkspace({ initialScriptId = null }: RetentionWorkspac
 
           {/* Weak Points & Actionable Directives */}
           <WeakPointsAndRecommendations analysis={analysis} />
+
+          {/* Direct Analyzer -> Optimizer Action Banner */}
+          <div className="rounded-2xl border border-cyan-500/30 bg-gradient-to-r from-cyan-950/40 via-slate-900/90 to-blue-950/40 p-5 shadow-xl flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className="space-y-1">
+              <div className="flex items-center gap-2">
+                <span className="p-1 rounded-md bg-cyan-500/20 text-cyan-400">
+                  <Sparkles className="w-4 h-4" />
+                </span>
+                <h3 className="text-sm font-bold text-white tracking-wide">
+                  Turn These Retention Diagnostics Into An Optimized Screenplay
+                </h3>
+              </div>
+              <p className="text-xs text-slate-400 max-w-2xl leading-relaxed">
+                Carry this analysis directly into the Script Optimizer. Weak hook friction, conversational fluff, and pacing bottlenecks will be targeted with non-mutating before/after comparisons.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={handleOptimizeHandoff}
+              className="px-4 py-2.5 rounded-xl text-xs font-bold text-slate-950 bg-gradient-to-r from-cyan-400 to-blue-400 hover:from-cyan-300 hover:to-blue-300 shadow-lg shadow-cyan-500/20 transition-all active:scale-95 flex items-center justify-center gap-2 whitespace-nowrap self-start sm:self-auto"
+            >
+              <span>Optimize Script</span>
+              <ArrowRight className="w-3.5 h-3.5" />
+            </button>
+          </div>
 
           {/* Beat-by-Beat Timeline Analysis */}
           <SegmentTimelineAnalysis analysis={analysis} />

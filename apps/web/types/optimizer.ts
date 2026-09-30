@@ -81,6 +81,130 @@ export interface ScriptOptimizationRequest {
   goals: string[];
   instructions?: string;
   target_retention_areas?: string[];
+  script_text?: string;
+  title?: string;
+  topic?: string;
+  platform?: string;
+  language?: string;
+  duration_seconds?: number;
+  tone?: string;
+  hook?: string;
+  segments?: ScriptSegment[];
+  cta?: string;
+}
+
+export interface OptimizerHandoffPayload {
+  scriptId: string | null;
+  title: string;
+  scriptText?: string;
+  sourceType?: string;
+  language?: string;
+  durationSeconds?: number;
+  hook?: string;
+  segments?: ScriptSegment[];
+  cta?: string;
+  analysis: ScriptAnalysisResponse;
+  weakPoints: string[];
+  recommendations: string[];
+  recommendedGoals: OptimizationGoalKey[];
+  timestamp: number;
+}
+
+const OPTIMIZER_HANDOFF_KEY = "cineha_optimizer_handoff";
+
+export function deriveRecommendedOptimizationGoals(
+  analysis: ScriptAnalysisResponse
+): OptimizationGoalKey[] {
+  const goals: OptimizationGoalKey[] = [];
+
+  // 1. Hook weaknesses
+  if (
+    analysis.hook_clarity.score < 80 ||
+    analysis.hook_strength.score < 80 ||
+    analysis.weak_points.some((w) => w.toLowerCase().includes("hook"))
+  ) {
+    goals.push("improve_hook");
+  }
+
+  // 2. Filler phrases
+  if (
+    analysis.filler_repetition.score < 80 ||
+    (analysis.metrics.detected_filler_words &&
+      analysis.metrics.detected_filler_words.length > 0) ||
+    analysis.weak_points.some(
+      (w) => w.toLowerCase().includes("filler") || w.toLowerCase().includes("fluff")
+    )
+  ) {
+    goals.push("remove_filler");
+  }
+
+  // 3. Pacing / duration / timing
+  if (
+    analysis.pacing_progression.score < 80 ||
+    analysis.segment_timing.score < 80 ||
+    analysis.metrics.pacing_assessment !== "Optimal" ||
+    analysis.weak_points.some(
+      (w) => w.toLowerCase().includes("pace") || w.toLowerCase().includes("timing")
+    )
+  ) {
+    goals.push("improve_pacing");
+  }
+
+  // 4. Curiosity / open loops
+  if (
+    analysis.curiosity_open_loops.score < 80 ||
+    analysis.weak_points.some(
+      (w) => w.toLowerCase().includes("loop") || w.toLowerCase().includes("curiosity")
+    )
+  ) {
+    goals.push("strengthen_curiosity");
+  }
+
+  // 5. Call to action
+  if (
+    analysis.cta_strength.score < 80 ||
+    analysis.weak_points.some(
+      (w) => w.toLowerCase().includes("cta") || w.toLowerCase().includes("call to action")
+    )
+  ) {
+    goals.push("improve_cta");
+  }
+
+  // If no specific goal triggered or overall potential is weak, include general_retention
+  if (goals.length === 0 || analysis.overall_score < 75) {
+    goals.push("general_retention");
+  }
+
+  return goals;
+}
+
+export function saveOptimizerHandoff(payload: OptimizerHandoffPayload): void {
+  if (typeof window !== "undefined" && window.sessionStorage) {
+    try {
+      window.sessionStorage.setItem(OPTIMIZER_HANDOFF_KEY, JSON.stringify(payload));
+    } catch (_) {}
+  }
+}
+
+export function getOptimizerHandoff(): OptimizerHandoffPayload | null {
+  if (typeof window !== "undefined" && window.sessionStorage) {
+    try {
+      const raw = window.sessionStorage.getItem(OPTIMIZER_HANDOFF_KEY);
+      if (!raw) return null;
+      return JSON.parse(raw) as OptimizerHandoffPayload;
+    } catch (_) {
+      return null;
+    }
+  }
+  return null;
+}
+
+export function clearOptimizerHandoff(): void {
+  if (typeof window !== "undefined" && window.sessionStorage) {
+    try {
+      window.sessionStorage.removeItem(OPTIMIZER_HANDOFF_KEY);
+    } catch (_) {}
+  }
 }
 
 export interface OptimizedScriptData {

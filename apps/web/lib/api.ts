@@ -331,7 +331,12 @@ export class ApiClient {
     scriptId: string,
     payload: ScriptOptimizationRequest
   ): Promise<ScriptOptimizationResponse> {
-    const response = await fetch(`${this.baseUrl}/scripts/${scriptId}/optimize`, {
+    const url =
+      scriptId === "custom"
+        ? `${this.baseUrl}/scripts/optimize-custom`
+        : `${this.baseUrl}/scripts/${scriptId}/optimize`;
+
+    const response = await fetch(url, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",

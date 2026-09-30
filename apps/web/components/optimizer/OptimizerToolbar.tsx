@@ -66,7 +66,7 @@ export const OptimizerToolbar: React.FC<OptimizerToolbarProps> = ({
       {/* Left Navigation and Status */}
       <div className="flex flex-wrap items-center gap-3">
         <Link
-          href="/studio"
+          href="/scripts"
           className="text-xs px-3 py-1.5 rounded-xl bg-[#181a28] border border-[#252b3d] text-slate-300 hover:text-white hover:border-slate-500 transition flex items-center gap-1.5"
         >
           <ArrowLeft className="w-3.5 h-3.5" />
@@ -149,7 +149,13 @@ export const OptimizerToolbar: React.FC<OptimizerToolbarProps> = ({
             }`}
           >
             <Save className={`w-3.5 h-3.5 ${isSaving ? "animate-spin" : ""}`} />
-            {isSaving ? "Saving..." : isSaved ? "Saved" : `Save as Version ${nextVersion}`}
+            {isSaving
+              ? "Saving..."
+              : isSaved
+              ? "Saved as Version"
+              : scriptId === "custom"
+              ? "Save to Script Studio as Version 1"
+              : `Save as Version ${nextVersion}`}
           </button>
         )}
       </div>

@@ -64,6 +64,23 @@ class ScriptOptimizationRequest(BaseModel):
         default=None,
         description="Optional list of specific retention dimensions from Phase 7A to prioritize",
     )
+    script_text: Optional[str] = Field(
+        default=None,
+        description="Optional raw screenplay text to optimize (for custom/unsaved scripts)",
+    )
+    title: Optional[str] = Field(
+        default=None,
+        max_length=200,
+        description="Optional title for custom or unsaved script",
+    )
+    topic: Optional[str] = Field(default=None, max_length=100)
+    platform: Optional[str] = Field(default=None, max_length=50)
+    language: Optional[str] = Field(default=None, max_length=50)
+    duration_seconds: Optional[int] = Field(default=None, ge=5, le=300)
+    tone: Optional[str] = Field(default=None, max_length=50)
+    hook: Optional[str] = Field(default=None)
+    segments: Optional[List[ScriptSegmentSchema]] = Field(default=None)
+    cta: Optional[str] = Field(default=None)
 
     @field_validator("goals")
     @classmethod

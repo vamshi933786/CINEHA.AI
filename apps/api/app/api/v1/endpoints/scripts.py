@@ -291,6 +291,24 @@ async def analyze_script_endpoint(
 
 
 @router.post(
+    "/scripts/optimize-custom",
+    response_model=ScriptOptimizationResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Optimize Custom or Unsaved Script",
+    description="Optimizes screenplay text or custom beats without requiring prior database persistence.",
+)
+async def optimize_custom_script_endpoint(
+    payload: ScriptOptimizationRequest,
+    db: AsyncSession = Depends(get_db),
+    agent: ScriptOptimizerAgent = Depends(get_script_optimizer_agent),
+) -> ScriptOptimizationResponse:
+    return await agent.optimize_custom(
+        request=payload,
+        db=db,
+    )
+
+
+@router.post(
     "/scripts/{script_id}/optimize",
     response_model=ScriptOptimizationResponse,
     status_code=status.HTTP_200_OK,
