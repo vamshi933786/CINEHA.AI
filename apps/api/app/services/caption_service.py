@@ -5,6 +5,8 @@ from app.schemas.captions import (
     CaptionSource,
     TranscriptionResponse,
     TranscriptionResult,
+    LanguageProcessingRequest,
+    LanguageProcessingResponse,
 )
 from app.services.video_validator import validate_video_upload
 from app.services.transcription_provider import get_transcription_provider
@@ -80,3 +82,21 @@ class CaptionService:
             transcription=transcription,
             notice=notice,
         )
+
+    async def process_language(
+        self,
+        request: LanguageProcessingRequest,
+    ) -> LanguageProcessingResponse:
+        """
+        Execute language translation or transliteration on timed segments.
+        Preserves original transcript and segment timing bounds.
+        """
+        from app.services.language_processor import get_language_processor
+
+        processor = get_language_processor(request.provider)
+        result = await processor.process(request)
+        return LanguageProcessingResponse(
+            result=result,
+            notice=result.notice,
+        )
+

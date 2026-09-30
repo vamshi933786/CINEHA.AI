@@ -264,7 +264,96 @@ The frontend provides an interactive editor (`TranscriptEditor`):
 
 ---
 
-## 8. Security & Privacy
+## 8. Language Processing Architecture (Translation & Transliteration)
+
+### 8.1. Architectural Distinction: Translation ≠ Transliteration
+
+A core architectural principle of CINEHA AI is the strict separation between **Translation** and **Transliteration**:
+
+```
+                       ┌──────────────────────────────────────────────┐
+                       │           SOURCE TRANSCRIPT (e.g. TE)        │
+                       └──────────────────────┬───────────────────────┘
+                                              │
+                      ┌───────────────────────┴───────────────────────┐
+                      ▼                                               ▼
+         [ TRANSLATION (Meaning) ]                      [ TRANSLITERATION (Script) ]
+        Converts semantic meaning into                  Converts native script phonetics
+        a completely different language.                into Romanized Latin alphabet.
+                      │                                               │
+                      ▼                                               ▼
+          Telugu: "నమస్కారం"                             Telugu: "నమస్కారం"
+                 │                                               │
+                 ▼                                               ▼
+          English: "Greetings" / "Hello"                 Tanglish: "Namaskaram" (te-Latn)
+```
+
+- **Translation**: Converts semantics across distinct languages (English ↔ Telugu, English ↔ Hindi, Telugu ↔ Hindi).
+- **Transliteration**: Preserves the spoken language identity and Telugu vocabulary, converting the Telugu native orthography into phonetically readable English/Latin letters (**Tanglish** / `te-Latn`).
+- **Tanglish is NOT an English translation**: Labeling Tanglish as translation is strictly prohibited by CINEHA AI's domain contracts.
+
+---
+
+### 8.2. Domain Models
+
+```typescript
+interface ProcessedTranscriptSegment {
+  id: string;               // Matches parent segment ID
+  original_text: string;    // Pre-processing transcript text
+  text: string;             // Processed translated or transliterated text
+  start_time: number;       // Frame-accurate start timestamp in seconds (immutable)
+  end_time: number;         // Frame-accurate end timestamp in seconds (immutable)
+  words?: TranscriptWord[]; // Empty array: word timings marked unavailable
+  speaker?: string | null;
+  confidence?: number | null;
+}
+
+interface LanguageProcessingResult {
+  source_language: string;
+  target_language: string;
+  target_language_code: string;
+  is_transliteration: boolean;
+  script_type: string;
+  processing_mode: "translation" | "transliteration" | "none";
+  segments: ProcessedTranscriptSegment[];
+  full_text: string;
+  original_full_text: string;
+  provider_name: string;
+  is_production_provider: boolean;
+  word_timings_available: boolean;
+  notice?: string | null;
+  metadata?: Record<string, any>;
+}
+```
+
+---
+
+### 8.3. Provider Architecture
+
+Language processing uses an extensible provider hierarchy rooted in `BaseLanguageProcessor`:
+
+1. **`MockDevelopmentLanguageProcessor`**:
+   - Offline, deterministic processor for local development and CI testing.
+   - Provides realistic cinema translations across English, Telugu, and Hindi.
+   - Implements a syllabic Telugu unicode phonetics engine converting Telugu script (`\u0c00`–`\u0c7f`) into natural Tanglish.
+   - Flags output with `is_production_provider = False` and an explicit user-facing notice:
+     `"Development Language Processing Mode — production language processor is not configured. Output is simulated for development/testing."`
+2. **`ProductionLanguageProcessorAdapter`**:
+   - Production cloud adapter utilizing OpenAI GPT-4o-mini (`/v1/chat/completions`).
+   - Translates dialogue and transliterates script while strictly preserving segment IDs and boundaries.
+   - If credentials (`LANGUAGE_PROCESSOR_API_KEY` or `OPENAI_API_KEY`) are missing, explicitly raises HTTP 400 without deceptive fallback.
+
+---
+
+### 8.4. Segment & Timing Preservation Guarantees
+
+1. **Exact Segment Bounds**: Start (`start_time`) and end (`end_time`) timestamps of every segment are preserved verbatim from the input transcription.
+2. **No Word Fabrication**: Because machine translation and phonetic transliteration alter token lengths and word order, original word timestamps are **never** artificially mapped onto translated words. `words` is set to an empty array and `word_timings_available = False`.
+3. **Non-Destructive Originals**: The original transcript remains permanently intact in application memory. The creator can switch between **Side-by-Side**, **Processed Only**, and **Original Only** views, apply the processed version to downstream caption tools, and revert to the original at any point.
+
+---
+
+## 9. Security & Privacy
 
 1. **No Filesystem Path Leakage**: Internal server paths (e.g., `/tmp/...` or OS paths) are never returned in API responses or logs.
 2. **In-Memory Streaming**: Uploaded video files are processed as byte streams and discarded immediately after transcription; no unmanaged temporary files are persisted to disk.
@@ -273,10 +362,10 @@ The frontend provides an interactive editor (`TranscriptEditor`):
 
 ---
 
-## 9. Future Pipeline Milestones
+## 10. Future Pipeline Milestones
 
-The foundation established in Task 5 directly unblocks subsequent phases:
+The foundation established in Tasks 5, 6, and 7 unblocks subsequent phases:
 - **Phase 9.1**: Caption Styling & Font Selection (Subtitles preset, colors, stroke, drop shadow).
 - **Phase 9.2**: Motion-Graphic Word Highlighting (Kinetic pop-in, karaoke-style active word highlighting).
-- **Phase 9.3**: Multi-lingual Translation & Tanglish Converter.
-- **Phase 9.4**: Video Compositor & Export Engine (Burned-in MP4 video rendering, SRT, and VTT download).
+- **Phase 9.3**: Video Compositor & Export Engine (Burned-in MP4 video rendering, SRT, and VTT download).
+

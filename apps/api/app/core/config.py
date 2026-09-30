@@ -46,6 +46,20 @@ class Settings(BaseSettings):
         description="Optional custom path to ffmpeg binary (auto-detected if unset)",
     )
 
+    # Caption Studio Language Processing (Translation & Transliteration)
+    LANGUAGE_PROCESSOR_PROVIDER: str = Field(
+        default="mock",
+        description="Language processor provider: 'mock' or 'production'",
+    )
+    LANGUAGE_PROCESSOR_API_KEY: str = Field(
+        default="",
+        description="Dedicated API key for language translation/transliteration (falls back to OPENAI_API_KEY)",
+    )
+    LANGUAGE_PROCESSOR_MODEL: str = Field(
+        default="gpt-4o-mini",
+        description="LLM model identifier for language translation and transliteration",
+    )
+
     @property
     def cors_origins(self) -> List[str]:
         if not self.ALLOWED_ORIGINS:

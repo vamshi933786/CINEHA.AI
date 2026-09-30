@@ -99,3 +99,78 @@ class TranscriptionResponse(BaseModel):
         default=None,
         description="Explicit advisory message if in development mock mode",
     )
+
+
+class ProcessedTranscriptSegment(BaseModel):
+    """Timed speech segment with original and translated/transliterated text."""
+    model_config = ConfigDict(extra="ignore")
+
+    id: str = Field(..., description="Unique segment identifier matching original segment")
+    original_text: str = Field(..., description="Original transcript text before processing")
+    text: str = Field(..., description="Processed translated or transliterated text")
+    start_time: float = Field(..., ge=0.0, description="Immutable start timestamp in seconds")
+    end_time: float = Field(..., ge=0.0, description="Immutable end timestamp in seconds")
+    words: List[TranscriptWord] = Field(default_factory=list, description="Word timings (empty if unavailable)")
+    speaker: Optional[str] = Field(default=None, description="Speaker token if preserved")
+    confidence: Optional[float] = Field(default=None, ge=0.0, le=1.0, description="Confidence score")
+
+
+class LanguageProcessingRequest(BaseModel):
+    """Payload to translate or transliterate timed transcript segments."""
+    model_config = ConfigDict(extra="ignore")
+
+    source_language: str = Field(..., description="Source language (English, Telugu, Hindi, Tanglish)")
+    target_language: str = Field(..., description="Target language (English, Telugu, Hindi, Tanglish)")
+    processing_mode: Literal["translation", "transliteration", "none"] = Field(
+        ..., description="Operation mode: 'translation', 'transliteration', or 'none'"
+    )
+    segments: List[TranscriptSegment] = Field(..., min_length=1, description="Transcript segments to process")
+    full_text: Optional[str] = Field(default=None, description="Optional full transcript text")
+    provider: Optional[str] = Field(default=None, description="Optional provider override ('mock' or 'production')")
+
+
+class LanguageProcessingResult(BaseModel):
+    """Normalized output contract of translation/transliteration operations."""
+    model_config = ConfigDict(extra="ignore")
+
+    source_language: str = Field(..., description="Source language name")
+    target_language: str = Field(..., description="Target language name")
+    target_language_code: str = Field(..., description="Target language code (e.g. en, te, hi, te-Latn)")
+    is_transliteration: bool = Field(default=False, description="True if script is Romanized/transliterated")
+    script_type: str = Field(default="Latin", description="Target writing script")
+    processing_mode: Literal["translation", "transliteration", "none"] = Field(
+        ..., description="Operation mode performed"
+    )
+    segments: List[ProcessedTranscriptSegment] = Field(default_factory=list, description="Ordered processed segments")
+    full_text: str = Field(..., description="Complete combined processed text")
+    original_full_text: str = Field(..., description="Original full text preserved for comparison")
+    provider_name: str = Field(..., description="Language processor identifier")
+    is_production_provider: bool = Field(default=False, description="Whether live production engine was used")
+    word_timings_available: bool = Field(default=False, description="Whether word-level timings are valid for processed text")
+    notice: Optional[str] = Field(default=None, description="Truthful advisory notice for development mode")
+    metadata: Dict[str, Any] = Field(default_factory=dict, description="Metadata and diagnostics")
+
+
+class LanguageVariant(BaseModel):
+    """Represents a language variant associated with a caption project."""
+    model_config = ConfigDict(extra="ignore")
+
+    id: str = Field(..., description="Variant identifier (e.g. 'original', 'variant_te', 'variant_tanglish')")
+    label: str = Field(..., description="Human-readable label")
+    language: str = Field(..., description="Language name")
+    language_code: str = Field(..., description="Language code")
+    is_transliteration: bool = Field(default=False)
+    script_type: str = Field(default="Latin")
+    processing_mode: str = Field(default="none")
+    full_text: str = Field(...)
+    segments: List[TranscriptSegment] = Field(default_factory=list)
+    is_active: bool = Field(default=False)
+
+
+class LanguageProcessingResponse(BaseModel):
+    """HTTP response contract for language processing API."""
+    model_config = ConfigDict(extra="ignore")
+
+    result: LanguageProcessingResult = Field(..., description="Processed language result")
+    notice: Optional[str] = Field(default=None, description="Explicit development/advisory notice")
+

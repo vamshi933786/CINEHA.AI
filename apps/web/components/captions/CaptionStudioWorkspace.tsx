@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import { VideoDropzone, VideoMetadata } from "./VideoDropzone";
 import { TranscriptEditor } from "./TranscriptEditor";
+import { LanguageProcessingSection } from "./LanguageProcessingSection";
 import { api } from "@/lib/api";
 import {
   TranscriptionResponse,
@@ -32,13 +33,18 @@ export function CaptionStudioWorkspace() {
   const [selectedLanguage, setSelectedLanguage] = useState<string>("English");
   const [selectedProvider, setSelectedProvider] = useState<string>("mock");
   const [isProductionConfigured, setIsProductionConfigured] = useState<boolean>(false);
+  const [isProductionLanguageConfigured, setIsProductionLanguageConfigured] =
+    useState<boolean>(false);
   const [providers, setProviders] = useState<TranscriptionProviderInfo[]>([]);
   const [isTranscribing, setIsTranscribing] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const [transcriptionResponse, setTranscriptionResponse] =
     useState<TranscriptionResponse | null>(null);
+  const [originalTranscription, setOriginalTranscription] =
+    useState<TranscriptionResult | null>(null);
   const [activeTranscription, setActiveTranscription] =
     useState<TranscriptionResult | null>(null);
+  const [isProcessedActive, setIsProcessedActive] = useState<boolean>(false);
 
   useEffect(() => {
     let isMounted = true;
@@ -47,6 +53,9 @@ export function CaptionStudioWorkspace() {
         const data = await api.getCaptionProviders();
         if (isMounted && data) {
           setIsProductionConfigured(Boolean(data.is_production_configured));
+          setIsProductionLanguageConfigured(
+            Boolean(data.is_production_language_configured)
+          );
           if (data.providers) {
             setProviders(data.providers);
           }
@@ -74,6 +83,8 @@ export function CaptionStudioWorkspace() {
       setPreviewUrl(null);
       setTranscriptionResponse(null);
       setActiveTranscription(null);
+      setOriginalTranscription(null);
+      setIsProcessedActive(false);
     } else {
       const url = URL.createObjectURL(file);
       setPreviewUrl(url);
@@ -106,6 +117,8 @@ export function CaptionStudioWorkspace() {
       );
       setTranscriptionResponse(response);
       setActiveTranscription(response.transcription);
+      setOriginalTranscription(response.transcription);
+      setIsProcessedActive(false);
     } catch (err: any) {
       console.error("Transcription error:", err);
       setError(
@@ -117,6 +130,18 @@ export function CaptionStudioWorkspace() {
     }
   };
 
+  const handleApplyProcessed = (processed: TranscriptionResult) => {
+    setActiveTranscription(processed);
+    setIsProcessedActive(true);
+  };
+
+  const handleRevertOriginal = () => {
+    if (originalTranscription) {
+      setActiveTranscription(originalTranscription);
+      setIsProcessedActive(false);
+    }
+  };
+
   const handleReset = () => {
     if (previewUrl) URL.revokeObjectURL(previewUrl);
     setSelectedFile(null);
@@ -124,6 +149,8 @@ export function CaptionStudioWorkspace() {
     setMetadata(null);
     setTranscriptionResponse(null);
     setActiveTranscription(null);
+    setOriginalTranscription(null);
+    setIsProcessedActive(false);
     setError(null);
   };
 
@@ -512,6 +539,19 @@ export function CaptionStudioWorkspace() {
             onUpdateTranscription={setActiveTranscription}
             disabled={isTranscribing}
           />
+
+          {/* 5. Multi-Lingual Translation & Transliteration */}
+          {originalTranscription && (
+            <LanguageProcessingSection
+              originalTranscription={originalTranscription}
+              activeTranscription={activeTranscription}
+              isProductionConfigured={isProductionLanguageConfigured}
+              onApplyProcessed={handleApplyProcessed}
+              onRevertOriginal={handleRevertOriginal}
+              isProcessedActive={isProcessedActive}
+              disabled={isTranscribing}
+            />
+          )}
         </div>
       )}
     </div>

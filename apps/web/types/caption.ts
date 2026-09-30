@@ -90,7 +90,10 @@ export interface TranscriptionProviderInfo {
 export interface CaptionProvidersResponse {
   default_provider: string;
   is_production_configured: boolean;
+  is_production_language_configured?: boolean;
+  default_language_processor?: string;
   providers: TranscriptionProviderInfo[];
+  language_processors?: TranscriptionProviderInfo[];
 }
 
 export const SUPPORTED_CAPTION_LANGUAGES: SupportedLanguageInfo[] = [
@@ -123,3 +126,60 @@ export const SUPPORTED_CAPTION_LANGUAGES: SupportedLanguageInfo[] = [
     description: "Telugu spoken audio transcribed phonetically into Roman/Latin characters",
   },
 ];
+
+export type LanguageProcessingMode = "translation" | "transliteration" | "none";
+
+export interface ProcessedTranscriptSegment {
+  id: string;
+  original_text: string;
+  text: string;
+  start_time: number;
+  end_time: number;
+  words?: TranscriptWord[];
+  speaker?: string | null;
+  confidence?: number | null;
+}
+
+export interface LanguageProcessingRequest {
+  source_language: string;
+  target_language: string;
+  processing_mode: LanguageProcessingMode;
+  segments: TranscriptSegment[];
+  full_text?: string | null;
+  provider?: string | null;
+}
+
+export interface LanguageProcessingResult {
+  source_language: string;
+  target_language: string;
+  target_language_code: string;
+  is_transliteration: boolean;
+  script_type: string;
+  processing_mode: LanguageProcessingMode;
+  segments: ProcessedTranscriptSegment[];
+  full_text: string;
+  original_full_text: string;
+  provider_name: string;
+  is_production_provider: boolean;
+  word_timings_available: boolean;
+  notice?: string | null;
+  metadata?: Record<string, any>;
+}
+
+export interface LanguageProcessingResponse {
+  result: LanguageProcessingResult;
+  notice?: string | null;
+}
+
+export interface LanguagePair {
+  source: string;
+  target: string;
+  mode: "translation" | "transliteration";
+}
+
+export interface LanguagePairsResponse {
+  translation_pairs: LanguagePair[];
+  transliteration_pairs: LanguagePair[];
+  supported_languages: string[];
+}
+

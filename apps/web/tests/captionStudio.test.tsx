@@ -21,6 +21,7 @@ vi.mock("../lib/api", () => ({
     transcribeVideo: vi.fn(),
     getCaptionLanguages: vi.fn(),
     getCaptionProviders: vi.fn(),
+    processLanguage: vi.fn(),
   },
 }));
 
@@ -492,5 +493,88 @@ describe("Caption Studio — Video Input & Transcription", () => {
 
     expect(screen.getByText("Segment timings only")).toBeInTheDocument();
     expect(screen.queryByText("Word timings available")).not.toBeInTheDocument();
+  });
+
+  it("integrates LanguageProcessingSection in workspace and allows applying translated captions", async () => {
+    vi.mocked(api.transcribeVideo).mockResolvedValue(mockTranscriptionResponse);
+    vi.mocked(api.processLanguage).mockResolvedValue({
+      result: {
+        source_language: "English",
+        target_language: "Telugu",
+        target_language_code: "te",
+        is_transliteration: false,
+        script_type: "Telugu",
+        processing_mode: "translation",
+        segments: [
+          {
+            id: "seg_0",
+            original_text: "Stop shooting at 60fps!",
+            text: "60fps లో షూట్ చేయడం ఆపండి!",
+            start_time: 0.0,
+            end_time: 3.4,
+            words: [],
+          },
+          {
+            id: "seg_1",
+            original_text: "60fps creates that harsh effect.",
+            text: "60fps కఠినమైన ఎఫెక్ట్‌ను తెస్తుంది.",
+            start_time: 3.6,
+            end_time: 7.2,
+            words: [],
+          },
+        ],
+        full_text: "60fps లో షూట్ చేయడం ఆపండి!\n\n60fps కఠినమైన ఎఫెక్ట్‌ను తెస్తుంది.",
+        original_full_text: mockTranscriptionResponse.transcription.full_text,
+        provider_name: "development_mock_language_processor",
+        is_production_provider: false,
+        word_timings_available: false,
+        notice: "Development Language Processing Mode",
+      },
+      notice: "Development Language Processing Mode",
+    });
+
+    render(<CaptionStudioWorkspace />);
+
+    const validFile = new File([new ArrayBuffer(5000)], "sample_reel.mp4", {
+      type: "video/mp4",
+    });
+    fireEvent.change(screen.getByLabelText("Upload video file"), {
+      target: { files: [validFile] },
+    });
+    fireEvent.click(screen.getByRole("button", { name: /Transcribe Video Speech/i }));
+
+    await waitFor(() => {
+      expect(
+        screen.getByText("5. Multi-Lingual Translation & Transliteration")
+      ).toBeInTheDocument();
+    });
+
+    // Translate to Telugu
+    const translateBtn = screen.getByRole("button", { name: /Translate to Telugu/i });
+    fireEvent.click(translateBtn);
+
+    await waitFor(() => {
+      expect(screen.getByText("Apply as Active Captions")).toBeInTheDocument();
+    });
+
+    // Apply
+    fireEvent.click(screen.getByRole("button", { name: /Apply as Active Captions/i }));
+
+    // Revert button should now be available
+    expect(
+      screen.getByRole("button", { name: /Revert to Original \(English\)/i })
+    ).toBeInTheDocument();
+
+    // Editor should now show the translated Telugu text
+    const segTextarea = screen.getByLabelText(
+      "Edit segment 1 transcript text"
+    ) as HTMLTextAreaElement;
+    expect(segTextarea.value).toBe("60fps లో షూట్ చేయడం ఆపండి!");
+
+    // Revert back to original
+    fireEvent.click(
+      screen.getByRole("button", { name: /Revert to Original \(English\)/i })
+    );
+    expect(segTextarea.value).toContain("Stop shooting at 60fps!");
   });
 });

@@ -32,6 +32,9 @@ import type {
   TranscriptionResponse,
   SupportedLanguageInfo,
   CaptionProvidersResponse,
+  LanguageProcessingRequest,
+  LanguageProcessingResponse,
+  LanguagePairsResponse,
 } from "../types/caption";
 
 export class ApiClient {
@@ -554,6 +557,54 @@ export class ApiClient {
 
     const data = await response.json();
     return data as CaptionProvidersResponse;
+  }
+
+  async processLanguage(
+    payload: LanguageProcessingRequest
+  ): Promise<LanguageProcessingResponse> {
+    const response = await fetch(`${this.baseUrl}/captions/process-language`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(payload),
+    });
+
+    if (!response.ok) {
+      let errorMessage = `Language processing failed (status: ${response.status})`;
+      try {
+        const errorJson = await response.json();
+        if (errorJson.detail) {
+          if (Array.isArray(errorJson.detail)) {
+            errorMessage = errorJson.detail
+              .map((d: any) => d.msg || JSON.stringify(d))
+              .join(", ");
+          } else {
+            errorMessage = errorJson.detail;
+          }
+        }
+      } catch (_) {}
+      throw new Error(errorMessage);
+    }
+
+    const data = await response.json();
+    return data as LanguageProcessingResponse;
+  }
+
+  async getLanguagePairs(): Promise<LanguagePairsResponse> {
+    const response = await fetch(`${this.baseUrl}/captions/language-pairs`, {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error(`Failed to fetch language pairs (status: ${response.status})`);
+    }
+
+    const data = await response.json();
+    return data as LanguagePairsResponse;
   }
 }
 
