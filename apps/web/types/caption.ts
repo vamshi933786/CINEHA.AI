@@ -107,6 +107,44 @@ export interface CaptionAppearanceSettings {
   show_safe_area: boolean;
 }
 
+export type CaptionMode = "plain" | "motion";
+
+export type MotionCaptionPreset =
+  | "clean_pop"
+  | "karaoke"
+  | "bold_bounce"
+  | "minimal_fade"
+  | "punchy";
+
+export type MotionEntranceAnimation = "none" | "fade" | "pop" | "slide_up";
+export type MotionExitAnimation = "none" | "fade" | "slide_down";
+export type MotionWordAnimation = "none" | "pop" | "emphasis" | "highlight";
+export type MotionAnimationIntensity = "low" | "medium" | "high";
+export type MotionActiveWordStyle = "off" | "highlight" | "scale" | "bold";
+
+export interface MotionCaptionSettings {
+  preset: MotionCaptionPreset;
+  entrance_animation: MotionEntranceAnimation;
+  exit_animation: MotionExitAnimation;
+  word_animation: MotionWordAnimation;
+  intensity: MotionAnimationIntensity;
+  active_word_style: MotionActiveWordStyle;
+  font_weight: "normal" | "bold" | "black";
+  primary_color: string;
+  active_color: string;
+  active_bg_color: string;
+  respect_reduced_motion: boolean;
+}
+
+export interface MotionPresetDefinition {
+  id: MotionCaptionPreset;
+  name: string;
+  description: string;
+  badge?: string;
+  requiresWordTimings?: boolean;
+  settings: Partial<MotionCaptionSettings>;
+}
+
 export interface CaptionProject {
   id: string;
   title: string;

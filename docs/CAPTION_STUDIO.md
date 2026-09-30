@@ -440,7 +440,75 @@ The UI explicitly displays the active source nature (`Caption Source: Original /
 
 ---
 
-## 10. Security & Privacy
+## 10. Motion-Graphic Caption Engine (Browser Preview)
+
+> [!NOTE]
+> **Browser Preview Only**: The motion-graphic caption engine implemented in Task 9 operates entirely within the client-side DOM layer over the HTML5 `<video>` preview. It provides real-time interactive visualization of kinetic typography. It does **NOT** permanently render or burn captions into video files or export video containers.
+
+### 10.1. Architecture & Presentation Decoupling
+
+The Motion Caption Engine extends Caption Studio without modifying underlying transcript data or timing bounds:
+
+```
+[ Active Transcript ] ───────► [ Deterministic Cue Generator ] ───────► [ CaptionCue[] ]
+                                                                               │
+                                               ┌───────────────────────────────┴───────────────────────────────┐
+                                               ▼                                                               ▼
+                                     [ PLAIN CAPTION MODE ]                                          [ MOTION CAPTION MODE ]
+                                     • Static display typography                                     • Synchronized word highlighting
+                                     • Minimalistic box / text shadow                                • Preset animations (Pop, Bounce, Fade)
+                                     • Standard screen alignment                                     • Karaoke progressive illumination
+                                                                                                     • Reduced-motion accessibility
+```
+
+### 10.2. Motion Preset Library
+
+| Preset | Visual Purpose | Entrance | Word Effect | Active Word Style | Word Sync Req.? |
+|---|---|---|---|---|:---:|
+| **Clean Pop** | Modern, crisp short-form pop. Subtle scaling on entrance, clean dark pill background. | Pop | Pop | Cyan highlight (`#22D3EE`) with soft glow | Optional |
+| **Karaoke** | Progressive word illumination. Spoken words illuminate brightly with gold accent; unspoken words dimmed. | Fade | Highlight | Gold text (`#FACC15`) with full opacity | **Yes** (Fallback to segment) |
+| **Bold Bounce** | High-energy kinetic bounce with punchy spring entrance. Active words scale up with extra weight. | Pop | Emphasis | Purple accent (`#A855F7`) with scale boost | Optional |
+| **Minimal Fade** | Subtle, cinematic documentary presentation. Soft opacity transitions without positional movement. | Fade | None | Pure white text with standard weight | Optional |
+| **Punchy** | High contrast impact. Heavy black typography with vibrant neon yellow highlight box on active words. | Slide Up | Pop | Amber box (`#FBBF24`) with black bold text | Optional |
+
+### 10.3. Word-Timing Behavior vs. Segment Fallback
+
+1. **Word-by-Word Synchronization**:
+   - When genuine word timestamps are present on cues (`w.end_time > w.start_time`), the engine computes:
+     $$\text{word.start\_time} \le \text{currentTime} < \text{word.end\_time}$$
+   - The active word receives immediate GPU-accelerated CSS scaling and accent coloring.
+   - The UI displays an emerald indicator: `"Word-synced motion available"`.
+2. **Segment-Level Fallback**:
+   - When word timestamps are absent (such as machine-translated or transliterated Tanglish transcripts), the engine **strictly avoids synthesizing fake word timestamps**.
+   - The entire caption phrase animates gracefully using segment-level motion.
+   - For Karaoke mode, the UI explains: `"Karaoke word synchronization is unavailable for translated/transliterated text. Segment-level fallback active."`
+   - The UI displays an amber indicator: `"Segment timing only"`.
+
+### 10.4. Entrance and Exit Animation Timing
+
+- Entrance transitions (`pop`, `fade`, `slide_up`) trigger within the first $0.2\text{s}$ of cue playback:
+  $$\tau = \text{currentTime} - \text{cue.start\_time} < 0.2\text{s}$$
+- Exit transitions (`fade`, `slide_down`) trigger in the trailing $0.2\text{s}$ before cue completion:
+  $$\text{rem} = \text{cue.end\_time} - \text{currentTime} < 0.2\text{s}$$
+- Animations are anchored to cue identity and video time rather than component render cycles, preventing visual resets during React re-renders.
+
+### 10.5. Accessibility & Reduced Motion
+
+- Automatically detects the user's `prefers-reduced-motion` system setting.
+- When reduced motion is active:
+  - All positional movement and transforms (`translateY`, bounce) are disabled.
+  - Scale transforms are locked to `scale(1.0)`.
+  - Active words retain high-contrast color highlighting and font weight changes so captions remain fully readable without disorientation or seizure risk.
+
+### 10.6. Performance & Synchronization Strategy
+
+- **Zero Custom Interval Loops**: Synchronization is driven purely by browser HTML5 `<video>` events (`onTimeUpdate`, `onSeeked`, `onPlay`).
+- **GPU-Accelerated Compositing**: All animations utilize CSS `transform`, `opacity`, and `color` properties, offloading rendering to the hardware compositor.
+- **Stable Keys**: Word elements utilize stable compound keys (`cue.id + "_w_" + index`), minimizing DOM mutations.
+
+---
+
+## 11. Security & Privacy
 
 1. **No Filesystem Path Leakage**: Internal server paths (e.g., `/tmp/...` or OS paths) are never returned in API responses or logs.
 2. **In-Memory Streaming**: Uploaded video files are processed as byte streams and discarded immediately after transcription; no unmanaged temporary files are persisted to disk.
@@ -449,11 +517,12 @@ The UI explicitly displays the active source nature (`Caption Source: Original /
 
 ---
 
-## 11. Future Pipeline Milestones
+## 12. Future Pipeline Milestones
 
-The foundation established in Tasks 5 through 8 unblocks subsequent phases:
-- **Phase 9.1**: Caption Styling & Font Selection (Subtitles preset, colors, stroke, drop shadow).
-- **Phase 9.2**: Motion-Graphic Word Highlighting (Kinetic pop-in, karaoke-style active word highlighting).
-- **Phase 9.3**: Video Compositor & Export Engine (Burned-in MP4 video rendering, SRT, and VTT download).
+The foundation established in Tasks 5 through 9 unblocks subsequent phases:
+- **Phase 9.1**: Caption Styling & Font Selection (Subtitles preset, custom typography, stroke, drop shadow).
+- **Phase 9.2**: Motion-Graphic Video Compositor & Export Engine (Permanent burned-in MP4 rendering via FFmpeg/canvas).
+- **Phase 9.3**: Subtitle File Export (SRT and VTT download).
+
 
 

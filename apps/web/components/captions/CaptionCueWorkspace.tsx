@@ -32,7 +32,12 @@ import {
   CaptionCueSettings,
   CaptionCueGenerationRequest,
   CaptionAppearanceSettings,
+  CaptionMode,
+  MotionCaptionSettings,
 } from "@/types/caption";
+import { DEFAULT_MOTION_SETTINGS } from "./motionPresets";
+import { MotionCaptionOverlay } from "./MotionCaptionOverlay";
+import { MotionCaptionControls } from "./MotionCaptionControls";
 
 interface CaptionCueWorkspaceProps {
   activeTranscription: TranscriptionResult;
@@ -83,6 +88,9 @@ export function CaptionCueWorkspace({
   const [appearance, setAppearance] = useState<CaptionAppearanceSettings>(
     DEFAULT_APPEARANCE_SETTINGS
   );
+  const [captionMode, setCaptionMode] = useState<CaptionMode>("plain");
+  const [motionSettings, setMotionSettings] =
+    useState<MotionCaptionSettings>(DEFAULT_MOTION_SETTINGS);
   const [showSettingsDrawer, setShowSettingsDrawer] = useState<boolean>(false);
   const [showConfirmRegenerate, setShowConfirmRegenerate] = useState<boolean>(false);
 
@@ -312,7 +320,7 @@ export function CaptionCueWorkspace({
               <span>5. Caption Cue Generation & Plain Video Preview</span>
             </h2>
             <span className="px-2.5 py-0.5 rounded-full text-[10px] font-mono font-medium bg-cyan-500/10 border border-cyan-500/30 text-cyan-300">
-              Plain Captions
+              {captionMode === "motion" ? "Motion Captions" : "Plain Captions"}
             </span>
           </div>
           <p className="text-xs text-slate-400 mt-1">
@@ -320,8 +328,41 @@ export function CaptionCueWorkspace({
           </p>
         </div>
 
-        {/* Source Badge & Generate Action */}
+        {/* Caption Mode & Source Badge & Generate Action */}
         <div className="flex flex-wrap items-center gap-2.5 self-start sm:self-auto">
+          {/* Mode Selector */}
+          <div
+            className="flex items-center rounded-xl bg-[#161826] p-1 border border-[#252a3e]"
+            role="group"
+            aria-label="Caption presentation mode"
+          >
+            <span className="text-[11px] text-slate-400 px-2 font-medium">Caption Mode:</span>
+            <button
+              type="button"
+              onClick={() => setCaptionMode("plain")}
+              aria-pressed={captionMode === "plain"}
+              className={`px-3 py-1 rounded-lg text-xs font-semibold transition ${
+                captionMode === "plain"
+                  ? "bg-cyan-500 text-black shadow"
+                  : "text-slate-400 hover:text-white"
+              }`}
+            >
+              Plain
+            </button>
+            <button
+              type="button"
+              onClick={() => setCaptionMode("motion")}
+              aria-pressed={captionMode === "motion"}
+              className={`px-3 py-1 rounded-lg text-xs font-semibold transition ${
+                captionMode === "motion"
+                  ? "bg-cyan-500 text-black shadow"
+                  : "text-slate-400 hover:text-white"
+              }`}
+            >
+              Motion
+            </button>
+          </div>
+
           <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#161826] border border-[#252a3e] text-xs">
             <span className="text-slate-400 text-[11px]">Caption Source:</span>
             <span className="font-semibold text-cyan-300">{sourceBadgeLabel}</span>
@@ -592,31 +633,39 @@ export function CaptionCueWorkspace({
               </div>
             )}
 
-            {/* Synchronized Plain Caption Overlay */}
-            {activeCue && (
-              <div
-                className={`absolute inset-x-4 pointer-events-none flex flex-col ${getVerticalClass()} ${getAlignmentClass()}`}
-                data-testid="active-caption-overlay"
-              >
+            {/* Synchronized Caption Overlay: Plain vs Motion */}
+            {activeCue &&
+              (captionMode === "motion" ? (
+                <MotionCaptionOverlay
+                  cue={activeCue}
+                  currentTime={currentTime}
+                  motionSettings={motionSettings}
+                  appearance={appearance}
+                />
+              ) : (
                 <div
-                  className={`inline-block font-sans font-semibold tracking-wide transition-all ${
-                    appearance.background === "box"
-                      ? "bg-black/85 text-white px-3.5 py-2 rounded-xl shadow-lg border border-white/10"
-                      : "text-white drop-shadow-[0_2px_4px_rgba(0,0,0,0.95)]"
-                  } ${getFontSizeClass()}`}
+                  className={`absolute inset-x-4 pointer-events-none flex flex-col ${getVerticalClass()} ${getAlignmentClass()}`}
+                  data-testid="active-caption-overlay"
                 >
-                  {activeCue.lines && activeCue.lines.length > 0 ? (
-                    activeCue.lines.map((line, idx) => (
-                      <div key={idx} className="leading-snug">
-                        {line}
-                      </div>
-                    ))
-                  ) : (
-                    <div>{activeCue.text}</div>
-                  )}
+                  <div
+                    className={`inline-block font-sans font-semibold tracking-wide transition-all ${
+                      appearance.background === "box"
+                        ? "bg-black/85 text-white px-3.5 py-2 rounded-xl shadow-lg border border-white/10"
+                        : "text-white drop-shadow-[0_2px_4px_rgba(0,0,0,0.95)]"
+                    } ${getFontSizeClass()}`}
+                  >
+                    {activeCue.lines && activeCue.lines.length > 0 ? (
+                      activeCue.lines.map((line, idx) => (
+                        <div key={idx} className="leading-snug">
+                          {line}
+                        </div>
+                      ))
+                    ) : (
+                      <div>{activeCue.text}</div>
+                    )}
+                  </div>
                 </div>
-              </div>
-            )}
+              ))}
           </div>
 
           {/* Video Playback Time Indicator */}
@@ -733,6 +782,16 @@ export function CaptionCueWorkspace({
               </div>
             </div>
           </div>
+
+          {/* Motion Caption Engine Controls (rendered in motion mode) */}
+          {captionMode === "motion" && (
+            <MotionCaptionControls
+              settings={motionSettings}
+              onChangeSettings={setMotionSettings}
+              hasWordTimings={timingGranularity === "word"}
+              disabled={disabled}
+            />
+          )}
         </div>
 
         {/* Right Column: Caption Cue Editor List (lg:col-span-7) */}
