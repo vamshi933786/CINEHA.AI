@@ -28,6 +28,10 @@ import type {
   SaveImportedScriptRequest,
   ScriptSourceType,
 } from "../types/scriptInput";
+import type {
+  TranscriptionResponse,
+  SupportedLanguageInfo,
+} from "../types/caption";
 
 export class ApiClient {
   private baseUrl: string;
@@ -475,6 +479,60 @@ export class ApiClient {
 
     const data = await response.json();
     return data as Script;
+  }
+
+  async transcribeVideo(
+    file: File,
+    language: string = "English",
+    durationSeconds?: number
+  ): Promise<TranscriptionResponse> {
+    const formData = new FormData();
+    formData.append("file", file);
+    formData.append("language", language);
+    if (durationSeconds !== undefined && durationSeconds !== null) {
+      formData.append("duration_seconds", String(durationSeconds));
+    }
+
+    const response = await fetch(`${this.baseUrl}/captions/transcribe`, {
+      method: "POST",
+      body: formData,
+    });
+
+    if (!response.ok) {
+      let errorMessage = `Failed to transcribe video (status: ${response.status})`;
+      try {
+        const errorJson = await response.json();
+        if (errorJson.detail) {
+          if (Array.isArray(errorJson.detail)) {
+            errorMessage = errorJson.detail
+              .map((d: any) => d.msg || JSON.stringify(d))
+              .join(", ");
+          } else {
+            errorMessage = errorJson.detail;
+          }
+        }
+      } catch (_) {}
+      throw new Error(errorMessage);
+    }
+
+    const data = await response.json();
+    return data as TranscriptionResponse;
+  }
+
+  async getCaptionLanguages(): Promise<{ languages: SupportedLanguageInfo[] }> {
+    const response = await fetch(`${this.baseUrl}/captions/languages`, {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error(`Failed to fetch caption languages (status: ${response.status})`);
+    }
+
+    const data = await response.json();
+    return data;
   }
 }
 

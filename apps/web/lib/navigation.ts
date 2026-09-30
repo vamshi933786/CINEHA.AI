@@ -10,6 +10,7 @@ import {
   User,
   Settings,
   Network,
+  Subtitles,
   LucideIcon,
 } from "lucide-react";
 
@@ -77,6 +78,13 @@ export const PRIMARY_NAV_ITEMS: NavItem[] = [
     icon: Video,
     description: "Video audit & Video → Script engine",
     badge: "100 MB",
+  },
+  {
+    label: "Caption Studio",
+    href: "/captions",
+    icon: Subtitles,
+    description: "Video ingestion, transcription & timed captions",
+    badge: "Phase 9",
   },
   {
     label: "Content Calendar",

@@ -27,6 +27,15 @@ from app.schemas.optimizer import (
     SaveOptimizedScriptRequest,
     VALID_OPTIMIZATION_GOALS,
 )
+from app.schemas.captions import (
+    CaptionSource,
+    TranscriptWord,
+    TranscriptSegment,
+    TranscriptionResult,
+    CaptionCue,
+    CaptionProject,
+    TranscriptionResponse,
+)
 
 __all__ = [
     "HealthResponse",
@@ -49,6 +58,13 @@ __all__ = [
     "ScriptOptimizationResponse",
     "SaveOptimizedScriptRequest",
     "VALID_OPTIMIZATION_GOALS",
+    "CaptionSource",
+    "TranscriptWord",
+    "TranscriptSegment",
+    "TranscriptionResult",
+    "CaptionCue",
+    "CaptionProject",
+    "TranscriptionResponse",
 ]
 
 
