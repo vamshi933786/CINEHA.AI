@@ -24,7 +24,12 @@ class CaptionService:
     """
 
     def __init__(self, provider=None):
-        self.provider = provider or get_transcription_provider()
+        self._custom_provider = provider
+
+    def _get_provider(self, provider_type: Optional[str] = None):
+        if self._custom_provider:
+            return self._custom_provider
+        return get_transcription_provider(provider_type)
 
     async def transcribe_video(
         self,
@@ -47,9 +52,7 @@ class CaptionService:
         )
 
         # 2. Select requested provider (or default)
-        active_provider = self.provider
-        if provider_type:
-            active_provider = get_transcription_provider(provider_type)
+        active_provider = self._get_provider(provider_type)
 
         # 3. Transcribe via active provider
         transcription: TranscriptionResult = await active_provider.transcribe(
@@ -226,6 +229,19 @@ class CaptionService:
                 processed_result = proc_res2
                 caption_source_type = "transliterated"
                 active_segments = proc_res2.segments
+
+            # Case D: Transcribed Telugu -> User wants English
+            elif source_transcription.language == "Telugu" and language == "English":
+                proc_req = LanguageProcessingRequest(
+                    source_language="Telugu",
+                    target_language="English",
+                    processing_mode="translation",
+                    segments=active_segments,
+                )
+                proc_res = await processor.process(proc_req)
+                processed_result = proc_res
+                caption_source_type = "translated"
+                active_segments = proc_res.segments
 
         # Convert processed segments to TranscriptSegment if needed for cue generator
         from app.schemas.captions import TranscriptSegment

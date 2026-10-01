@@ -565,10 +565,14 @@ Rendered MP4 artifacts are stored in a dedicated scratch cache directory (`RENDE
 - Cache size is bounded to 50 active renders (`MAX_CACHE_ENTRIES = 50`) to avoid disk bloat.
 - Stale rendered files are automatically pruned when the cache exceeds capacity or age limits.
 
-### 11.7. Development vs Production Modes
-- **Development Mode**: If no OpenAI/Whisper API key is configured, the system uses simulated transcription with realistic timestamps, enabling end-to-end testing and frontend UI development without network dependency or API costs.
-- **Production Mode**: Configured with `OPENAI_API_KEY` or `WHISPER_API_KEY`, enabling live neural speech recognition and audio extraction.
-- In both modes, the FFmpeg rendering pipeline runs real local video processing to create authentic MP4 outputs with burned-in subtitles.
+### 11.7. Speech Transcription & Provider Architecture
+- **Production Mode (Default)**: CINEHA AI requires live neural speech recognition (`OpenAIWhisperTranscriptionProvider`) powered by `OPENAI_API_KEY` or `WHISPER_API_KEY` in `apps/api/.env`. Captions are extracted directly from the actual audio voice track of the uploaded video.
+- **Strict Prohibition of Silent Mock Captions**: The system NEVER silently falls back to canned or mock captions in the user flow. If API credentials are not configured, the API returns HTTP 400 with a clear advisory: `"Production speech recognition is not configured. Production transcription is not configured. Please set OPENAI_API_KEY or WHISPER_API_KEY in apps/api/.env to enable speech-to-text."` and the UI alerts the user.
+- **Mock Provider Reserved Strictly for Automated Unit Tests**: The `MockDevelopmentTranscriptionProvider` is only invoked when `provider="mock"` is explicitly passed in internal test fixtures.
+- **Audio Track Validation**: Before invoking speech-to-text, FFmpeg probes the uploaded container for an active audio stream. If the video is silent or contains no audio track, processing halts immediately with the explicit error: `"No audio track was detected in this video."`
+- **Genuine Word Timings**: When Whisper returns word-level timestamps (`words` array in verbose JSON), they are preserved directly. If word timestamps are unavailable, word timing fabrication is strictly prohibited—segments fall back cleanly to segment bounds (`word_timings_available = False`).
+- **Telugu Script Recognition & Tanglish Transliteration**: Spoken Telugu is transcribed into authentic Telugu Unicode script (`te`). Tanglish is strictly treated as an output format generated via phonetic transliteration of authentic Telugu text into Latin characters.
+- **Session Isolation & State Reset**: Audio extraction executes within isolated temporary directories (`/tmp/cinehai_audio_<uuid>`) that are purged immediately after processing. When a new video is uploaded, all previous captions, cues, and renders are reset to prevent cross-video state contamination.
 
 ---
 
@@ -589,6 +593,7 @@ Rendered MP4 artifacts are stored in a dedicated scratch cache directory (`RENDE
 - **Milestone 4**: Caption Cue Generation (Deterministic line breaking, gap handling).
 - **Milestone 5**: Direct-on-Video Synchronized Plain & Motion Preview (Clean Pop, Karaoke, Bold Bounce, Minimal Fade).
 - **Milestone 6**: Direct Multilingual Video Rendering Engine (FFmpeg libass burned-in captions, Telugu Unicode font support, MP4 export & download).
+- **Milestone 7**: Real Speech Transcription Accuracy & Audio Track Validation (Audio stream detection, strict no-mock production policy, Whisper verbose word timings, isolated temp sessions, and upload state reset).
 
 
 

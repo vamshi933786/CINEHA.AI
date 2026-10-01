@@ -1,4 +1,4 @@
-from typing import Optional, List, Dict, Any, Literal
+from typing import Optional, List, Dict, Any, Literal, Union
 from pydantic import BaseModel, Field, ConfigDict
 
 
@@ -304,7 +304,7 @@ class CaptionPipelineResponse(BaseModel):
     project_id: str = Field(..., description="Assigned caption project UUID")
     caption_source: CaptionSource = Field(..., description="Validated video upload source metadata")
     transcription: TranscriptionResult = Field(..., description="Source speech transcription")
-    processed_transcription: Optional[TranscriptionResult] = Field(
+    processed_transcription: Optional[Union[LanguageProcessingResult, TranscriptionResult]] = Field(
         default=None, description="Translated or transliterated transcript if requested"
     )
     cues: List[CaptionCue] = Field(default_factory=list, description="Synchronized caption cues")

@@ -25,7 +25,11 @@ from app.services.caption_renderer import (
     InvalidCaptionTimingError,
     CaptionRenderError,
 )
-from app.services.audio_extractor import FFmpegNotFoundError
+from app.services.audio_extractor import (
+    FFmpegNotFoundError,
+    NoAudioTrackError,
+    AudioExtractionError,
+)
 from app.services.transcription_provider import (
     LANGUAGE_CONFIGS,
     is_production_transcription_configured,
@@ -157,14 +161,25 @@ async def transcribe_video(
             detail=f"Failed to read uploaded video file: {str(e)}",
         )
 
-    return await caption_service.transcribe_video(
-        video_bytes=video_bytes,
-        filename=file.filename,
-        mime_type=file.content_type,
-        language=language,
-        duration_seconds=duration_seconds,
-        provider_type=provider,
-    )
+    try:
+        return await caption_service.transcribe_video(
+            video_bytes=video_bytes,
+            filename=file.filename,
+            mime_type=file.content_type,
+            language=language,
+            duration_seconds=duration_seconds,
+            provider_type=provider,
+        )
+    except NoAudioTrackError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e),
+        )
+    except AudioExtractionError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e),
+        )
 
 
 @router.post("/captions/process-language", response_model=LanguageProcessingResponse)
@@ -240,14 +255,25 @@ async def generate_captions(
             detail=f"Failed to read uploaded video file: {str(e)}",
         )
 
-    return await caption_service.generate_captions_pipeline(
-        video_bytes=video_bytes,
-        filename=file.filename,
-        mime_type=file.content_type,
-        language=language,
-        duration_seconds=duration_seconds,
-        provider_type=provider,
-    )
+    try:
+        return await caption_service.generate_captions_pipeline(
+            video_bytes=video_bytes,
+            filename=file.filename,
+            mime_type=file.content_type,
+            language=language,
+            duration_seconds=duration_seconds,
+            provider_type=provider,
+        )
+    except NoAudioTrackError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e),
+        )
+    except AudioExtractionError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e),
+        )
 
 
 @router.post("/captions/render", response_model=CaptionRenderResponse)

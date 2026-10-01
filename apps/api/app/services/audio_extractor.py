@@ -1,9 +1,11 @@
 import os
+import re
+import uuid
 import shutil
 import tempfile
 import asyncio
 import logging
-from typing import Optional, Dict, Any, Tuple
+from typing import Optional, Dict, Any
 from app.core.config import settings
 
 logger = logging.getLogger(__name__)
@@ -74,12 +76,34 @@ class AudioExtractionResult:
         self.metadata = metadata or {}
 
 
+async def detect_audio_stream(video_path: str, ffmpeg_bin: str) -> bool:
+    """
+    Inspect the uploaded video container using ffmpeg to verify an audio stream exists.
+    Returns True if an Audio stream is present, False otherwise.
+    """
+    cmd = [ffmpeg_bin, "-i", video_path]
+    process = await asyncio.create_subprocess_exec(
+        *cmd,
+        stdout=asyncio.subprocess.PIPE,
+        stderr=asyncio.subprocess.PIPE,
+    )
+    _, stderr = await process.communicate()
+    stderr_text = stderr.decode("utf-8", errors="replace")
+
+    # Match audio stream indicator in FFmpeg metadata
+    # Examples:
+    # "Stream #0:1[0x2](und): Audio: aac ..."
+    # "Stream #0:1: Audio: mp3 ..."
+    return bool(re.search(r"Stream\s+#\d+:\d+.*:\s*Audio:", stderr_text, re.IGNORECASE))
+
+
 async def extract_audio_from_video(
     video_bytes: bytes,
     filename: Optional[str] = None,
 ) -> AudioExtractionResult:
     """
     Extract the audio track from video bytes and convert to speech-optimized MP3 (16kHz).
+    Uses a completely isolated temporary directory per request.
     Guarantees immediate cleanup of all temporary disk files in both success and failure cases.
     Raises:
     - FFmpegNotFoundError if ffmpeg binary is missing
@@ -97,23 +121,29 @@ async def extract_audio_from_video(
     if not ext:
         ext = ".mp4"
 
-    video_temp_path = None
-    audio_temp_path = None
+    # Dedicated temporary directory for 100% session isolation
+    session_id = uuid.uuid4().hex
+    session_dir = os.path.join(tempfile.gettempdir(), f"cinehai_audio_{session_id}")
+    os.makedirs(session_dir, exist_ok=True)
+
+    video_temp_path = os.path.join(session_dir, f"video{ext}")
+    audio_temp_path = os.path.join(session_dir, "extracted_audio.mp3")
 
     try:
         # 1. Write input video bytes to isolated temporary file
-        with tempfile.NamedTemporaryFile(suffix=ext, delete=False) as video_temp:
-            video_temp.write(video_bytes)
-            video_temp_path = video_temp.name
+        with open(video_temp_path, "wb") as f:
+            f.write(video_bytes)
 
-        # 2. Prepare output audio temporary file path
-        with tempfile.NamedTemporaryFile(suffix=".mp3", delete=False) as audio_temp:
-            audio_temp_path = audio_temp.name
+        # 2. Inspect video container: detect if an audio stream actually exists
+        has_audio = await detect_audio_stream(video_temp_path, ffmpeg_bin)
+        if not has_audio:
+            logger.warning(f"Video file '{clean_filename}' contains no audio streams.")
+            raise NoAudioTrackError("No audio track was detected in this video.")
 
         # 3. Execute ffmpeg: extract audio, convert to 16kHz mono/stereo MP3
         # -vn: disable video recording
         # -acodec libmp3lame: MP3 audio encoder
-        # -ar 16000: 16 kHz sample rate (optimal for speech models)
+        # -ar 16000: 16 kHz sample rate (optimal for speech recognition)
         # -ab 64k: compact speech bitrate
         cmd = [
             ffmpeg_bin,
@@ -136,7 +166,7 @@ async def extract_audio_from_video(
             stderr=asyncio.subprocess.PIPE,
         )
 
-        stdout, stderr = await process.communicate()
+        _, stderr = await process.communicate()
         stderr_text = stderr.decode("utf-8", errors="replace")
 
         if process.returncode != 0:
@@ -147,10 +177,7 @@ async def extract_audio_from_video(
                 or "no audio" in stderr_lower
                 or "output file is empty" in stderr_lower
             ):
-                raise NoAudioTrackError(
-                    f"The uploaded video file '{clean_filename}' contains no audio track. "
-                    "Please provide a video with recorded speech."
-                )
+                raise NoAudioTrackError("No audio track was detected in this video.")
 
             logger.error(f"FFmpeg extraction failed (code {process.returncode}): {stderr_text[:500]}")
             raise AudioExtractionError(
@@ -159,10 +186,7 @@ async def extract_audio_from_video(
 
         # 4. Verify output file exists and has content
         if not os.path.isfile(audio_temp_path) or os.path.getsize(audio_temp_path) == 0:
-            raise NoAudioTrackError(
-                f"The uploaded video file '{clean_filename}' produced no audio data. "
-                "The video likely contains no audio track."
-            )
+            raise NoAudioTrackError("No audio track was detected in this video.")
 
         with open(audio_temp_path, "rb") as f:
             audio_bytes = f.read()
@@ -178,15 +202,8 @@ async def extract_audio_from_video(
         )
 
     finally:
-        # Guaranteed cleanup of temporary files
-        if video_temp_path and os.path.exists(video_temp_path):
-            try:
-                os.unlink(video_temp_path)
-            except OSError:
-                pass
-
-        if audio_temp_path and os.path.exists(audio_temp_path):
-            try:
-                os.unlink(audio_temp_path)
-            except OSError:
-                pass
+        # Guaranteed complete cleanup of isolated temporary session directory
+        try:
+            shutil.rmtree(session_dir, ignore_errors=True)
+        except Exception:
+            pass

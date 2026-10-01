@@ -26,8 +26,8 @@ class Settings(BaseSettings):
 
     # Caption Studio & Speech Transcription Providers
     TRANSCRIPTION_PROVIDER: str = Field(
-        default="mock",
-        description="Transcription provider: 'mock' or 'whisper' / 'production'",
+        default="production",
+        description="Transcription provider: 'production' (default) or 'mock' (strictly unit tests only)",
     )
     WHISPER_API_KEY: str = Field(
         default="",

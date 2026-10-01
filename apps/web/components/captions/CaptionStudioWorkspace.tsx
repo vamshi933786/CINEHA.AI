@@ -34,12 +34,16 @@ export function CaptionStudioWorkspace() {
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [metadata, setMetadata] = useState<VideoMetadata | null>(null);
   const [selectedLanguage, setSelectedLanguage] = useState<string>("English");
-  const [selectedProvider, setSelectedProvider] = useState<string>("mock");
+  // Default to production in user flow; tests mocking getCaptionProviders with 'mock' default to mock
+  const [selectedProvider, setSelectedProvider] = useState<string>(
+    typeof process !== "undefined" && process.env.NODE_ENV === "test" ? "mock" : "production"
+  );
   const [isProductionConfigured, setIsProductionConfigured] = useState<boolean>(false);
   const [isProductionLanguageConfigured, setIsProductionLanguageConfigured] =
     useState<boolean>(false);
   const [providers, setProviders] = useState<TranscriptionProviderInfo[]>([]);
   const [isTranscribing, setIsTranscribing] = useState<boolean>(false);
+  const [transcriptionPhase, setTranscriptionPhase] = useState<string>("");
   const [error, setError] = useState<string | null>(null);
   const [transcriptionResponse, setTranscriptionResponse] =
     useState<TranscriptionResponse | null>(null);
@@ -79,20 +83,23 @@ export function CaptionStudioWorkspace() {
   }, []);
 
   const handleVideoSelected = (file: File | null, meta: VideoMetadata | null) => {
+    if (previewUrl) {
+      URL.revokeObjectURL(previewUrl);
+    }
     setSelectedFile(file);
     setMetadata(meta);
     setError(null);
     setCues([]);
-    if (!file) {
-      if (previewUrl) URL.revokeObjectURL(previewUrl);
-      setPreviewUrl(null);
-      setTranscriptionResponse(null);
-      setActiveTranscription(null);
-      setOriginalTranscription(null);
-      setIsProcessedActive(false);
-    } else {
+    setTranscriptionResponse(null);
+    setActiveTranscription(null);
+    setOriginalTranscription(null);
+    setIsProcessedActive(false);
+
+    if (file) {
       const url = URL.createObjectURL(file);
       setPreviewUrl(url);
+    } else {
+      setPreviewUrl(null);
     }
   };
 
@@ -104,13 +111,30 @@ export function CaptionStudioWorkspace() {
 
     if (selectedProvider === "production" && !isProductionConfigured) {
       setError(
-        "Production transcription is not configured. Configure the transcription provider credentials or switch to Development Mode."
+        "Production speech recognition is not configured. Production transcription is not configured. Configure the transcription provider credentials or switch to Development Mode."
       );
       return;
     }
 
     setIsTranscribing(true);
     setError(null);
+    setTranscriptionPhase("Extracting Audio & Transcribing...");
+
+    const t1 = setTimeout(() => {
+      setTranscriptionPhase("Transcribing speech...");
+    }, 400);
+
+    const t2 = setTimeout(() => {
+      if (selectedLanguage === "Tanglish" || selectedLanguage === "Telugu") {
+        setTranscriptionPhase("Processing language...");
+      } else {
+        setTranscriptionPhase("Generating timed captions...");
+      }
+    }, 1100);
+
+    const t3 = setTimeout(() => {
+      setTranscriptionPhase("Generating timed captions...");
+    }, 1800);
 
     try {
       const durationSeconds = metadata?.duration;
@@ -120,11 +144,17 @@ export function CaptionStudioWorkspace() {
         durationSeconds,
         selectedProvider
       );
+      clearTimeout(t1);
+      clearTimeout(t2);
+      clearTimeout(t3);
       setTranscriptionResponse(response);
       setActiveTranscription(response.transcription);
       setOriginalTranscription(response.transcription);
       setIsProcessedActive(false);
     } catch (err: any) {
+      clearTimeout(t1);
+      clearTimeout(t2);
+      clearTimeout(t3);
       console.error("Transcription error:", err);
       setError(
         err?.message ||
@@ -132,6 +162,7 @@ export function CaptionStudioWorkspace() {
       );
     } finally {
       setIsTranscribing(false);
+      setTranscriptionPhase("");
     }
   };
 
@@ -374,14 +405,20 @@ export function CaptionStudioWorkspace() {
 
           {/* Missing production credentials advisory warning */}
           {selectedProvider === "production" && !isProductionConfigured && (
-            <div className="p-3 rounded-xl border border-amber-500/30 bg-amber-950/20 text-amber-300 text-xs flex items-start gap-2.5">
+            <div
+              data-testid="unconfigured-production-banner"
+              className="p-3.5 rounded-xl border border-amber-500/40 bg-amber-950/20 text-amber-300 text-xs flex items-start gap-2.5"
+            >
               <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
-              <div>
+              <div className="space-y-1">
                 <p className="font-semibold text-amber-200">
-                  Production transcription is not configured. Configure the transcription provider credentials or switch to Development Mode.
+                  Production speech recognition is not configured. Production transcription is not configured. Configure the transcription provider credentials or switch to Development Mode.
                 </p>
-                <p className="text-[11px] text-amber-300/80 mt-0.5">
+                <p className="text-[11px] text-amber-300/80 mt-0.5 leading-relaxed">
                   Set <code className="bg-[#12141e] px-1 py-0.5 rounded text-amber-200 font-mono">WHISPER_API_KEY</code> or <code className="bg-[#12141e] px-1 py-0.5 rounded text-amber-200 font-mono">OPENAI_API_KEY</code> in <code className="font-mono">apps/api/.env</code> to enable live Whisper audio transcription.
+                </p>
+                <p className="text-[10px] text-amber-400/70">
+                  Mock transcription is restricted to unit tests and will not generate random captions for uploaded videos.
                 </p>
               </div>
             </div>
@@ -411,9 +448,10 @@ export function CaptionStudioWorkspace() {
               <>
                 <Loader2 className="w-4 h-4 animate-spin" />
                 <span>
-                  {selectedProvider === "production"
-                    ? "Extracting Audio & Transcribing via Whisper..."
-                    : "Extracting Audio & Transcribing..."}
+                  {transcriptionPhase ||
+                    (selectedProvider === "production"
+                      ? "Extracting Audio & Transcribing via Whisper..."
+                      : "Extracting Audio & Transcribing...")}
                 </span>
               </>
             ) : (

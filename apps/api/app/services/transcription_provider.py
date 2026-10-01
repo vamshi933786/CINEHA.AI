@@ -354,8 +354,8 @@ class OpenAIWhisperTranscriptionProvider(BaseTranscriptionProvider):
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail=(
-                    "Production transcription is not configured. Configure the transcription "
-                    "provider credentials or switch to Development Mode."
+                    "Production speech recognition is not configured. Production transcription is not configured. "
+                    "Please set OPENAI_API_KEY or WHISPER_API_KEY in apps/api/.env to enable speech-to-text."
                 ),
             )
 
@@ -371,16 +371,14 @@ class OpenAIWhisperTranscriptionProvider(BaseTranscriptionProvider):
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
         # 3. Determine underlying spoken language
-        lang_config = LANGUAGE_CONFIGS.get(
-            language,
-            {
-                "code": "en",
-                "script": "Latin",
-                "is_transliteration": False,
-                "whisper_lang": "en",
-            },
-        )
-        whisper_lang = lang_config.get("whisper_lang", "en")
+        # For Telugu and Tanglish: spoken audio is Telugu ('te')
+        # For English: leave whisper_lang as None to allow Whisper auto-detection of spoken speech
+        whisper_lang = None
+        if language in ("Telugu", "Tanglish"):
+            whisper_lang = "te"
+        elif language == "Hindi":
+            whisper_lang = "hi"
+        # If language == "English": do NOT pass language to allow Whisper auto-detection
 
         # 4. Construct multipart request payload for Whisper
         headers = {
@@ -478,12 +476,26 @@ class OpenAIWhisperTranscriptionProvider(BaseTranscriptionProvider):
             s_end = round(float(s.get("end", 0.0)), 3)
             s_text = s.get("text", "").strip()
 
-            # Match words belonging to this segment's timing window
-            seg_words = [
-                w
-                for w in all_words
-                if (w.start_time >= s_start - 0.05 and w.end_time <= s_end + 0.05)
-            ]
+            # Check if segment has word timings directly from provider
+            seg_words: List[TranscriptWord] = []
+            if "words" in s and isinstance(s["words"], list) and len(s["words"]) > 0:
+                for sw in s["words"]:
+                    sw_text = sw.get("word", "").strip()
+                    if sw_text:
+                        seg_words.append(
+                            TranscriptWord(
+                                text=sw_text,
+                                start_time=round(float(sw.get("start", s_start)), 3),
+                                end_time=round(float(sw.get("end", s_end)), 3),
+                            )
+                        )
+            elif all_words:
+                # Match words belonging to this segment's timing window
+                seg_words = [
+                    w
+                    for w in all_words
+                    if (w.start_time >= s_start - 0.05 and w.end_time <= s_end + 0.05)
+                ]
 
             # Approximate confidence from average logprob if available
             confidence = None
@@ -521,12 +533,39 @@ class OpenAIWhisperTranscriptionProvider(BaseTranscriptionProvider):
             )
 
         total_duration = segments[-1].end_time if segments else float(resp_data.get("duration", 0.0))
-        word_timings_available = len(all_words) > 0
+        # Genuine word timings available ONLY if non-empty word timings were actually returned
+        word_timings_available = any(len(s.words) > 0 for s in segments)
+
+        # Determine actual spoken language detected by Whisper
+        resp_lang = str(resp_data.get("language", "")).lower()
+        if "telugu" in resp_lang or resp_lang == "te":
+            detected_language = "Telugu"
+            lang_code = "te"
+            script_type = "Telugu"
+        elif "hindi" in resp_lang or resp_lang == "hi":
+            detected_language = "Hindi"
+            lang_code = "hi"
+            script_type = "Devanagari"
+        elif "english" in resp_lang or resp_lang == "en":
+            detected_language = "English"
+            lang_code = "en"
+            script_type = "Latin"
+        else:
+            lang_cfg = LANGUAGE_CONFIGS.get(language, LANGUAGE_CONFIGS["English"])
+            detected_language = language if language != "Tanglish" else "Telugu"
+            lang_code = lang_cfg.get("code", "en")
+            script_type = lang_cfg.get("script", "Latin")
+
+        # When Tanglish is selected, the raw speech transcription is native Telugu script
+        result_lang = "Telugu" if language == "Tanglish" else detected_language
+        result_code = "te" if language == "Tanglish" else lang_code
+        result_script = "Telugu" if language == "Tanglish" else script_type
 
         metadata: Dict[str, Any] = {
             "video_filename": clean_filename,
             "provider_model": self.model,
             "word_timings_available": word_timings_available,
+            "detected_speech_language": detected_language,
             "extracted_audio_format": audio_result.audio_format,
             "extracted_audio_size_bytes": audio_result.file_size_bytes,
         }
@@ -540,10 +579,10 @@ class OpenAIWhisperTranscriptionProvider(BaseTranscriptionProvider):
             )
 
         return TranscriptionResult(
-            language=language,
-            language_code=lang_config["code"],
-            is_transliteration=lang_config["is_transliteration"],
-            script_type=lang_config["script"],
+            language=result_lang,
+            language_code=result_code,
+            is_transliteration=False,
+            script_type=result_script,
             segments=segments,
             full_text=raw_text or "\n\n".join(s.text for s in segments),
             duration_seconds=total_duration,
@@ -557,12 +596,12 @@ class OpenAIWhisperTranscriptionProvider(BaseTranscriptionProvider):
 class ProductionTranscriptionProviderStub(BaseTranscriptionProvider):
     """
     Production Transcription Provider Stub adapter for backward compatibility.
-    Directs to OpenAIWhisperTranscriptionProvider when configured, or provides safe dev fallback.
+    Directs to OpenAIWhisperTranscriptionProvider when configured.
+    Raises HTTPException if credentials are not configured — never silently falls back to mock.
     """
 
     def __init__(self):
         self._whisper = OpenAIWhisperTranscriptionProvider()
-        self._dev_fallback = MockDevelopmentTranscriptionProvider()
 
     async def transcribe(
         self,
@@ -571,23 +610,20 @@ class ProductionTranscriptionProviderStub(BaseTranscriptionProvider):
         language: str = "English",
         duration_seconds: Optional[float] = None,
     ) -> TranscriptionResult:
-        if self._whisper.is_configured():
-            return await self._whisper.transcribe(
-                video_bytes=video_bytes,
-                filename=filename,
-                language=language,
-                duration_seconds=duration_seconds,
+        if not self._whisper.is_configured():
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=(
+                    "Production speech recognition is not configured. Production transcription is not configured. "
+                    "Please set OPENAI_API_KEY or WHISPER_API_KEY in apps/api/.env to enable speech-to-text."
+                ),
             )
-
-        logger.info("Production speech provider credentials not configured. Delegating to development transcription.")
-        result = await self._dev_fallback.transcribe(
+        return await self._whisper.transcribe(
             video_bytes=video_bytes,
             filename=filename,
             language=language,
             duration_seconds=duration_seconds,
         )
-        result.metadata["production_stub_status"] = "unconfigured_credentials"
-        return result
 
 
 def is_production_transcription_configured() -> bool:
@@ -599,21 +635,22 @@ def is_production_transcription_configured() -> bool:
 def get_transcription_provider(provider_type: Optional[str] = None) -> BaseTranscriptionProvider:
     """
     Factory function to retrieve the configured transcription provider.
-    Honors explicit provider_type argument or settings.TRANSCRIPTION_PROVIDER.
+    Defaults to production speech recognition (OpenAIWhisperTranscriptionProvider).
+    MockDevelopmentTranscriptionProvider is strictly reserved for automated unit tests via provider_type='mock'.
     Raises HTTPException if production provider is requested without configured credentials.
     """
-    target = (provider_type or settings.TRANSCRIPTION_PROVIDER or "mock").lower().strip()
+    target = (provider_type or settings.TRANSCRIPTION_PROVIDER or "production").lower().strip()
 
-    if target in ("whisper", "production", "openai"):
-        provider = OpenAIWhisperTranscriptionProvider()
-        if not provider.is_configured():
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=(
-                    "Production transcription is not configured. Configure the transcription "
-                    "provider credentials or switch to Development Mode."
-                ),
-            )
-        return provider
+    if target == "mock":
+        return MockDevelopmentTranscriptionProvider()
 
-    return MockDevelopmentTranscriptionProvider()
+    provider = OpenAIWhisperTranscriptionProvider()
+    if not provider.is_configured():
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=(
+                "Production speech recognition is not configured. Production transcription is not configured. "
+                "Please set OPENAI_API_KEY or WHISPER_API_KEY in apps/api/.env to enable speech-to-text."
+            ),
+        )
+    return provider

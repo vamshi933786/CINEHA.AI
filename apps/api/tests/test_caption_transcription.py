@@ -129,7 +129,7 @@ async def test_validate_video_upload_malformed_container():
 @pytest.mark.asyncio
 async def test_transcription_provider_abstraction():
     """Verify MockDevelopmentTranscriptionProvider returns structured segments and word timings."""
-    provider = get_transcription_provider()
+    provider = get_transcription_provider("mock")
     assert isinstance(provider, MockDevelopmentTranscriptionProvider)
 
     result = await provider.transcribe(
@@ -186,15 +186,16 @@ async def test_transcription_language_matrix():
 
 @pytest.mark.asyncio
 async def test_production_transcription_provider_stub():
-    """Verify ProductionTranscriptionProviderStub delegates safely to mock when credentials are unconfigured."""
+    """Verify ProductionTranscriptionProviderStub raises 400 when credentials are unconfigured without silent fallback."""
     stub = ProductionTranscriptionProviderStub()
-    result = await stub.transcribe(
-        video_bytes=create_dummy_mp4_bytes(500),
-        filename="reel.mp4",
-        language="English",
-    )
-    assert result.is_production_provider is False
-    assert result.metadata.get("production_stub_status") == "unconfigured_credentials"
+    with pytest.raises(HTTPException) as exc:
+        await stub.transcribe(
+            video_bytes=create_dummy_mp4_bytes(500),
+            filename="reel.mp4",
+            language="English",
+        )
+    assert exc.value.status_code == 400
+    assert "Production speech recognition is not configured" in exc.value.detail
 
 
 @pytest.mark.asyncio
@@ -224,7 +225,7 @@ async def test_api_transcribe_video_success():
     async with AsyncClient(transport=transport, base_url="http://test") as client:
         mp4_content = create_dummy_mp4_bytes(1024)
         files = {"file": ("cinematic_sample.mp4", mp4_content, "video/mp4")}
-        data = {"language": "English", "duration_seconds": "18.5"}
+        data = {"language": "English", "duration_seconds": "18.5", "provider": "mock"}
 
         response = await client.post("/api/v1/captions/transcribe", files=files, data=data)
         assert response.status_code == 200
@@ -255,7 +256,7 @@ async def test_api_transcribe_video_tanglish():
     async with AsyncClient(transport=transport, base_url="http://test") as client:
         mov_content = create_dummy_mov_bytes(1024)
         files = {"file": ("telugu_reel.mov", mov_content, "video/quicktime")}
-        data = {"language": "Tanglish"}
+        data = {"language": "Tanglish", "provider": "mock"}
 
         response = await client.post("/api/v1/captions/transcribe", files=files, data=data)
         assert response.status_code == 200
