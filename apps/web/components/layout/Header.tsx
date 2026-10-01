@@ -17,14 +17,47 @@ export function Header({ onMenuToggle }: HeaderProps) {
 
   useEffect(() => {
     let mounted = true;
-    api.checkHealth().then((data) => {
+
+    // Failsafe timeout to prevent staying indefinitely in checking state
+    const fallbackTimer = setTimeout(() => {
       if (mounted) {
-        setHealth(data);
         setLoading(false);
       }
-    });
+    }, 6000);
+
+    const performCheck = async () => {
+      try {
+        const data = await api.checkHealth(5000);
+        if (mounted) {
+          setHealth(data);
+          setLoading(false);
+        }
+      } catch {
+        if (mounted) {
+          setHealth({
+            status: "unreachable",
+            project_name: "CINEHA AI API",
+            version: "unknown",
+            environment: "unknown",
+            database: "disconnected",
+            active_provider: "none",
+            max_video_size_mb: 100,
+            timestamp: new Date().toISOString(),
+          });
+          setLoading(false);
+        }
+      }
+    };
+
+    performCheck();
+
+    // Heartbeat polling every 30 seconds
+    const interval = setInterval(performCheck, 30000);
+
     return () => {
       mounted = false;
+      clearTimeout(fallbackTimer);
+      clearInterval(interval);
     };
   }, []);
 
@@ -75,11 +108,23 @@ export function Header({ onMenuToggle }: HeaderProps) {
         <div className="sm:hidden flex items-center">
           <span
             className={`w-2.5 h-2.5 rounded-full ${
-              health?.status === "healthy"
-                ? "bg-cine-emerald animate-pulse"
-                : "bg-cine-amber"
+              loading
+                ? "bg-amber-400 animate-pulse"
+                : health?.status === "healthy"
+                ? "bg-emerald-400 animate-pulse"
+                : health?.status === "degraded"
+                ? "bg-amber-400"
+                : "bg-rose-500"
             }`}
-            title={`Backend: ${health?.status || "connecting"}`}
+            title={`Backend: ${
+              loading
+                ? "Checking system heartbeat..."
+                : health?.status === "healthy"
+                ? "API: HEALTHY"
+                : health?.status === "degraded"
+                ? "API: DEGRADED"
+                : "API: OFFLINE"
+            }`}
           />
         </div>
 

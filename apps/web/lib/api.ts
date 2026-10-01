@@ -50,15 +50,24 @@ export class ApiClient {
     this.baseUrl = baseUrl.replace(/\/+$/, "");
   }
 
-  async checkHealth(): Promise<HealthResponse> {
+  async checkHealth(timeoutMs: number = 5000): Promise<HealthResponse> {
     try {
+      const controller =
+        typeof AbortController !== "undefined" ? new AbortController() : null;
+      const timer = controller
+        ? setTimeout(() => controller.abort(), timeoutMs)
+        : null;
+
       const response = await fetch(`${this.baseUrl}/health`, {
         method: "GET",
         headers: {
           "Content-Type": "application/json",
         },
         cache: "no-store",
+        signal: controller ? controller.signal : undefined,
       });
+
+      if (timer) clearTimeout(timer);
 
       if (!response.ok) {
         throw new Error(`API responded with status: ${response.status}`);
