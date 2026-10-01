@@ -48,7 +48,7 @@ export const WorkflowWorkspace: React.FC = () => {
             <strong>CINEHA AI Multi-Agent Pipeline:</strong> Visualizes the end-to-end orchestration flow from Creator Intent to Final Production-Ready Screenplay.
           </p>
           <p className="text-[11px] text-slate-400">
-            Note: Current phases (Hooks, Script Studio, Retention Analyzer, Optimizer) execute synchronously via direct API endpoints. Continuous streaming telemetry will be bound upon deployment of the background multi-agent orchestrator.
+            Note: Current workflow pipeline stages execute synchronously via direct API endpoints. Continuous streaming telemetry will be bound upon deployment of the background multi-agent orchestrator.
           </p>
         </div>
       </div>

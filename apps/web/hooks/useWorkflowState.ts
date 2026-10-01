@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import {
   WorkflowNodeId,
+  WorkflowNodeData,
   WorkflowNodeStatus,
   WorkflowState,
   DEFAULT_WORKFLOW_NODES,
@@ -10,7 +11,13 @@ import {
 } from "../types/workflow";
 
 export function useWorkflowState() {
-  const [nodes, setNodes] = useState(DEFAULT_WORKFLOW_NODES);
+  const [nodes, setNodes] = useState(() => {
+    const initial = {} as Record<WorkflowNodeId, WorkflowNodeData>;
+    (Object.keys(DEFAULT_WORKFLOW_NODES) as WorkflowNodeId[]).forEach((key) => {
+      initial[key] = { ...DEFAULT_WORKFLOW_NODES[key] };
+    });
+    return initial;
+  });
   const [connections, setConnections] = useState(DEFAULT_WORKFLOW_CONNECTIONS);
   const [selectedNodeId, setSelectedNodeId] = useState<WorkflowNodeId | null>("orchestrator");
   const [activeNodeId, setActiveNodeId] = useState<WorkflowNodeId | null>(null);
@@ -82,7 +89,7 @@ export function useWorkflowState() {
         const next = { ...prev };
         (Object.keys(next) as WorkflowNodeId[]).forEach((key, index) => {
           let status: WorkflowNodeStatus = "completed";
-          if (key === "optimizer") status = "processing";
+          if (key === "review") status = "processing";
           if (key === "final_output") status = "waiting";
           next[key] = {
             ...next[key],
@@ -99,31 +106,31 @@ export function useWorkflowState() {
       setConnections(
         DEFAULT_WORKFLOW_CONNECTIONS.map((c, i) => ({
           ...c,
-          active: i <= 5,
+          active: i <= 3,
         }))
       );
-      setActiveNodeId("optimizer");
+      setActiveNodeId("review");
       setGlobalStatus("running");
     } else if (preset === "error_case") {
       // Diagnostic failure demonstration (e.g. low hook retention score)
-      setNodes((prev) => {
-        const next = { ...prev };
-        next.user_request.status = "completed";
-        next.orchestrator.status = "completed";
-        next.research.status = "completed";
-        next.hook.status = "completed";
-        next.script.status = "completed";
-        next.review.status = "error";
-        next.review.telemetryNotes =
-          "Retention threshold breach: Hook duration exceeds 4.5s; 3 conversational filler phrases flagged.";
-        next.optimizer.status = "waiting";
-        next.final_output.status = "idle";
-        return next;
-      });
+      setNodes((prev) => ({
+        ...prev,
+        user_request: { ...prev.user_request, status: "completed" },
+        orchestrator: { ...prev.orchestrator, status: "completed" },
+        research: { ...prev.research, status: "completed" },
+        hook: { ...prev.hook, status: "completed" },
+        review: {
+          ...prev.review,
+          status: "error",
+          telemetryNotes:
+            "Retention threshold breach: Hook duration exceeds 4.5s; 3 conversational filler phrases flagged.",
+        },
+        final_output: { ...prev.final_output, status: "idle" },
+      }));
       setConnections(
         DEFAULT_WORKFLOW_CONNECTIONS.map((c, i) => ({
           ...c,
-          active: i < 5,
+          active: i < 3,
         }))
       );
       setActiveNodeId("review");

@@ -105,7 +105,7 @@ export const Accessible2DWorkflow: React.FC<Accessible2DWorkflowProps> = ({
           </p>
         </div>
         <span className="text-[11px] font-mono px-2.5 py-1 rounded-lg bg-[#181a28] border border-[#262c3e] text-slate-400">
-          8 Sequential Stages
+          6 Sequential Stages
         </span>
       </div>
 

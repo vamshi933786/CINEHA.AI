@@ -7,7 +7,7 @@ This document outlines the architecture, performance safeguards, accessibility p
 ## 1. System Objectives
 
 The 3D system serves as an intuitive, interactive pedagogical tool explaining the CINEHA AI multi-agent orchestration architecture:
-1. **Multi-Agent Orchestration Workflow:** Visualizes the sequential data passing between User Ingestion, Orchestrator, Research, Hook Generator, Script Studio, Retention Analyzer, Script Optimizer, and Final Production Output.
+1. **Multi-Agent Orchestration Workflow:** Visualizes the sequential data passing between User Request, Orchestrator, Research, Hook Generator, Review, and Final Output.
 2. **Honest Execution State Telemetry:** Distinguishes between static architectural blueprint representation and live agent execution telemetry. Does not fake backend progress.
 3. **Inclusive Accessibility Fallback:** Provides an accessible, semantic 2D HTML/SVG representation for screen readers, low-capability environments, WebGL failures, and reduced-motion users.
 
@@ -55,10 +55,8 @@ type WorkflowNodeStatus = "idle" | "waiting" | "processing" | "completed" | "err
 | 2 | `orchestrator` | **Orchestrator Agent** | System Brain & Delegation | Decomposes creative brief and dispatches subagents |
 | 3 | `research` | **Research Agent** | Topic & Trend Intelligence | Pattern synthesis, competitor pacing & citations (Phase 10) |
 | 4 | `hook` | **Hook Generator** | 0–3s Retention Architecture | 9-taxonomy psychological opening hooks (Phase 5) |
-| 5 | `script` | **Script Studio Agent** | 2-Column Screenplay Generation | Screenplay choreography (VO, Visual, B-Roll, SFX) (Phase 6) |
-| 6 | `review` | **Retention Analyzer** | 9-Dimension Retention Auditor | Pacing, word velocity, filler detection & scoring (Phase 7A) |
-| 7 | `optimizer` | **Script Optimizer** | Retention & Pacing Rewriter | 6-goal optimization and version branching (Phase 7B) |
-| 8 | `final_output` | **Production Ready Screenplay** | Final Delivery Asset | Formatted teleprompter script, visual storyboard & export |
+| 5 | `review` | **Retention Review** | 9-Dimension Retention Auditor | Content & hook retention audit, drop-off risks, recommendations |
+| 6 | `final_output` | **Final Output** | Final Delivery Asset | Production content package, presentation copy & export |
 
 ---
 

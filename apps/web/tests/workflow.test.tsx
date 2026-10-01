@@ -44,16 +44,17 @@ describe("Phase 8: 3D Workflow Visualization Test Suite", () => {
       expect(result.current.activePreset).toBe("idle_blueprint");
       expect(result.current.globalStatus).toBe("idle");
 
-      // Verify all 8 core nodes exist
+      // Verify all 6 core nodes exist
       const nodeKeys = Object.keys(result.current.nodes);
-      expect(nodeKeys).toContain("user_request");
-      expect(nodeKeys).toContain("orchestrator");
-      expect(nodeKeys).toContain("research");
-      expect(nodeKeys).toContain("hook");
-      expect(nodeKeys).toContain("script");
-      expect(nodeKeys).toContain("review");
-      expect(nodeKeys).toContain("optimizer");
-      expect(nodeKeys).toContain("final_output");
+      expect(nodeKeys).toHaveLength(6);
+      expect(nodeKeys).toEqual([
+        "user_request",
+        "orchestrator",
+        "research",
+        "hook",
+        "review",
+        "final_output",
+      ]);
 
       // Verify default status is idle
       Object.values(result.current.nodes).forEach((node) => {
@@ -70,8 +71,8 @@ describe("Phase 8: 3D Workflow Visualization Test Suite", () => {
 
       expect(result.current.activePreset).toBe("sample_run");
       expect(result.current.globalStatus).toBe("running");
-      expect(result.current.nodes.optimizer.status).toBe("processing");
-      expect(result.current.nodes.script.status).toBe("completed");
+      expect(result.current.nodes.review.status).toBe("processing");
+      expect(result.current.nodes.hook.status).toBe("completed");
       expect(result.current.nodes.final_output.status).toBe("waiting");
     });
 
@@ -105,7 +106,7 @@ describe("Phase 8: 3D Workflow Visualization Test Suite", () => {
   });
 
   describe("Accessible2DWorkflow Component", () => {
-    it("renders semantic ordered list and all 8 workflow stages with accessible labels", () => {
+    it("renders semantic ordered list and all 6 workflow stages with accessible labels", () => {
       const mockSelect = vi.fn();
 
       render(
@@ -128,15 +129,20 @@ describe("Phase 8: 3D Workflow Visualization Test Suite", () => {
       });
       expect(ol).toBeInTheDocument();
 
-      // Verify all required node names
+      // Verify 6 Sequential Stages badge
+      expect(screen.getByText("6 Sequential Stages")).toBeInTheDocument();
+
+      // Verify all 6 required node names
       expect(screen.getByText("User Request")).toBeInTheDocument();
       expect(screen.getByText("Orchestrator Agent")).toBeInTheDocument();
       expect(screen.getByText("Research Agent")).toBeInTheDocument();
       expect(screen.getByText("Hook Generator")).toBeInTheDocument();
-      expect(screen.getByText("Script Studio Agent")).toBeInTheDocument();
-      expect(screen.getByText("Retention Analyzer")).toBeInTheDocument();
-      expect(screen.getByText("Script Optimizer")).toBeInTheDocument();
-      expect(screen.getByText("Production Ready Screenplay")).toBeInTheDocument();
+      expect(screen.getByText("Retention Review")).toBeInTheDocument();
+      expect(screen.getByText("Final Output")).toBeInTheDocument();
+
+      // Verify removed nodes are NOT present
+      expect(screen.queryByText("Script Studio Agent")).not.toBeInTheDocument();
+      expect(screen.queryByText("Script Optimizer")).not.toBeInTheDocument();
 
       // Verify clicking triggers selection callback
       fireEvent.click(screen.getByText("Hook Generator"));
@@ -147,8 +153,8 @@ describe("Phase 8: 3D Workflow Visualization Test Suite", () => {
       const customNodes: Record<string, WorkflowNodeData> = {
         ...DEFAULT_WORKFLOW_NODES,
         hook: { ...DEFAULT_WORKFLOW_NODES.hook, status: "processing" },
-        script: { ...DEFAULT_WORKFLOW_NODES.script, status: "completed" },
-        optimizer: { ...DEFAULT_WORKFLOW_NODES.optimizer, status: "waiting" },
+        orchestrator: { ...DEFAULT_WORKFLOW_NODES.orchestrator, status: "completed" },
+        final_output: { ...DEFAULT_WORKFLOW_NODES.final_output, status: "waiting" },
         review: { ...DEFAULT_WORKFLOW_NODES.review, status: "error" },
       };
 
@@ -171,21 +177,21 @@ describe("Phase 8: 3D Workflow Visualization Test Suite", () => {
 
   describe("WorkflowNodeDetailPanel Component", () => {
     it("renders selected node details, input/output artifacts, and tool navigation link", () => {
-      const selectedNode = DEFAULT_WORKFLOW_NODES.optimizer;
+      const selectedNode = DEFAULT_WORKFLOW_NODES.review;
 
       render(<WorkflowNodeDetailPanel node={selectedNode} />);
 
-      expect(screen.getByText("Script Optimizer")).toBeInTheDocument();
-      expect(screen.getByText("Retention & Pacing Rewriter")).toBeInTheDocument();
+      expect(screen.getByText("Retention Review")).toBeInTheDocument();
+      expect(screen.getByText("9-Dimension Retention Auditor")).toBeInTheDocument();
       expect(screen.getByText("Agent Responsibilities")).toBeInTheDocument();
 
       // Input and output artifacts
-      expect(screen.getByText("Retention Audit")).toBeInTheDocument();
-      expect(screen.getByText("Optimized Screenplay")).toBeInTheDocument();
+      expect(screen.getByText("Candidate Hooks")).toBeInTheDocument();
+      expect(screen.getByText("Approved Review")).toBeInTheDocument();
 
       // Quick launch link to tool
-      const launchLink = screen.getByRole("link", { name: /Launch Script Optimizer/i });
-      expect(launchLink).toHaveAttribute("href", "/optimizer");
+      const launchLink = screen.getByRole("link", { name: /Launch Retention Analyzer/i });
+      expect(launchLink).toHaveAttribute("href", "/analyzer");
     });
 
     it("renders empty state placeholder when no node is selected", () => {

@@ -41,12 +41,8 @@ export const WorkflowNodeDetailPanel: React.FC<WorkflowNodeDetailPanelProps> = (
         return { label: "Creator Profile", href: "/profile" };
       case "hook":
         return { label: "Hook Generator", href: "/hooks" };
-      case "script":
-        return { label: "Script Studio", href: "/scripts" };
       case "review":
         return { label: "Retention Analyzer", href: "/analyzer" };
-      case "optimizer":
-        return { label: "Script Optimizer", href: "/optimizer" };
       case "research":
         return { label: "Trend Research", href: "/research" };
       default:
