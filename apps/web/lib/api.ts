@@ -35,8 +35,12 @@ import type {
   LanguageProcessingRequest,
   LanguageProcessingResponse,
   LanguagePairsResponse,
+  CaptionCue,
   CaptionCueGenerationRequest,
   CaptionCueGenerationResponse,
+  CaptionRenderOptions,
+  CaptionRenderResponse,
+  CaptionPipelineResponse,
 } from "../types/caption";
 
 export class ApiClient {
@@ -639,6 +643,94 @@ export class ApiClient {
 
     const data = await response.json();
     return data as CaptionCueGenerationResponse;
+  }
+
+  async generateCaptions(
+    file: File,
+    language: string = "English",
+    durationSeconds?: number,
+    provider?: string
+  ): Promise<CaptionPipelineResponse> {
+    const formData = new FormData();
+    formData.append("file", file);
+    formData.append("language", language);
+    if (durationSeconds !== undefined && durationSeconds !== null) {
+      formData.append("duration_seconds", String(durationSeconds));
+    }
+    if (provider) {
+      formData.append("provider", provider);
+    }
+
+    const response = await fetch(`${this.baseUrl}/captions/generate`, {
+      method: "POST",
+      body: formData,
+    });
+
+    if (!response.ok) {
+      let errorMessage = `Caption generation failed (status: ${response.status})`;
+      try {
+        const errorJson = await response.json();
+        if (errorJson.detail) {
+          if (Array.isArray(errorJson.detail)) {
+            errorMessage = errorJson.detail
+              .map((d: any) => d.msg || JSON.stringify(d))
+              .join(", ");
+          } else {
+            errorMessage = errorJson.detail;
+          }
+        }
+      } catch (_) {}
+      throw new Error(errorMessage);
+    }
+
+    const data = await response.json();
+    return data as CaptionPipelineResponse;
+  }
+
+  async renderCaptionedVideo(
+    file: File,
+    cues: CaptionCue[],
+    language: string = "English",
+    preset: string = "clean_pop",
+    options?: Partial<CaptionRenderOptions>
+  ): Promise<CaptionRenderResponse> {
+    const formData = new FormData();
+    formData.append("file", file);
+    formData.append("cues", JSON.stringify(cues));
+    formData.append("language", language);
+    formData.append("preset", preset);
+    if (options) {
+      formData.append("options", JSON.stringify(options));
+    }
+
+    const response = await fetch(`${this.baseUrl}/captions/render`, {
+      method: "POST",
+      body: formData,
+    });
+
+    if (!response.ok) {
+      let errorMessage = `Caption rendering failed (status: ${response.status})`;
+      try {
+        const errorJson = await response.json();
+        if (errorJson.detail) {
+          if (Array.isArray(errorJson.detail)) {
+            errorMessage = errorJson.detail
+              .map((d: any) => d.msg || JSON.stringify(d))
+              .join(", ");
+          } else {
+            errorMessage = errorJson.detail;
+          }
+        }
+      } catch (_) {}
+      throw new Error(errorMessage);
+    }
+
+    const data = await response.json();
+    return data as CaptionRenderResponse;
+  }
+
+  getRenderDownloadUrl(renderId: string): string {
+    return `${this.baseUrl}/captions/render/${encodeURIComponent(renderId)}/download`;
   }
 }
 

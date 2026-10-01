@@ -278,3 +278,90 @@ export interface LanguagePairsResponse {
   supported_languages: string[];
 }
 
+export interface CaptionStudioLanguageOption {
+  id: "English" | "Telugu" | "Tanglish";
+  name: string;
+  label: string;
+  code: string;
+  script: string;
+  is_transliteration: boolean;
+  description: string;
+}
+
+export const CAPTION_STUDIO_LANGUAGES: CaptionStudioLanguageOption[] = [
+  {
+    id: "English",
+    name: "English",
+    label: "English",
+    code: "en",
+    script: "Latin",
+    is_transliteration: false,
+    description: "Standard English speech recognition with timed word cues",
+  },
+  {
+    id: "Telugu",
+    name: "Telugu",
+    label: "Telugu (తెలుగు)",
+    code: "te",
+    script: "Telugu",
+    is_transliteration: false,
+    description: "Native Telugu script with Unicode font rendering",
+  },
+  {
+    id: "Tanglish",
+    name: "Tanglish",
+    label: "Tanglish",
+    code: "te-Latn",
+    script: "Latin",
+    is_transliteration: true,
+    description: "Conversational language written phonetically in Latin characters",
+  },
+];
+
+export interface CaptionRenderOptions {
+  preset: MotionCaptionPreset;
+  font_size: "small" | "medium" | "large";
+  alignment: "left" | "center" | "right";
+  vertical_position: "top" | "center" | "bottom";
+  background: "none" | "box" | "outline";
+  primary_color: string;
+  active_color: string;
+  active_bg_color: string;
+  font_weight: "normal" | "bold" | "black";
+}
+
+export interface CaptionRenderResult {
+  render_id: string;
+  status: "completed" | "failed";
+  output_filename: string;
+  mime_type: string;
+  file_size: number;
+  duration: number;
+  caption_language: string;
+  caption_count: number;
+  download_url: string;
+  video_width?: number;
+  video_height?: number;
+  preset_used: string;
+  metadata?: Record<string, any>;
+}
+
+export interface CaptionRenderResponse {
+  result: CaptionRenderResult;
+  notice?: string | null;
+}
+
+export interface CaptionPipelineResponse {
+  project_id: string;
+  caption_source: CaptionSource;
+  transcription: TranscriptionResult;
+  processed_transcription?: TranscriptionResult | null;
+  cues: CaptionCue[];
+  selected_language: string;
+  cue_count: number;
+  total_caption_duration: number;
+  timing_granularity: "word" | "segment";
+  is_production_provider: boolean;
+  notice?: string | null;
+}
+

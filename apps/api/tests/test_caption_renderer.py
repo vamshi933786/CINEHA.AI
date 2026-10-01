@@ -1,0 +1,255 @@
+import io
+import os
+import json
+import pytest
+from httpx import AsyncClient, ASGITransport
+from app.main import app
+from app.schemas.captions import CaptionCue, CaptionCueWord, CaptionRenderOptions
+from app.services.caption_renderer import (
+    FFmpegCaptionRenderer,
+    format_ass_timestamp,
+    hex_to_ass_color,
+    resolve_caption_font,
+    InvalidCaptionTimingError,
+    UnicodeFontNotFoundError,
+    RENDER_REGISTRY,
+)
+
+
+def create_minimal_mp4_bytes() -> bytes:
+    """Create a minimal valid ftyp mp4 binary header for testing."""
+    return (
+        b"\x00\x00\x00\x18ftypmp42\x00\x00\x00\x00mp42isom"
+        b"\x00\x00\x00\x08free"
+        b"\x00\x00\x00\x10mdat" + b"\x00" * 64
+    )
+
+
+def test_format_ass_timestamp():
+    """Verify standard centisecond ASS timestamp formatting."""
+    assert format_ass_timestamp(0.0) == "0:00:00.00"
+    assert format_ass_timestamp(1.234) == "0:00:01.23"
+    assert format_ass_timestamp(59.999) == "0:01:00.00"
+    assert format_ass_timestamp(65.5) == "0:01:05.50"
+    assert format_ass_timestamp(3661.05) == "1:01:01.05"
+
+
+def test_hex_to_ass_color():
+    """Verify conversion of hex color to ASS BGR format."""
+    assert hex_to_ass_color("#FFFFFF") == "&H00FFFFFF"
+    assert hex_to_ass_color("#000000") == "&H00000000"
+    assert hex_to_ass_color("#00F0FF") == "&H00FFF000"
+    assert hex_to_ass_color("#FF0000") == "&H000000FF"
+    assert hex_to_ass_color("", default="&H00FFFFFF") == "&H00FFFFFF"
+
+
+def test_resolve_caption_font():
+    """Verify font resolution for Telugu, English, and Tanglish."""
+    # English
+    en_font, en_dir = resolve_caption_font("English")
+    assert en_font in ("Arial", "Helvetica", "Telugu Sangam MN", "DejaVu Sans")
+
+    # Tanglish (uses Latin script)
+    tan_font, tan_dir = resolve_caption_font("Tanglish")
+    assert tan_font in ("Arial", "Helvetica", "Telugu Sangam MN", "DejaVu Sans")
+
+    # Telugu (checks system fonts or raises UnicodeFontNotFoundError)
+    try:
+        te_font, te_dir = resolve_caption_font("Telugu")
+        assert te_font in ("Telugu Sangam MN", "Kohinoor Telugu", "Telugu MN", "Noto Sans Telugu", "FreeSerif")
+    except UnicodeFontNotFoundError:
+        # If in headless minimal docker without any Telugu font installed
+        pass
+
+
+def test_generate_ass_content_clean_pop():
+    """Verify ASS document structure for clean_pop preset."""
+    renderer = FFmpegCaptionRenderer()
+    cues = [
+        CaptionCue(
+            id="cue_0",
+            text="Welcome to CINEHAI",
+            start_time=0.0,
+            end_time=2.5,
+            duration=2.5,
+            lines=["Welcome to", "CINEHAI"],
+        )
+    ]
+    options = CaptionRenderOptions(preset="clean_pop", font_size="medium")
+    ass = renderer._generate_ass_content(
+        cues=cues,
+        language="English",
+        options=options,
+        video_width=1080,
+        video_height=1920,
+        font_family="Arial",
+    )
+    assert "[Script Info]" in ass
+    assert "PlayResX: 1080" in ass
+    assert "PlayResY: 1920" in ass
+    assert "[V4+ Styles]" in ass
+    assert "Welcome to\\NCINEHAI" in ass
+    assert "Dialogue: 0,0:00:00.00,0:00:02.50,Default" in ass
+
+
+def test_generate_ass_content_karaoke():
+    """Verify ASS document karaoke timing tags for karaoke preset."""
+    renderer = FFmpegCaptionRenderer()
+    cues = [
+        CaptionCue(
+            id="cue_0",
+            text="Stop shooting now",
+            start_time=0.0,
+            end_time=1.5,
+            duration=1.5,
+            lines=["Stop shooting now"],
+            words=[
+                CaptionCueWord(text="Stop", start_time=0.0, end_time=0.5),
+                CaptionCueWord(text="shooting", start_time=0.5, end_time=1.0),
+                CaptionCueWord(text="now", start_time=1.0, end_time=1.5),
+            ],
+        )
+    ]
+    options = CaptionRenderOptions(preset="karaoke")
+    ass = renderer._generate_ass_content(
+        cues=cues,
+        language="English",
+        options=options,
+        video_width=1080,
+        video_height=1920,
+        font_family="Arial",
+    )
+    assert "{\\k" in ass
+    assert "Stop" in ass
+    assert "shooting" in ass
+
+
+@pytest.mark.asyncio
+async def test_render_empty_cues_rejected():
+    """Verify renderer rejects empty cue list."""
+    renderer = FFmpegCaptionRenderer()
+    mp4_bytes = create_minimal_mp4_bytes()
+    with pytest.raises(Exception):
+        await renderer.render(
+            video_bytes=mp4_bytes,
+            cues=[],
+            language="English",
+        )
+
+
+@pytest.mark.asyncio
+async def test_render_invalid_cue_timing_rejected():
+    """Verify renderer rejects cues with reversed or invalid timings."""
+    renderer = FFmpegCaptionRenderer()
+    mp4_bytes = create_minimal_mp4_bytes()
+
+    # End <= Start
+    bad_cues = [
+        CaptionCue(
+            id="c2",
+            text="Hello",
+            start_time=2.0,
+            end_time=1.0,
+            duration=0.0,
+        )
+    ]
+    with pytest.raises(InvalidCaptionTimingError):
+        await renderer.render(video_bytes=mp4_bytes, cues=bad_cues, language="English")
+
+
+@pytest.mark.asyncio
+async def test_api_generate_captions_pipeline():
+    """Verify POST /api/v1/captions/generate pipeline works end-to-end."""
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        mp4_bytes = create_minimal_mp4_bytes()
+
+        # Test English
+        files = {"file": ("demo.mp4", mp4_bytes, "video/mp4")}
+        data = {"language": "English", "provider": "mock"}
+        resp = await client.post("/api/v1/captions/generate", files=files, data=data)
+        assert resp.status_code == 200
+        payload = resp.json()
+        assert payload["selected_language"] == "English"
+        assert len(payload["cues"]) > 0
+        assert "project_id" in payload
+
+        # Test Telugu
+        files_te = {"file": ("demo_te.mp4", mp4_bytes, "video/mp4")}
+        data_te = {"language": "Telugu", "provider": "mock"}
+        resp_te = await client.post("/api/v1/captions/generate", files=files_te, data=data_te)
+        assert resp_te.status_code == 200
+        payload_te = resp_te.json()
+        assert payload_te["selected_language"] == "Telugu"
+        assert len(payload_te["cues"]) > 0
+
+        # Test Tanglish
+        files_tan = {"file": ("demo_tan.mp4", mp4_bytes, "video/mp4")}
+        data_tan = {"language": "Tanglish", "provider": "mock"}
+        resp_tan = await client.post("/api/v1/captions/generate", files=files_tan, data=data_tan)
+        assert resp_tan.status_code == 200
+        payload_tan = resp_tan.json()
+        assert payload_tan["selected_language"] == "Tanglish"
+        assert len(payload_tan["cues"]) > 0
+
+
+@pytest.mark.asyncio
+async def test_api_render_validation_and_download():
+    """Verify POST /api/v1/captions/render rejects invalid inputs and downloads output."""
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        mp4_bytes = create_minimal_mp4_bytes()
+
+        # 1. Rejects missing file
+        resp1 = await client.post("/api/v1/captions/render", data={"cues": "[]", "language": "English"})
+        assert resp1.status_code == 422  # missing required file field
+
+        # 2. Rejects empty cues array
+        files = {"file": ("test.mp4", mp4_bytes, "video/mp4")}
+        resp2 = await client.post(
+            "/api/v1/captions/render",
+            files=files,
+            data={"cues": "[]", "language": "English"},
+        )
+        assert resp2.status_code == 400
+        assert "at least one caption cue" in resp2.json()["detail"].lower()
+
+        # 3. Rejects invalid cues JSON
+        files3 = {"file": ("test.mp4", mp4_bytes, "video/mp4")}
+        resp3 = await client.post(
+            "/api/v1/captions/render",
+            files=files3,
+            data={"cues": "{not-valid-json}", "language": "English"},
+        )
+        assert resp3.status_code == 400
+
+        # 4. Rejects invalid timing
+        bad_cues = [
+            {
+                "id": "c1",
+                "text": "Hello",
+                "start_time": 5.0,
+                "end_time": 2.0,
+                "duration": 0.0,
+                "manually_edited": False,
+            }
+        ]
+        files4 = {"file": ("test.mp4", mp4_bytes, "video/mp4")}
+        resp4 = await client.post(
+            "/api/v1/captions/render",
+            files=files4,
+            data={"cues": json.dumps(bad_cues), "language": "English"},
+        )
+        assert resp4.status_code == 400
+        assert "end time" in resp4.json()["detail"].lower()
+
+        # 5. Invalid UUID format on download
+        resp5 = await client.get("/api/v1/captions/render/not-a-valid-uuid/download")
+        assert resp5.status_code == 400
+        assert "invalid" in resp5.json()["detail"].lower()
+
+        # 6. Non-existent render ID on download
+        resp6 = await client.get(
+            "/api/v1/captions/render/12345678-1234-1234-1234-123456789abc/download"
+        )
+        assert resp6.status_code == 404

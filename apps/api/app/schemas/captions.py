@@ -244,3 +244,76 @@ class LanguageProcessingResponse(BaseModel):
     result: LanguageProcessingResult = Field(..., description="Processed language result")
     notice: Optional[str] = Field(default=None, description="Explicit development/advisory notice")
 
+
+class CaptionRenderOptions(BaseModel):
+    """Visual style, typography, and layout options for video caption rendering."""
+    model_config = ConfigDict(extra="ignore")
+
+    preset: Literal["clean_pop", "karaoke", "bold_bounce", "minimal_fade", "punchy"] = Field(
+        default="clean_pop", description="Motion caption styling preset"
+    )
+    font_size: Literal["small", "medium", "large"] = Field(
+        default="medium", description="Relative caption font size"
+    )
+    alignment: Literal["left", "center", "right"] = Field(
+        default="center", description="Horizontal text alignment"
+    )
+    vertical_position: Literal["top", "center", "bottom"] = Field(
+        default="bottom", description="Vertical placement on video frame"
+    )
+    background: Literal["none", "box", "outline"] = Field(
+        default="box", description="Caption background box or outline style"
+    )
+    primary_color: str = Field(default="#FFFFFF", description="Main caption text hex color")
+    active_color: str = Field(default="#00F0FF", description="Active word or highlight hex color")
+    active_bg_color: str = Field(default="#33000000", description="Background box fill color")
+    font_weight: Literal["normal", "bold", "black"] = Field(default="bold", description="Font weight")
+
+
+class CaptionRenderResult(BaseModel):
+    """Normalized metadata describing the completed video rendering output."""
+    model_config = ConfigDict(extra="ignore")
+
+    render_id: str = Field(..., description="Unique UUID identifier for this render output")
+    status: Literal["completed", "failed"] = Field(default="completed", description="Render status")
+    output_filename: str = Field(..., description="Safe filename for the output video")
+    mime_type: str = Field(default="video/mp4", description="Video MIME type")
+    file_size: int = Field(..., ge=0, description="Rendered file size in bytes")
+    duration: float = Field(..., ge=0.0, description="Video duration in seconds")
+    caption_language: str = Field(..., description="Language of burned-in captions")
+    caption_count: int = Field(..., ge=0, description="Total caption cues rendered")
+    download_url: str = Field(..., description="Secure API URL to download the rendered MP4")
+    video_width: Optional[int] = Field(default=None, description="Probed video width in pixels")
+    video_height: Optional[int] = Field(default=None, description="Probed video height in pixels")
+    preset_used: str = Field(default="clean_pop", description="Motion preset applied during rendering")
+    metadata: Dict[str, Any] = Field(default_factory=dict, description="Diagnostic and font metadata")
+
+
+class CaptionRenderResponse(BaseModel):
+    """HTTP response contract for video caption rendering endpoint."""
+    model_config = ConfigDict(extra="ignore")
+
+    result: CaptionRenderResult = Field(..., description="Rendered video result metadata")
+    notice: Optional[str] = Field(default=None, description="Advisory message if applicable")
+
+
+class CaptionPipelineResponse(BaseModel):
+    """Unified response contract for end-to-end caption generation pipeline."""
+    model_config = ConfigDict(extra="ignore")
+
+    project_id: str = Field(..., description="Assigned caption project UUID")
+    caption_source: CaptionSource = Field(..., description="Validated video upload source metadata")
+    transcription: TranscriptionResult = Field(..., description="Source speech transcription")
+    processed_transcription: Optional[TranscriptionResult] = Field(
+        default=None, description="Translated or transliterated transcript if requested"
+    )
+    cues: List[CaptionCue] = Field(default_factory=list, description="Synchronized caption cues")
+    selected_language: str = Field(..., description="Active caption language (English, Telugu, Tanglish)")
+    cue_count: int = Field(default=0, ge=0, description="Total cues generated")
+    total_caption_duration: float = Field(default=0.0, ge=0.0, description="Total duration of cues")
+    timing_granularity: Literal["word", "segment"] = Field(
+        default="segment", description="Timing precision of caption cues"
+    )
+    is_production_provider: bool = Field(default=False, description="Whether production STT was used")
+    notice: Optional[str] = Field(default=None, description="Advisory or development notice")
+

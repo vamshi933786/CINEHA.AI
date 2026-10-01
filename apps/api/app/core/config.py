@@ -60,6 +60,16 @@ class Settings(BaseSettings):
         description="LLM model identifier for language translation and transliteration",
     )
 
+    # Caption Studio Rendering & Unicode Fonts
+    TELUGU_FONT_PATH: str = Field(
+        default="",
+        description="Optional path to custom Telugu Unicode font file or directory",
+    )
+    RENDER_CACHE_DIR: str = Field(
+        default="",
+        description="Optional directory for rendered MP4 outputs (defaults to system temp)",
+    )
+
     @property
     def cors_origins(self) -> List[str]:
         if not self.ALLOWED_ORIGINS:

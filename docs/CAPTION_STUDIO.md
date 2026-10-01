@@ -508,21 +508,88 @@ The Motion Caption Engine extends Caption Studio without modifying underlying tr
 
 ---
 
-## 11. Security & Privacy
+## 11. Direct-on-Video Caption Generation & FFmpeg Export Engine
+
+### 11.1. Supported Caption Languages
+Caption Studio offers exactly three selectable language workflows:
+1. **English (`en`)**: Standard English speech-to-text recognition with micro word-level timestamps and Latin font rendering.
+2. **Telugu (`te` / `తెలుగు`)**: Native Telugu script speech transcription or translation rendered with real Unicode Telugu fonts (`Telugu Sangam MN`, `Kohinoor Telugu`, `Noto Sans Telugu`, `Lohit Telugu`, `Pothana2000`).
+3. **Tanglish (`te-Latn`)**: Conversational Telugu written phonetically in the Latin alphabet (Romanized transliteration), providing effortless readability for digital audiences without needing Telugu script literacy.
+*Note: Hindi is not selectable in the Caption Studio interface.*
+
+### 11.2. Complete User Workflow
+```
+Upload Video (MP4/MOV/WebM ≤ 100 MB)
+      ↓
+Choose Caption Language (English, Telugu, Tanglish)
+      ↓
+Generate Captions (via Whisper STT or Heuristic Dev Mode)
+      ↓
+Synchronized Overlaid Captions appear directly over video preview
+      ↓
+Customize Styling (Presets: Clean Pop, Karaoke, Bold Bounce, Minimal Fade; Typography, Colors, Position)
+      ↓
+Render Captioned Video (FFmpeg Advanced SubStation Alpha burned-in rendering)
+      ↓
+Download Final MP4 with burned-in subtitles
+```
+
+### 11.3. FFmpeg Burned-In Rendering Architecture
+Permanent caption burn-in uses the FFmpeg `subtitles` / `ass` filter (`libass`):
+- **ASS Subtitle Script Generation**: Generates standard Advanced SubStation Alpha (`.ass`) subtitle files with millisecond timing precision (`h:mm:ss.cc`).
+- **Styling Mapping**:
+  - `clean_pop`: Bold sans-serif font, cyan accent color (`#22D3EE`), dark semi-transparent pill/box background (`&H33000000`), subtle entrance scaling.
+  - `karaoke`: Word illumination tags (`{\k<duration>}` / `{\K<duration>}`), golden highlight (`#FACC15`), muted base text.
+  - `bold_bounce`: Extra bold typography with drop shadow and outline.
+  - `minimal_fade`: Clean, borderless minimalist typography with soft drop shadow.
+- **Color Translation**: Converts CSS hex/RGBA colors (`#RRGGBB` / `rgba(...)`) to ASS format (`&HAABBGGRR&`).
+- **Probe-Aware Coordinate Scaling**: Probes source video width, height, and display matrix via `ffprobe` to set `PlayResX` and `PlayResY` proportionally, ensuring identical font sizes across vertical (9:16), horizontal (16:9), and square videos.
+- **Audio & Video Re-encoding**: Uses `libx264` (`-pix_fmt yuv420p`, `-preset medium`, `-crf 22`) and `aac` audio passthrough/copy (`-c:a copy` or `aac -b:a 192k`), producing universally compatible MP4 outputs.
+
+### 11.4. Real Unicode Font Resolution Strategy
+To ensure Telugu script renders with zero missing glyphs or "tofu" boxes across all platforms:
+- **macOS**: Looks for `Telugu Sangam MN.ttc` or `KohinoorTelugu.ttc` in `/System/Library/Fonts/Supplemental/` or `/System/Library/Fonts/`.
+- **Linux / Docker**: Looks for `NotoSansTelugu-Regular.ttf`, `NotoSansTelugu-Bold.ttf`, `Lohit-Telugu.ttf`, or `Pothana2000.ttf` in `/usr/share/fonts/opentype/noto/`, `/usr/share/fonts/truetype/noto/`, or `/usr/share/fonts/truetype/lohit-telugu/`.
+- **Windows**: Resolves `Gautami.ttf` or `Vani.ttf` in `C:\Windows\Fonts\`.
+- **Fallback**: System fontconfig (`fc-match telugu`) and ASS `Fontname` fallback chain.
+- Creators can configure custom fonts via the `TELUGU_FONT_PATH` environment variable.
+
+### 11.5. API Endpoints
+- `POST /api/v1/captions/generate`: Unified pipeline endpoint accepting video upload + target language (`English`, `Telugu`, `Tanglish`), executing transcription, language processing, and cue generation in one step.
+- `POST /api/v1/captions/render`: Renders an MP4 with burned-in captions given source video + cue array + visual options.
+- `GET /api/v1/captions/render/{render_id}/download`: Streams the completed MP4 artifact with `Content-Disposition: attachment; filename="..."`.
+
+### 11.6. Render Cache & Artifact Management
+Rendered MP4 artifacts are stored in a dedicated scratch cache directory (`RENDER_CACHE_DIR`):
+- Managed in-memory registry (`RENDER_REGISTRY`) maps `render_id` UUIDs to output file paths and metadata.
+- Cache size is bounded to 50 active renders (`MAX_CACHE_ENTRIES = 50`) to avoid disk bloat.
+- Stale rendered files are automatically pruned when the cache exceeds capacity or age limits.
+
+### 11.7. Development vs Production Modes
+- **Development Mode**: If no OpenAI/Whisper API key is configured, the system uses simulated transcription with realistic timestamps, enabling end-to-end testing and frontend UI development without network dependency or API costs.
+- **Production Mode**: Configured with `OPENAI_API_KEY` or `WHISPER_API_KEY`, enabling live neural speech recognition and audio extraction.
+- In both modes, the FFmpeg rendering pipeline runs real local video processing to create authentic MP4 outputs with burned-in subtitles.
+
+---
+
+## 12. Security & Privacy
 
 1. **No Filesystem Path Leakage**: Internal server paths (e.g., `/tmp/...` or OS paths) are never returned in API responses or logs.
-2. **In-Memory Streaming**: Uploaded video files are processed as byte streams and discarded immediately after transcription; no unmanaged temporary files are persisted to disk.
+2. **In-Memory Streaming & Secure Temp Files**: Video uploads are isolated with unique UUIDs and safe temporary files.
 3. **Upload Size Guard**: The 100 MB limit protects server memory and prevents denial-of-service attacks from oversized video uploads.
 4. **Credential Isolation**: Cloud API keys remain strictly in backend environment variables and are never exposed to the frontend client.
 
 ---
 
-## 12. Future Pipeline Milestones
+## 13. Completed Milestones
 
-The foundation established in Tasks 5 through 9 unblocks subsequent phases:
-- **Phase 9.1**: Caption Styling & Font Selection (Subtitles preset, custom typography, stroke, drop shadow).
-- **Phase 9.2**: Motion-Graphic Video Compositor & Export Engine (Permanent burned-in MP4 rendering via FFmpeg/canvas).
-- **Phase 9.3**: Subtitle File Export (SRT and VTT download).
+- **Milestone 1**: Video Validation & Ingestion (100 MB limit, magic-byte checks).
+- **Milestone 2**: Speech Recognition & Provider Abstraction (Whisper + Dev simulation).
+- **Milestone 3**: Language Processing (Translation to Telugu, Transliteration to Tanglish).
+- **Milestone 4**: Caption Cue Generation (Deterministic line breaking, gap handling).
+- **Milestone 5**: Direct-on-Video Synchronized Plain & Motion Preview (Clean Pop, Karaoke, Bold Bounce, Minimal Fade).
+- **Milestone 6**: Direct Multilingual Video Rendering Engine (FFmpeg libass burned-in captions, Telugu Unicode font support, MP4 export & download).
+
 
 
 

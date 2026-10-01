@@ -22,9 +22,11 @@ import { api } from "@/lib/api";
 import {
   TranscriptionResponse,
   TranscriptionResult,
+  CAPTION_STUDIO_LANGUAGES,
   SUPPORTED_CAPTION_LANGUAGES,
   SupportedLanguageInfo,
   TranscriptionProviderInfo,
+  CaptionCue,
 } from "@/types/caption";
 
 export function CaptionStudioWorkspace() {
@@ -46,6 +48,7 @@ export function CaptionStudioWorkspace() {
   const [activeTranscription, setActiveTranscription] =
     useState<TranscriptionResult | null>(null);
   const [isProcessedActive, setIsProcessedActive] = useState<boolean>(false);
+  const [cues, setCues] = useState<CaptionCue[]>([]);
 
   useEffect(() => {
     let isMounted = true;
@@ -79,6 +82,7 @@ export function CaptionStudioWorkspace() {
     setSelectedFile(file);
     setMetadata(meta);
     setError(null);
+    setCues([]);
     if (!file) {
       if (previewUrl) URL.revokeObjectURL(previewUrl);
       setPreviewUrl(null);
@@ -94,7 +98,7 @@ export function CaptionStudioWorkspace() {
 
   const handleTranscribe = async () => {
     if (!selectedFile) {
-      setError("Please select or drop a valid video file before transcribing.");
+      setError("Please select or drop a valid video file before generating captions.");
       return;
     }
 
@@ -152,6 +156,7 @@ export function CaptionStudioWorkspace() {
     setActiveTranscription(null);
     setOriginalTranscription(null);
     setIsProcessedActive(false);
+    setCues([]);
     setError(null);
   };
 
@@ -237,10 +242,10 @@ export function CaptionStudioWorkspace() {
                 className="text-xs font-semibold text-slate-200 flex items-center gap-1.5"
               >
                 <Globe2 className="w-3.5 h-3.5 text-cyan-400" />
-                <span>2. Target Spoken Language</span>
+                <span>2. Caption Language</span>
               </label>
               <p className="text-[11px] text-slate-400 mt-0.5">
-                Select the primary language spoken in the video audio track.
+                Generate captions in English, Telugu Unicode script, or Tanglish (Latin characters).
               </p>
             </div>
 
@@ -251,8 +256,8 @@ export function CaptionStudioWorkspace() {
             )}
           </div>
 
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
-            {SUPPORTED_CAPTION_LANGUAGES.map((lang) => {
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+            {CAPTION_STUDIO_LANGUAGES.map((lang) => {
               const isSelected = selectedLanguage === lang.name;
               return (
                 <button
@@ -260,20 +265,20 @@ export function CaptionStudioWorkspace() {
                   type="button"
                   onClick={() => setSelectedLanguage(lang.name)}
                   disabled={isTranscribing}
-                  className={`p-3 rounded-xl border text-left transition flex flex-col justify-between ${
+                  className={`p-3.5 rounded-xl border text-left transition flex flex-col justify-between ${
                     isSelected
                       ? "border-cyan-500/50 bg-cyan-950/20 text-cyan-200 shadow-sm"
                       : "border-[#25293d] bg-[#161826] text-slate-300 hover:border-slate-600 hover:bg-[#1b1e30]"
                   } ${isTranscribing ? "opacity-60 cursor-not-allowed" : ""}`}
                 >
                   <div className="flex items-center justify-between">
-                    <span className="text-xs font-semibold">{lang.name}</span>
+                    <span className="text-xs font-semibold">{lang.label}</span>
                     <span className="text-[9px] font-mono text-slate-500 uppercase">
                       {lang.code}
                     </span>
                   </div>
-                  <span className="text-[10px] text-slate-400 mt-1 block truncate">
-                    {lang.script} {lang.is_transliteration ? "(Translit.)" : "Script"}
+                  <span className="text-[10px] text-slate-400 mt-1 block">
+                    {lang.description}
                   </span>
                 </button>
               );
@@ -394,6 +399,8 @@ export function CaptionStudioWorkspace() {
             type="button"
             onClick={handleTranscribe}
             disabled={!selectedFile || isTranscribing}
+            aria-label="Generate Captions — Transcribe Video Speech"
+            data-testid="generate-captions-button"
             className={`w-full sm:w-auto px-6 py-3 rounded-xl text-xs font-bold transition flex items-center justify-center gap-2 shadow-lg ${
               !selectedFile || isTranscribing
                 ? "bg-slate-800 text-slate-500 cursor-not-allowed border border-slate-700/50"
@@ -412,7 +419,7 @@ export function CaptionStudioWorkspace() {
             ) : (
               <>
                 <Sparkles className="w-4 h-4" />
-                <span>Transcribe Video Speech</span>
+                <span>Generate Captions</span>
               </>
             )}
           </button>
@@ -522,13 +529,27 @@ export function CaptionStudioWorkspace() {
           </div>
         ))}
 
-      {/* Editable Transcript Section */}
+      {/* 4. Direct Video Preview, Styling Presets, and Render MP4 */}
+      {activeTranscription && originalTranscription && (
+        <CaptionCueWorkspace
+          activeTranscription={activeTranscription}
+          originalTranscription={originalTranscription}
+          isProcessedActive={isProcessedActive}
+          videoPreviewUrl={previewUrl}
+          selectedFile={selectedFile}
+          selectedLanguage={selectedLanguage}
+          initialCues={cues}
+          disabled={isTranscribing}
+        />
+      )}
+
+      {/* 5. Editable Transcript & Language Processing Section */}
       {activeTranscription && (
-        <div className="space-y-4">
+        <div className="space-y-4 pt-4 border-t border-[#21253a]">
           <div>
             <h2 className="text-sm font-semibold text-slate-200 flex items-center gap-2">
               <FileCheck className="w-4 h-4 text-cyan-400" />
-              <span>4. Timed Speech Cues & Transcript</span>
+              <span>Interactive Transcript & Detailed Speech Cues</span>
             </h2>
             <p className="text-xs text-slate-400 mt-0.5">
               Review extracted segments. Edit any misheard words directly before passing into the downstream caption styler.
@@ -541,7 +562,6 @@ export function CaptionStudioWorkspace() {
             disabled={isTranscribing}
           />
 
-          {/* 5. Multi-Lingual Translation & Transliteration */}
           {originalTranscription && (
             <LanguageProcessingSection
               originalTranscription={originalTranscription}
@@ -550,17 +570,6 @@ export function CaptionStudioWorkspace() {
               onApplyProcessed={handleApplyProcessed}
               onRevertOriginal={handleRevertOriginal}
               isProcessedActive={isProcessedActive}
-              disabled={isTranscribing}
-            />
-          )}
-
-          {/* 6. Caption Cue Generation & Plain Caption Video Preview */}
-          {originalTranscription && (
-            <CaptionCueWorkspace
-              activeTranscription={activeTranscription}
-              originalTranscription={originalTranscription}
-              isProcessedActive={isProcessedActive}
-              videoPreviewUrl={previewUrl}
               disabled={isTranscribing}
             />
           )}

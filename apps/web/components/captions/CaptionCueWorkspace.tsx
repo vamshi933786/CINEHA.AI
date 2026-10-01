@@ -24,6 +24,9 @@ import {
   ChevronDown,
   ChevronUp,
   Volume2,
+  Download,
+  Film,
+  Loader2,
 } from "lucide-react";
 import { api } from "@/lib/api";
 import {
@@ -34,16 +37,21 @@ import {
   CaptionAppearanceSettings,
   CaptionMode,
   MotionCaptionSettings,
+  CaptionRenderOptions,
+  CaptionRenderResult,
 } from "@/types/caption";
 import { DEFAULT_MOTION_SETTINGS } from "./motionPresets";
 import { MotionCaptionOverlay } from "./MotionCaptionOverlay";
 import { MotionCaptionControls } from "./MotionCaptionControls";
 
 interface CaptionCueWorkspaceProps {
-  activeTranscription: TranscriptionResult;
-  originalTranscription: TranscriptionResult;
-  isProcessedActive: boolean;
+  activeTranscription?: TranscriptionResult;
+  originalTranscription?: TranscriptionResult;
+  isProcessedActive?: boolean;
   videoPreviewUrl: string | null;
+  selectedFile?: File | null;
+  selectedLanguage?: string;
+  initialCues?: CaptionCue[];
   disabled?: boolean;
 }
 
@@ -77,9 +85,12 @@ export function CaptionCueWorkspace({
   originalTranscription,
   isProcessedActive,
   videoPreviewUrl,
+  selectedFile,
+  selectedLanguage,
+  initialCues,
   disabled = false,
 }: CaptionCueWorkspaceProps) {
-  const [cues, setCues] = useState<CaptionCue[]>([]);
+  const [cues, setCues] = useState<CaptionCue[]>(initialCues || []);
   const [isGenerating, setIsGenerating] = useState<boolean>(false);
   const [generationError, setGenerationError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
@@ -94,6 +105,18 @@ export function CaptionCueWorkspace({
   const [showSettingsDrawer, setShowSettingsDrawer] = useState<boolean>(false);
   const [showConfirmRegenerate, setShowConfirmRegenerate] = useState<boolean>(false);
 
+  // Video Render & Export state
+  const [isRendering, setIsRendering] = useState<boolean>(false);
+  const [renderResult, setRenderResult] = useState<CaptionRenderResult | null>(null);
+  const [renderError, setRenderError] = useState<string | null>(null);
+
+  // Sync initialCues if provided from parent
+  useEffect(() => {
+    if (initialCues && initialCues.length > 0) {
+      setCues(initialCues);
+    }
+  }, [initialCues]);
+
   // Video playback & synchronization state
   const videoRef = useRef<HTMLVideoElement>(null);
   const [currentTime, setCurrentTime] = useState<number>(0);
@@ -106,18 +129,18 @@ export function CaptionCueWorkspace({
   // Active transcript nature label
   const captionSourceType = useMemo<"original" | "translated" | "transliterated">(() => {
     if (!isProcessedActive) return "original";
-    if (activeTranscription.is_transliteration) return "transliterated";
+    if (activeTranscription?.is_transliteration) return "transliterated";
     return "translated";
-  }, [isProcessedActive, activeTranscription.is_transliteration]);
+  }, [isProcessedActive, activeTranscription?.is_transliteration]);
 
   const sourceBadgeLabel = useMemo(() => {
     if (captionSourceType === "transliterated") {
-      return `Transliterated (${activeTranscription.language} - ${activeTranscription.script_type})`;
+      return `Transliterated (${activeTranscription?.language || "Language"} - ${activeTranscription?.script_type || "Script"})`;
     }
     if (captionSourceType === "translated") {
-      return `Translated (${activeTranscription.language})`;
+      return `Translated (${activeTranscription?.language || "Language"})`;
     }
-    return `Original (${originalTranscription.language})`;
+    return `Original (${originalTranscription?.language || "Original"})`;
   }, [captionSourceType, activeTranscription, originalTranscription]);
 
   // Check if any cue has been manually edited
@@ -148,6 +171,7 @@ export function CaptionCueWorkspace({
         return;
       }
       setShowConfirmRegenerate(false);
+      if (!activeTranscription) return;
       setIsGenerating(true);
       setGenerationError(null);
       setNotice(null);
@@ -307,6 +331,62 @@ export function CaptionCueWorkspace({
       default:
         return "text-sm sm:text-lg";
     }
+  };
+
+  const handleRenderCaptionedVideo = async () => {
+    if (!selectedFile) {
+      setRenderError("Please select or drop a valid video file before rendering captions.");
+      return;
+    }
+    if (!cues || cues.length === 0) {
+      setRenderError("No caption cues available. Generate captions before rendering.");
+      return;
+    }
+    if (isRendering) return;
+
+    setIsRendering(true);
+    setRenderError(null);
+    setRenderResult(null);
+
+    try {
+      const renderOptions: Partial<CaptionRenderOptions> = {
+        preset: motionSettings.preset,
+        font_size: appearance.font_size,
+        alignment: appearance.alignment,
+        vertical_position: appearance.vertical_position,
+        background: appearance.background,
+        primary_color: motionSettings.primary_color,
+        active_color: motionSettings.active_color,
+        active_bg_color: motionSettings.active_bg_color,
+        font_weight: motionSettings.font_weight,
+      };
+
+      const targetLang = selectedLanguage || activeTranscription?.language || "English";
+      const res = await api.renderCaptionedVideo(
+        selectedFile,
+        cues,
+        targetLang,
+        motionSettings.preset,
+        renderOptions
+      );
+      setRenderResult(res.result);
+    } catch (err: any) {
+      console.error("Video rendering failed:", err);
+      setRenderError(err?.message || "Failed to render video with burned-in captions.");
+    } finally {
+      setIsRendering(false);
+    }
+  };
+
+  const handleDownloadCaptionedVideo = () => {
+    if (!renderResult) return;
+    const downloadUrl = api.getRenderDownloadUrl(renderResult.render_id);
+    const a = document.createElement("a");
+    a.href = downloadUrl;
+    a.download = renderResult.output_filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
   };
 
   return (
@@ -893,7 +973,7 @@ export function CaptionCueWorkspace({
                           className="w-14 bg-[#1b1e2f] border border-[#2b3149] rounded px-1.5 py-0.5 text-center text-slate-200"
                         />
                         <span className="text-slate-400 text-[10px] pl-1">
-                          ({cue.duration.toFixed(1)}s)
+                          ({((cue.duration ?? (cue.end_time - cue.start_time))).toFixed(1)}s)
                         </span>
                       </div>
                     </div>
@@ -936,6 +1016,128 @@ export function CaptionCueWorkspace({
             </div>
           )}
         </div>
+      </div>
+
+      {/* 7. Render Captioned Video Section */}
+      <div className="p-5 rounded-2xl border border-[#232738] bg-[#141622] space-y-4 shadow-xl">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-[#212538]">
+          <div>
+            <h3 className="text-sm font-bold text-slate-100 flex items-center gap-2">
+              <Film className="w-4 h-4 text-cyan-400" />
+              <span>Export Captioned MP4 Video</span>
+            </h3>
+            <p className="text-xs text-slate-400 mt-0.5">
+              Permanently burn synchronized captions into the video using FFmpeg with Unicode font rendering.
+            </p>
+          </div>
+
+          {renderResult && (
+            <span
+              className="px-2.5 py-1 rounded-lg bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 text-xs font-semibold flex items-center gap-1.5 self-start sm:self-auto"
+              data-testid="captioned-video-ready-badge"
+            >
+              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+              <span>Captioned video ready</span>
+            </span>
+          )}
+        </div>
+
+        {/* Render Error Banner */}
+        {renderError && (
+          <div className="p-3.5 rounded-xl border border-rose-500/40 bg-rose-950/20 text-rose-300 text-xs flex items-center justify-between shadow">
+            <div className="flex items-center gap-2">
+              <AlertCircle className="w-4 h-4 text-rose-400 shrink-0" />
+              <span>{renderError}</span>
+            </div>
+            <button
+              type="button"
+              onClick={() => setRenderError(null)}
+              className="text-xs underline text-rose-300 hover:text-white"
+            >
+              Dismiss
+            </button>
+          </div>
+        )}
+
+        {/* Render Action Controls */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pt-1">
+          <div className="text-xs text-slate-400">
+            <span>Language: </span>
+            <strong className="text-slate-200">{selectedLanguage || activeTranscription?.language || "English"}</strong>
+            <span className="mx-2">•</span>
+            <span>Preset: </span>
+            <strong className="text-cyan-300 capitalize">{motionSettings.preset.replace('_', ' ')}</strong>
+            <span className="mx-2">•</span>
+            <span>Cues: </span>
+            <strong className="text-slate-200">{cues.length}</strong>
+          </div>
+
+          <button
+            type="button"
+            onClick={handleRenderCaptionedVideo}
+            disabled={isRendering || !selectedFile || cues.length === 0 || disabled}
+            data-testid="render-captioned-video-btn"
+            className={`px-6 py-3 rounded-xl text-xs font-bold transition flex items-center justify-center gap-2.5 shadow-lg ${
+              isRendering || !selectedFile || cues.length === 0 || disabled
+                ? "bg-slate-800 text-slate-500 cursor-not-allowed border border-slate-700/50"
+                : "bg-cyan-500 hover:bg-cyan-400 text-black shadow-cyan-500/20 hover:scale-[1.01]"
+            }`}
+          >
+            {isRendering ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin text-black" />
+                <span>Rendering Captioned Video via FFmpeg...</span>
+              </>
+            ) : (
+              <>
+                <Film className="w-4 h-4" />
+                <span>Render Captioned Video</span>
+              </>
+            )}
+          </button>
+        </div>
+
+        {/* Completed Render State & Download Button */}
+        {renderResult && (
+          <div
+            className="p-4 rounded-xl border border-emerald-500/40 bg-emerald-950/25 text-emerald-200 text-xs shadow-lg space-y-3"
+            data-testid="render-ready-banner"
+          >
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div className="flex items-center gap-2.5">
+                <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0" />
+                <div>
+                  <h4 className="font-bold text-emerald-100 text-sm">
+                    Captioned video ready
+                  </h4>
+                  <p className="text-emerald-300/80 text-[11px] mt-0.5">
+                    Captions have been permanently burned into your MP4 video with real Unicode font rendering.
+                  </p>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={handleDownloadCaptionedVideo}
+                data-testid="download-captioned-video-btn"
+                className="flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-black text-xs font-bold shadow-lg shadow-emerald-500/20 transition hover:scale-[1.02]"
+              >
+                <Download className="w-4 h-4" />
+                <span>Download Captioned Video</span>
+              </button>
+            </div>
+
+            <div className="pt-2 border-t border-emerald-500/20 flex flex-wrap items-center gap-3 text-[11px] text-emerald-400/90 font-mono">
+              <span>File: <strong className="text-emerald-200">{renderResult.output_filename}</strong></span>
+              <span>•</span>
+              <span>Size: <strong className="text-emerald-200">{Math.round(renderResult.file_size / 1024)} KB</strong></span>
+              <span>•</span>
+              <span>Duration: <strong className="text-emerald-200">{renderResult.duration.toFixed(1)}s</strong></span>
+              <span>•</span>
+              <span>Preset: <strong className="text-emerald-200">{renderResult.preset_used}</strong></span>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
