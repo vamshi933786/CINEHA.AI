@@ -131,10 +131,10 @@ async def test_production_provider_transcribe_success_with_word_timestamps():
             call_kwargs = mock_post.call_args[1]
             assert "Authorization" in call_kwargs["headers"]
             assert "Bearer sk-mock-key" in call_kwargs["headers"]["Authorization"]
-            assert ("model", "whisper-1") in call_kwargs["data"]
-            assert ("response_format", "verbose_json") in call_kwargs["data"]
-            assert ("timestamp_granularities[]", "word") in call_kwargs["data"]
-            assert ("timestamp_granularities[]", "segment") in call_kwargs["data"]
+            assert call_kwargs["data"]["model"] == "whisper-1"
+            assert call_kwargs["data"]["response_format"] == "verbose_json"
+            assert "word" in call_kwargs["data"]["timestamp_granularities[]"]
+            assert "segment" in call_kwargs["data"]["timestamp_granularities[]"]
 
             # 5. Verify normalization
             assert result.is_production_provider is True

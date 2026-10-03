@@ -387,15 +387,14 @@ class OpenAIWhisperTranscriptionProvider(BaseTranscriptionProvider):
         files = {
             "file": ("extracted_audio.mp3", audio_result.audio_bytes, "audio/mpeg"),
         }
-        # In httpx, repeated form keys use list of tuples
-        data = [
-            ("model", self.model),
-            ("response_format", "verbose_json"),
-            ("timestamp_granularities[]", "word"),
-            ("timestamp_granularities[]", "segment"),
-        ]
+        # In httpx, repeated form keys use list values inside a mapping for AsyncClient compatibility
+        data: Dict[str, Any] = {
+            "model": self.model,
+            "response_format": "verbose_json",
+            "timestamp_granularities[]": ["word", "segment"],
+        }
         if whisper_lang:
-            data.append(("language", whisper_lang))
+            data["language"] = whisper_lang
 
         # 5. Execute HTTP request to production Whisper API
         try:
@@ -425,9 +424,16 @@ class OpenAIWhisperTranscriptionProvider(BaseTranscriptionProvider):
                 detail="Production transcription authentication failed. Please check the Whisper/OpenAI API key configuration.",
             )
         elif response.status_code == 429:
+            error_detail = "Production transcription rate limit exceeded. Please wait a moment and try again."
+            try:
+                err_json = response.json()
+                if isinstance(err_json, dict) and "error" in err_json and "message" in err_json["error"]:
+                    error_detail = f"Production transcription rate limit / quota error: {err_json['error']['message']}"
+            except Exception:
+                pass
             raise HTTPException(
                 status_code=status.HTTP_429_TOO_MANY_REQUESTS,
-                detail="Production transcription rate limit exceeded. Please wait a moment and try again.",
+                detail=error_detail,
             )
         elif response.status_code != 200:
             error_msg = f"Production transcription provider returned error (status {response.status_code})."

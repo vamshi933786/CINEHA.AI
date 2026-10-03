@@ -10,6 +10,7 @@ import tempfile
 import asyncio
 from unittest.mock import AsyncMock, patch, MagicMock
 import pytest
+import httpx
 from httpx import AsyncClient, ASGITransport
 from fastapi import HTTPException
 
@@ -489,3 +490,91 @@ async def test_extraction_temporary_directory_isolation_and_cleanup():
             os.unlink(vid_a)
         if os.path.exists(vid_b):
             os.unlink(vid_b)
+
+
+# ---------------------------------------------------------------------------
+# 7. Production Async Multipart Encoding & Language Parameter Tests
+# ---------------------------------------------------------------------------
+
+@pytest.mark.asyncio
+async def test_production_transcription_provider_async_multipart_encoding():
+    """Verify production provider builds a valid async multipart request without RuntimeError."""
+    mock_audio = AudioExtractionResult(
+        audio_bytes=b"fake_mp3_audio_payload",
+        audio_format="mp3",
+        duration_seconds=3.0,
+    )
+    provider = OpenAIWhisperTranscriptionProvider(api_key="mock-key-for-test-only")
+
+    captured_requests = []
+    class MockAsyncTransport(httpx.AsyncBaseTransport):
+        async def handle_async_request(self, request: httpx.Request) -> httpx.Response:
+            captured_requests.append(request)
+            body_bytes = await request.aread()
+            is_telugu = b'name="language"\r\n\r\nte' in body_bytes
+            return httpx.Response(200, json={
+                "text": "నమస్కారం" if is_telugu else "Hello world",
+                "language": "telugu" if is_telugu else "english",
+                "duration": 3.0,
+                "segments": [
+                    {
+                        "id": 0,
+                        "start": 0.0,
+                        "end": 3.0,
+                        "text": "నమస్కారం" if is_telugu else "Hello world",
+                        "words": [
+                            {"word": "నమస్కారం" if is_telugu else "Hello", "start": 0.0, "end": 1.2},
+                        ],
+                    }
+                ],
+            })
+
+    orig_client = httpx.AsyncClient
+    with patch("app.services.transcription_provider.extract_audio_from_video", return_value=mock_audio):
+        with patch("httpx.AsyncClient", lambda *args, **kwargs: orig_client(transport=MockAsyncTransport())):
+            # 1. English request executes without RuntimeError
+            res_en = await provider.transcribe(
+                video_bytes=create_dummy_mp4_bytes(),
+                filename="english_sample.mp4",
+                language="English",
+            )
+            assert res_en.full_text == "Hello world"
+
+    # Verify request compatibility with AsyncClient (is AsyncByteStream)
+    req = captured_requests[0]
+    assert isinstance(req.stream, httpx.AsyncByteStream)
+
+    body = await req.aread()
+    body_str = body.decode("utf-8", errors="replace")
+
+    # 2. model=whisper-1 must remain present
+    assert 'name="model"' in body_str
+    assert "whisper-1" in body_str
+
+    # 3. response_format=verbose_json must remain present
+    assert 'name="response_format"' in body_str
+    assert "verbose_json" in body_str
+
+    # 4. Both word and segment timestamp granularities must remain requested
+    assert 'name="timestamp_granularities[]"' in body_str
+    assert "word" in body_str
+    assert "segment" in body_str
+
+    # 5. English does not pass language parameter (auto-detection preserved)
+    assert 'name="language"' not in body_str
+
+    # 6. Telugu request sends language=te
+    captured_requests.clear()
+    with patch("app.services.transcription_provider.extract_audio_from_video", return_value=mock_audio):
+        with patch("httpx.AsyncClient", lambda *args, **kwargs: orig_client(transport=MockAsyncTransport())):
+            res_te = await provider.transcribe(
+                video_bytes=create_dummy_mp4_bytes(),
+                filename="telugu_sample.mp4",
+                language="Telugu",
+            )
+            assert res_te.language == "Telugu"
+    req_te = captured_requests[0]
+    body_te = (await req_te.aread()).decode("utf-8", errors="replace")
+    assert 'name="language"' in body_te
+    assert "te" in body_te
+
