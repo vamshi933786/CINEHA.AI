@@ -10,6 +10,8 @@ class HealthResponse(BaseModel):
     active_provider: str = Field(..., description="Configured active AI provider")
     max_video_size_mb: int = Field(..., description="Configured maximum video upload limit in MB")
     timestamp: datetime = Field(..., description="Current server UTC timestamp")
+    gemini_configured: bool = Field(default=False, description="Whether Gemini provider API key is configured")
+    gemini_model: str = Field(default="", description="Active Gemini model identifier")
 
     model_config = {
         "json_schema_extra": {

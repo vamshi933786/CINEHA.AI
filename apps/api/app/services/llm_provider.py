@@ -1208,8 +1208,9 @@ class GeminiLLMProvider(BaseLLMProvider):
     Google Gemini AI Provider integration.
     Falls back gracefully to OfflineHeuristicMockProvider if API call fails or key is missing.
     """
-    def __init__(self, api_key: str):
+    def __init__(self, api_key: str, model: Optional[str] = None):
         self.api_key = api_key
+        self.model = model or getattr(settings, "GEMINI_MODEL", "gemini-3.5-flash-lite")
         self.mock_fallback = OfflineHeuristicMockProvider()
 
     async def generate_hooks(
@@ -1232,7 +1233,7 @@ class GeminiLLMProvider(BaseLLMProvider):
 
         # Call Gemini REST endpoint
         try:
-            url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={self.api_key}"
+            url = f"https://generativelanguage.googleapis.com/v1beta/models/{self.model}:generateContent?key={self.api_key}"
             prompt = (
                 f"You are an expert short-form video hook scriptwriter. Generate exactly {count} opening hooks for {platform}.\n"
                 f"Topic: {topic}\n"
@@ -1300,7 +1301,7 @@ class GeminiLLMProvider(BaseLLMProvider):
             )
 
         try:
-            url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={self.api_key}"
+            url = f"https://generativelanguage.googleapis.com/v1beta/models/{self.model}:generateContent?key={self.api_key}"
             prompt = (
                 f"You are a master short-form screenplay writer for {platform}.\n"
                 f"Topic: {topic}\n"
@@ -1381,7 +1382,7 @@ class GeminiLLMProvider(BaseLLMProvider):
             )
 
         try:
-            url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={self.api_key}"
+            url = f"https://generativelanguage.googleapis.com/v1beta/models/{self.model}:generateContent?key={self.api_key}"
             segments_summary = "\n".join(
                 f"[{s.get('start_time')}–{s.get('end_time')}] {s.get('section')}: \"{s.get('voiceover')}\" (Visual: {s.get('visual_direction')}, Text: {s.get('on_screen_text')})"
                 for s in segments
@@ -1468,7 +1469,7 @@ class GeminiLLMProvider(BaseLLMProvider):
             )
 
         try:
-            url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={self.api_key}"
+            url = f"https://generativelanguage.googleapis.com/v1beta/models/{self.model}:generateContent?key={self.api_key}"
             goals_str = ", ".join(goals)
             prompt = (
                 f"You are a master short-form screenplay optimizer and retention editor for {platform}.\n"
@@ -1525,6 +1526,9 @@ class GeminiLLMProvider(BaseLLMProvider):
 
 def get_llm_provider() -> BaseLLMProvider:
     if settings.AI_PROVIDER == "gemini" and settings.GEMINI_API_KEY:
-        return GeminiLLMProvider(api_key=settings.GEMINI_API_KEY)
+        return GeminiLLMProvider(
+            api_key=settings.GEMINI_API_KEY,
+            model=getattr(settings, "GEMINI_MODEL", "gemini-3.5-flash-lite"),
+        )
     return OfflineHeuristicMockProvider()
 

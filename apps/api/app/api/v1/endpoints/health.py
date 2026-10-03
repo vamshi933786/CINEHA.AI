@@ -1,4 +1,5 @@
 from datetime import datetime, timezone
+from typing import Dict, Any
 from fastapi import APIRouter, Depends, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import text
@@ -24,6 +25,8 @@ async def check_health(db: AsyncSession = Depends(get_db)) -> HealthResponse:
     except Exception as e:
         db_status = f"error: {str(e)}"
 
+    gemini_configured = bool(settings.GEMINI_API_KEY and settings.GEMINI_API_KEY.strip())
+
     return HealthResponse(
         status="healthy" if db_status == "connected" else "degraded",
         project_name=settings.PROJECT_NAME,
@@ -33,4 +36,44 @@ async def check_health(db: AsyncSession = Depends(get_db)) -> HealthResponse:
         active_provider=settings.AI_PROVIDER,
         max_video_size_mb=settings.MAX_VIDEO_SIZE_MB,
         timestamp=datetime.now(timezone.utc),
+        gemini_configured=gemini_configured,
+        gemini_model=settings.GEMINI_MODEL if gemini_configured else "",
     )
+
+
+@router.get(
+    "/health/providers",
+    response_model=Dict[str, Any],
+    status_code=status.HTTP_200_OK,
+    summary="Safe AI Provider Diagnostics",
+    description="Returns non-sensitive configuration and capability diagnostics for AI providers without exposing keys.",
+)
+async def check_providers_diagnostic() -> Dict[str, Any]:
+    gemini_configured = bool(settings.GEMINI_API_KEY and settings.GEMINI_API_KEY.strip())
+    selected_llm = (
+        "GeminiLLMProvider"
+        if settings.AI_PROVIDER == "gemini" and gemini_configured
+        else "OfflineHeuristicMockProvider"
+    )
+    return {
+        "active_provider": settings.AI_PROVIDER,
+        "selected_llm_provider": selected_llm,
+        "gemini": {
+            "configured": gemini_configured,
+            "model": settings.GEMINI_MODEL,
+            "provider_class": "GeminiLLMProvider",
+            "supported_features": [
+                "hook_generator",
+                "script_generator",
+                "retention_analyzer",
+                "script_optimizer",
+            ],
+            "fallback_provider": "OfflineHeuristicMockProvider",
+        },
+        "caption_transcription": {
+            "active_provider": settings.TRANSCRIPTION_PROVIDER,
+            "model": settings.WHISPER_MODEL,
+            "configured": bool(settings.WHISPER_API_KEY or settings.OPENAI_API_KEY),
+            "engine": "OpenAI Whisper (speech-to-text + genuine acoustic timestamps)",
+        },
+    }

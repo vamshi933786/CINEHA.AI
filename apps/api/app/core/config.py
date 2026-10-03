@@ -20,8 +20,12 @@ class Settings(BaseSettings):
     MAX_VIDEO_SIZE_MB: int = Field(default=100, description="Maximum video upload size in Megabytes")
     
     # AI Providers
-    AI_PROVIDER: str = "heuristic_mock"
+    AI_PROVIDER: str = "gemini"
     GEMINI_API_KEY: str = ""
+    GEMINI_MODEL: str = Field(
+        default="gemini-3.5-flash-lite",
+        description="Google Gemini model identifier for text generation and analysis",
+    )
     OPENAI_API_KEY: str = ""
 
     # Caption Studio & Speech Transcription Providers
