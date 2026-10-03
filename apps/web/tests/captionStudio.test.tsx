@@ -361,6 +361,82 @@ describe("Caption Studio — Video Input & Transcription", () => {
     expect(api.transcribeVideo).not.toHaveBeenCalled();
   });
 
+  it("displays Local Whisper with Available status badge and transcribes via local_whisper", async () => {
+    vi.mocked(api.getCaptionProviders).mockResolvedValue({
+      default_provider: "local_whisper",
+      is_production_configured: false,
+      is_local_whisper_configured: true,
+      providers: [
+        {
+          id: "local_whisper",
+          name: "Local Whisper",
+          is_production: true,
+          is_configured: true,
+          description: "Free on-device faster-whisper",
+        },
+        {
+          id: "production",
+          name: "OpenAI Whisper",
+          is_production: true,
+          is_configured: false,
+          description: "Cloud OpenAI Whisper",
+        },
+        {
+          id: "mock",
+          name: "Development Mock",
+          is_production: false,
+          is_configured: true,
+          description: "Simulated mock",
+        },
+      ],
+    });
+
+    const localWhisperResponse: TranscriptionResponse = {
+      ...mockTranscriptionResponse,
+      notice: null,
+      transcription: {
+        ...mockTranscriptionResponse.transcription,
+        provider_name: "local_whisper",
+        is_production_provider: true,
+      },
+    };
+    vi.mocked(api.transcribeVideo).mockResolvedValue(localWhisperResponse);
+
+    render(<CaptionStudioWorkspace />);
+
+    // Verify status badges
+    expect(await screen.findByText(/Local Whisper — Available/i)).toBeInTheDocument();
+    expect(screen.getByText(/OpenAI Whisper — Not configured/i)).toBeInTheDocument();
+    expect(screen.getByText(/Development Mock — Development only/i)).toBeInTheDocument();
+
+    const validFile = new File([new ArrayBuffer(5000)], "sample_reel.mp4", {
+      type: "video/mp4",
+    });
+    fireEvent.change(screen.getByLabelText("Upload video file"), {
+      target: { files: [validFile] },
+    });
+
+    // Select Local Whisper
+    const localBtn = screen.getByRole("button", { name: /Local Whisper/i });
+    fireEvent.click(localBtn);
+
+    const transcribeBtn = screen.getByRole("button", { name: /Transcribe Video Speech/i });
+    fireEvent.click(transcribeBtn);
+
+    await waitFor(() => {
+      expect(api.transcribeVideo).toHaveBeenCalledWith(
+        expect.any(File),
+        "English",
+        undefined,
+        "local_whisper"
+      );
+    });
+
+    // Verify production status banner without mock warning
+    expect(await screen.findByText(/Production Speech-to-Text Active/i)).toBeInTheDocument();
+    expect(screen.queryByText(/Development Transcription Mode/i)).not.toBeInTheDocument();
+  });
+
   it("successfully transcribes with production Whisper provider and displays production status banner", async () => {
     vi.mocked(api.getCaptionProviders).mockResolvedValue({
       default_provider: "production",

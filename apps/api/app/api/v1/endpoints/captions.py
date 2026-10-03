@@ -33,6 +33,7 @@ from app.services.audio_extractor import (
 from app.services.transcription_provider import (
     LANGUAGE_CONFIGS,
     is_production_transcription_configured,
+    is_local_whisper_available,
 )
 from app.services.language_processor import (
     is_production_language_processor_configured,
@@ -89,29 +90,38 @@ async def get_supported_language_pairs():
 async def get_caption_providers():
     """
     Return available transcription and language processing providers and their configuration status.
-    Exposes whether production credentials (Whisper/OpenAI) are configured.
+    Exposes Local Whisper, OpenAI Whisper, and Development Mock statuses.
     """
     is_transcription_configured = is_production_transcription_configured()
+    is_local_configured = is_local_whisper_available()
     is_language_configured = is_production_language_processor_configured()
     return {
         "default_provider": settings.TRANSCRIPTION_PROVIDER,
         "is_production_configured": is_transcription_configured,
+        "is_local_whisper_configured": is_local_configured,
         "is_production_language_configured": is_language_configured,
         "default_language_processor": settings.LANGUAGE_PROCESSOR_PROVIDER,
         "providers": [
             {
-                "id": "mock",
-                "name": "Development Mock",
-                "is_production": False,
-                "is_configured": True,
-                "description": "Deterministic simulated screenplay cues for offline testing without cloud credentials",
+                "id": "local_whisper",
+                "name": "Local Whisper",
+                "is_production": True,
+                "is_configured": is_local_configured,
+                "description": "Free on-device neural speech-to-text with word-level timestamps and Apple Silicon acceleration",
             },
             {
                 "id": "production",
                 "name": "OpenAI Whisper",
                 "is_production": True,
                 "is_configured": is_transcription_configured,
-                "description": "Production neural speech-to-text with word-level timestamps and multi-lingual audio extraction",
+                "description": "Cloud neural speech-to-text with word-level timestamps and multi-lingual audio extraction",
+            },
+            {
+                "id": "mock",
+                "name": "Development Mock",
+                "is_production": False,
+                "is_configured": True,
+                "description": "Deterministic simulated screenplay cues for offline testing without local models or cloud credentials",
             },
         ],
         "language_processors": [
@@ -138,12 +148,12 @@ async def transcribe_video(
     file: UploadFile = File(..., description="Video file (MP4, MOV, WebM up to 100MB)"),
     language: str = Form("English", description="Source spoken language (English, Telugu, Hindi, Tanglish)"),
     duration_seconds: Optional[float] = Form(None, description="Optional hinted duration in seconds"),
-    provider: Optional[str] = Form(None, description="Optional provider override: 'mock' or 'production' / 'whisper'"),
+    provider: Optional[str] = Form(None, description="Optional provider override: 'local_whisper', 'production', or 'mock'"),
 ):
     """
     Ingest and transcribe an uploaded video file.
     Validates container header, format, and 100MB size limit.
-    Extracts audio stream and invokes selected provider (development mock or production Whisper).
+    Extracts audio stream and invokes selected provider (Local Whisper, production OpenAI Whisper, or development mock).
     Returns normalized timed segments, word timings, and truthful provider status.
     """
     if not file or not file.filename:

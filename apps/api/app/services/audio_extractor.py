@@ -207,3 +207,50 @@ async def extract_audio_from_video(
             shutil.rmtree(session_dir, ignore_errors=True)
         except Exception:
             pass
+
+
+async def convert_audio_to_pcm_array(
+    audio_bytes: bytes,
+    ffmpeg_bin: Optional[str] = None,
+) -> Any:
+    """
+    Decode audio bytes into a 1D float32 numpy array sampled at 16000 Hz mono.
+    Directly pipes PCM float32 samples from FFmpeg, bypassing PyAV container decoding
+    and eliminating av.open metadata_errors incompatibility on Python 3.14.
+    """
+    import numpy as np
+
+    bin_path = ffmpeg_bin or get_ffmpeg_binary_path()
+    if not bin_path:
+        raise FFmpegNotFoundError(
+            "ffmpeg is required for audio decoding but is not installed or available in PATH."
+        )
+
+    cmd = [
+        bin_path,
+        "-i",
+        "pipe:0",
+        "-f",
+        "f32le",
+        "-acodec",
+        "pcm_f32le",
+        "-ar",
+        "16000",
+        "-ac",
+        "1",
+        "pipe:1",
+    ]
+
+    process = await asyncio.create_subprocess_exec(
+        *cmd,
+        stdin=asyncio.subprocess.PIPE,
+        stdout=asyncio.subprocess.PIPE,
+        stderr=asyncio.subprocess.PIPE,
+    )
+    stdout, stderr = await process.communicate(input=audio_bytes)
+    if process.returncode != 0:
+        err_msg = stderr.decode("utf-8", errors="replace")[:300]
+        logger.error(f"FFmpeg PCM conversion failed (code {process.returncode}): {err_msg}")
+        raise AudioExtractionError(f"Failed to decode audio into PCM array: {err_msg}")
+
+    return np.frombuffer(stdout, dtype=np.float32)

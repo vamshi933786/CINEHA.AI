@@ -30,8 +30,12 @@ class Settings(BaseSettings):
 
     # Caption Studio & Speech Transcription Providers
     TRANSCRIPTION_PROVIDER: str = Field(
-        default="production",
-        description="Transcription provider: 'production' (default) or 'mock' (strictly unit tests only)",
+        default="local_whisper",
+        description="Transcription provider: 'local_whisper' (default, free on-device STT), 'production' (OpenAI Whisper cloud API), or 'mock' (unit tests only)",
+    )
+    LOCAL_WHISPER_MODEL: str = Field(
+        default="base",
+        description="Local Whisper model size (tiny, base, small, medium, large-v3)",
     )
     WHISPER_API_KEY: str = Field(
         default="",

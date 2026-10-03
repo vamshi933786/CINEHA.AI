@@ -34,11 +34,12 @@ export function CaptionStudioWorkspace() {
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [metadata, setMetadata] = useState<VideoMetadata | null>(null);
   const [selectedLanguage, setSelectedLanguage] = useState<string>("English");
-  // Default to production in user flow; tests mocking getCaptionProviders with 'mock' default to mock
+  // Default to local_whisper in user flow; tests mocking getCaptionProviders with 'mock' default to mock
   const [selectedProvider, setSelectedProvider] = useState<string>(
-    typeof process !== "undefined" && process.env.NODE_ENV === "test" ? "mock" : "production"
+    typeof process !== "undefined" && process.env.NODE_ENV === "test" ? "mock" : "local_whisper"
   );
   const [isProductionConfigured, setIsProductionConfigured] = useState<boolean>(false);
+  const [isLocalWhisperConfigured, setIsLocalWhisperConfigured] = useState<boolean>(true);
   const [isProductionLanguageConfigured, setIsProductionLanguageConfigured] =
     useState<boolean>(false);
   const [providers, setProviders] = useState<TranscriptionProviderInfo[]>([]);
@@ -61,6 +62,7 @@ export function CaptionStudioWorkspace() {
         const data = await api.getCaptionProviders();
         if (isMounted && data) {
           setIsProductionConfigured(Boolean(data.is_production_configured));
+          setIsLocalWhisperConfigured(Boolean(data.is_local_whisper_configured ?? true));
           setIsProductionLanguageConfigured(
             Boolean(data.is_production_language_configured)
           );
@@ -112,6 +114,13 @@ export function CaptionStudioWorkspace() {
     if (selectedProvider === "production" && !isProductionConfigured) {
       setError(
         "Production speech recognition is not configured. Production transcription is not configured. Configure the transcription provider credentials or switch to Development Mode."
+      );
+      return;
+    }
+
+    if (selectedProvider === "local_whisper" && !isLocalWhisperConfigured) {
+      setError(
+        "Local Whisper speech recognition is not available. Please install faster-whisper or configure OpenAI Whisper API."
       );
       return;
     }
@@ -326,11 +335,22 @@ export function CaptionStudioWorkspace() {
                 <span>3. Speech-to-Text Provider Engine</span>
               </label>
               <p className="text-[11px] text-slate-400 mt-0.5">
-                Choose between local development simulation and production Whisper STT.
+                Choose between free local on-device transcription, cloud OpenAI Whisper, and dev mock.
               </p>
             </div>
 
             <div className="flex items-center gap-2">
+              <span
+                className={`px-2 py-0.5 rounded text-[10px] font-mono font-medium ${
+                  isLocalWhisperConfigured
+                    ? "bg-emerald-500/10 border border-emerald-500/30 text-emerald-300"
+                    : "bg-slate-800 border border-slate-700 text-slate-400"
+                }`}
+              >
+                {isLocalWhisperConfigured
+                  ? "Local Whisper Ready"
+                  : "Local Whisper Unavailable"}
+              </span>
               <span
                 className={`px-2 py-0.5 rounded text-[10px] font-mono font-medium ${
                   isProductionConfigured
@@ -345,61 +365,117 @@ export function CaptionStudioWorkspace() {
             </div>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            {/* Development Mock */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            {/* Local Whisper (Free / Local) */}
             <button
               type="button"
-              onClick={() => setSelectedProvider("mock")}
+              onClick={() => setSelectedProvider("local_whisper")}
               disabled={isTranscribing}
+              aria-label="Local Whisper"
               className={`p-3.5 rounded-xl border text-left transition flex flex-col justify-between ${
-                selectedProvider === "mock"
+                selectedProvider === "local_whisper"
                   ? "border-cyan-500/50 bg-cyan-950/20 text-cyan-200 shadow-sm"
                   : "border-[#25293d] bg-[#161826] text-slate-300 hover:border-slate-600 hover:bg-[#1b1e30]"
               } ${isTranscribing ? "opacity-60 cursor-not-allowed" : ""}`}
             >
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <span className="text-xs font-semibold">Development Mock</span>
-                  <span className="px-1.5 py-0.5 rounded text-[9px] font-mono bg-cyan-500/10 text-cyan-300">
-                    Offline
+              <div>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-semibold">Local Whisper</span>
+                    <span className="px-1.5 py-0.5 rounded text-[9px] font-mono bg-cyan-500/10 text-cyan-300">
+                      Free / Local
+                    </span>
+                  </div>
+                  <span
+                    className={`text-[10px] font-mono font-medium ${
+                      isLocalWhisperConfigured ? "text-emerald-400" : "text-amber-400"
+                    }`}
+                  >
+                    {isLocalWhisperConfigured ? "Available" : "Not available"}
                   </span>
                 </div>
-                <span className="text-[10px] font-mono text-emerald-400 font-medium">Ready</span>
+                <p className="text-[11px] text-slate-400 mt-1.5 leading-relaxed">
+                  Free on-device neural speech recognition (faster-whisper) with word-level timestamps. No cloud credits or API keys required.
+                </p>
               </div>
-              <p className="text-[11px] text-slate-400 mt-1.5">
-                Instant simulated screenplay cues with mock word timings for rapid local testing without API keys.
-              </p>
+              <div className="mt-3 pt-2 border-t border-[#21263d] flex items-center justify-between text-[10px] font-mono">
+                <span className="text-slate-400">Local Whisper — {isLocalWhisperConfigured ? "Available" : "Not available"}</span>
+                <span className="text-emerald-400 font-medium">100% Free</span>
+              </div>
             </button>
 
-            {/* Production Whisper */}
+            {/* OpenAI Whisper (Cloud Production) */}
             <button
               type="button"
               onClick={() => setSelectedProvider("production")}
               disabled={isTranscribing}
+              aria-label="OpenAI Whisper"
               className={`p-3.5 rounded-xl border text-left transition flex flex-col justify-between ${
                 selectedProvider === "production"
                   ? "border-cyan-500/50 bg-cyan-950/20 text-cyan-200 shadow-sm"
                   : "border-[#25293d] bg-[#161826] text-slate-300 hover:border-slate-600 hover:bg-[#1b1e30]"
               } ${isTranscribing ? "opacity-60 cursor-not-allowed" : ""}`}
             >
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <span className="text-xs font-semibold">OpenAI Whisper</span>
-                  <span className="px-1.5 py-0.5 rounded text-[9px] font-mono bg-violet-500/10 text-violet-300">
-                    Production
+              <div>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-semibold">OpenAI Whisper</span>
+                    <span className="px-1.5 py-0.5 rounded text-[9px] font-mono bg-violet-500/10 text-violet-300">
+                      Cloud
+                    </span>
+                  </div>
+                  <span
+                    className={`text-[10px] font-mono font-medium ${
+                      isProductionConfigured ? "text-emerald-400" : "text-amber-400"
+                    }`}
+                  >
+                    {isProductionConfigured ? "Available" : "Not configured"}
                   </span>
                 </div>
-                <span
-                  className={`text-[10px] font-mono font-medium ${
-                    isProductionConfigured ? "text-emerald-400" : "text-amber-400"
-                  }`}
-                >
-                  {isProductionConfigured ? "Ready" : "Unconfigured"}
+                <p className="text-[11px] text-slate-400 mt-1.5 leading-relaxed">
+                  Cloud speech recognition via OpenAI Whisper API with word-level timestamps and multi-lingual audio extraction.
+                </p>
+              </div>
+              <div className="mt-3 pt-2 border-t border-[#21263d] flex items-center justify-between text-[10px] font-mono">
+                <span className="text-slate-400">OpenAI Whisper — {isProductionConfigured ? "Available" : "Not configured"}</span>
+                <span className={isProductionConfigured ? "text-emerald-400" : "text-amber-400"}>
+                  {isProductionConfigured ? "Active" : "API Key Required"}
                 </span>
               </div>
-              <p className="text-[11px] text-slate-400 mt-1.5">
-                Real neural STT via OpenAI Whisper API with word-level timestamps and multi-lingual audio extraction.
-              </p>
+            </button>
+
+            {/* Development Mock */}
+            <button
+              type="button"
+              onClick={() => setSelectedProvider("mock")}
+              disabled={isTranscribing}
+              aria-label="Development Mock"
+              className={`p-3.5 rounded-xl border text-left transition flex flex-col justify-between ${
+                selectedProvider === "mock"
+                  ? "border-cyan-500/50 bg-cyan-950/20 text-cyan-200 shadow-sm"
+                  : "border-[#25293d] bg-[#161826] text-slate-300 hover:border-slate-600 hover:bg-[#1b1e30]"
+              } ${isTranscribing ? "opacity-60 cursor-not-allowed" : ""}`}
+            >
+              <div>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-semibold">Development Mock</span>
+                    <span className="px-1.5 py-0.5 rounded text-[9px] font-mono bg-amber-500/10 text-amber-300">
+                      Offline
+                    </span>
+                  </div>
+                  <span className="text-[10px] font-mono text-amber-400 font-medium">
+                    Development only
+                  </span>
+                </div>
+                <p className="text-[11px] text-slate-400 mt-1.5 leading-relaxed">
+                  Instant simulated screenplay cues with mock word timings for rapid offline unit testing without audio models.
+                </p>
+              </div>
+              <div className="mt-3 pt-2 border-t border-[#21263d] flex items-center justify-between text-[10px] font-mono">
+                <span className="text-slate-400">Development Mock — Development only</span>
+                <span className="text-amber-400 font-medium">Simulated</span>
+              </div>
             </button>
           </div>
 
@@ -415,7 +491,7 @@ export function CaptionStudioWorkspace() {
                   Production speech recognition is not configured. Production transcription is not configured. Configure the transcription provider credentials or switch to Development Mode.
                 </p>
                 <p className="text-[11px] text-amber-300/80 mt-0.5 leading-relaxed">
-                  Set <code className="bg-[#12141e] px-1 py-0.5 rounded text-amber-200 font-mono">WHISPER_API_KEY</code> or <code className="bg-[#12141e] px-1 py-0.5 rounded text-amber-200 font-mono">OPENAI_API_KEY</code> in <code className="font-mono">apps/api/.env</code> to enable live Whisper audio transcription.
+                  Set <code className="bg-[#12141e] px-1 py-0.5 rounded text-amber-200 font-mono">WHISPER_API_KEY</code> or <code className="bg-[#12141e] px-1 py-0.5 rounded text-amber-200 font-mono">OPENAI_API_KEY</code> in <code className="font-mono">apps/api/.env</code> to enable live OpenAI Whisper audio transcription. Alternatively, switch to <strong>Local Whisper</strong> for free on-device transcription.
                 </p>
                 <p className="text-[10px] text-amber-400/70">
                   Mock transcription is restricted to unit tests and will not generate random captions for uploaded videos.
@@ -450,7 +526,9 @@ export function CaptionStudioWorkspace() {
                 <span>
                   {transcriptionPhase ||
                     (selectedProvider === "production"
-                      ? "Extracting Audio & Transcribing via Whisper..."
+                      ? "Extracting Audio & Transcribing via OpenAI Whisper..."
+                      : selectedProvider === "local_whisper"
+                      ? "Extracting Audio & Transcribing via Local Whisper..."
                       : "Extracting Audio & Transcribing...")}
                 </span>
               </>

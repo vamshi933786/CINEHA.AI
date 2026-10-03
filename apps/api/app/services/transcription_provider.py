@@ -1,6 +1,8 @@
 from abc import ABC, abstractmethod
 import math
 import logging
+import asyncio
+import threading
 import httpx
 from typing import Optional, List, Dict, Any
 from fastapi import HTTPException, status
@@ -12,6 +14,7 @@ from app.schemas.captions import (
 )
 from app.services.audio_extractor import (
     extract_audio_from_video,
+    convert_audio_to_pcm_array,
     NoAudioTrackError,
     FFmpegNotFoundError,
     AudioExtractionError,
@@ -599,6 +602,243 @@ class OpenAIWhisperTranscriptionProvider(BaseTranscriptionProvider):
         )
 
 
+_LOCAL_WHISPER_MODELS: Dict[str, Any] = {}
+_LOCAL_MODEL_LOCK = threading.Lock()
+
+
+def is_local_whisper_available() -> bool:
+    """Return True if faster-whisper runtime and numpy are available on this system."""
+    try:
+        import faster_whisper
+        import numpy
+        return True
+    except ImportError:
+        return False
+
+
+def get_local_whisper_model(model_size: Optional[str] = None):
+    """
+    Thread-safe model loader and singleton cache for faster-whisper.
+    Loads model once per model_size and reuses across requests to avoid reload overhead.
+    """
+    selected_size = model_size or getattr(settings, "LOCAL_WHISPER_MODEL", "base") or "base"
+    if selected_size in _LOCAL_WHISPER_MODELS:
+        return _LOCAL_WHISPER_MODELS[selected_size]
+
+    with _LOCAL_MODEL_LOCK:
+        if selected_size in _LOCAL_WHISPER_MODELS:
+            return _LOCAL_WHISPER_MODELS[selected_size]
+
+        from faster_whisper import WhisperModel
+
+        logger.info(f"Loading local faster-whisper model '{selected_size}' on CPU (int8)...")
+        model = WhisperModel(selected_size, device="cpu", compute_type="int8")
+        _LOCAL_WHISPER_MODELS[selected_size] = model
+        logger.info(f"Local faster-whisper model '{selected_size}' loaded successfully.")
+        return model
+
+
+class LocalWhisperTranscriptionProvider(BaseTranscriptionProvider):
+    """
+    Free on-device Speech-to-Text Provider powered by faster-whisper (CTranslate2).
+    1. Extracts speech audio from video container via FFmpeg.
+    2. Converts audio into 16kHz float32 mono PCM numpy array (bypassing PyAV bug).
+    3. Executes local faster-whisper inference with word_timestamps=True.
+    4. Produces truthful segment and word-level timestamps without network calls or API costs.
+    5. Disallows fake/mock fallback — guarantees real speech transcription on actual uploaded media.
+    """
+
+    def __init__(self, model_size: Optional[str] = None):
+        self.model_size = model_size or getattr(settings, "LOCAL_WHISPER_MODEL", "base") or "base"
+        self.provider_name = "local_whisper"
+        self.is_production_provider = True
+
+    def is_available(self) -> bool:
+        """Check whether local faster-whisper is available for inference."""
+        return is_local_whisper_available()
+
+    async def transcribe(
+        self,
+        video_bytes: bytes,
+        filename: Optional[str] = None,
+        language: str = "English",
+        duration_seconds: Optional[float] = None,
+    ) -> TranscriptionResult:
+        # 1. Enforce local runtime availability
+        if not self.is_available():
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail=(
+                    "Local Whisper speech recognition runtime is not available. "
+                    "Please ensure 'faster-whisper' and 'ctranslate2' are installed in the backend environment."
+                ),
+            )
+
+        # 2. Extract speech audio stream from video using local ffmpeg
+        clean_filename = filename or "uploaded_video.mp4"
+        try:
+            audio_result = await extract_audio_from_video(video_bytes, filename=clean_filename)
+        except NoAudioTrackError as e:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+        except FFmpegNotFoundError as e:
+            raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=str(e))
+        except AudioExtractionError as e:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+
+        # 3. Decode audio bytes into 16kHz float32 mono PCM array (pure FFmpeg pipe)
+        try:
+            audio_array = await convert_audio_to_pcm_array(audio_result.audio_bytes)
+        except FFmpegNotFoundError as e:
+            raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=str(e))
+        except AudioExtractionError as e:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+
+        if len(audio_array) == 0:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="No audio track was detected in this video.",
+            )
+
+        # 4. Determine spoken language code
+        whisper_lang = None
+        if language in ("Telugu", "Tanglish"):
+            whisper_lang = "te"
+        elif language == "Hindi":
+            whisper_lang = "hi"
+        elif language == "English":
+            whisper_lang = "en"
+
+        # 5. Run inference inside worker thread (non-blocking for FastAPI event loop)
+        try:
+            model = get_local_whisper_model(self.model_size)
+
+            def _infer():
+                segments_iter, info = model.transcribe(
+                    audio_array,
+                    language=whisper_lang,
+                    word_timestamps=True,
+                    vad_filter=True,
+                    vad_parameters=dict(min_silence_duration_ms=500),
+                )
+                return list(segments_iter), info
+
+            segments_raw, info = await asyncio.to_thread(_infer)
+        except Exception as e:
+            logger.error(f"Local Whisper inference failed: {e}", exc_info=True)
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"Local Whisper speech transcription failed: {str(e)}",
+            )
+
+        # 6. Parse and normalize segments & word-level timestamps
+        segments: List[TranscriptSegment] = []
+        full_text_parts: List[str] = []
+
+        for idx, s in enumerate(segments_raw):
+            s_text = s.text.strip()
+            if not s_text:
+                continue
+            full_text_parts.append(s_text)
+            s_start = round(float(s.start), 3)
+            s_end = round(float(s.end), 3)
+
+            seg_words: List[TranscriptWord] = []
+            if s.words:
+                for w in s.words:
+                    w_text = w.word.strip()
+                    if w_text:
+                        w_prob = getattr(w, "probability", None)
+                        seg_words.append(
+                            TranscriptWord(
+                                text=w_text,
+                                start_time=round(float(w.start), 3),
+                                end_time=round(float(w.end), 3),
+                                confidence=round(float(w_prob), 2) if w_prob is not None else 0.95,
+                            )
+                        )
+
+            confidence = None
+            if hasattr(s, "avg_logprob") and s.avg_logprob is not None:
+                try:
+                    confidence = round(max(0.0, min(1.0, math.exp(float(s.avg_logprob)))), 2)
+                except Exception:
+                    confidence = None
+
+            segments.append(
+                TranscriptSegment(
+                    id=f"seg_{idx}",
+                    text=s_text,
+                    start_time=s_start,
+                    end_time=s_end,
+                    words=seg_words,
+                    speaker="Speaker 1",
+                    confidence=confidence or 0.95,
+                )
+            )
+
+        total_duration = (
+            segments[-1].end_time
+            if segments
+            else round(float(getattr(info, "duration", 0.0) or (len(audio_array) / 16000.0)), 3)
+        )
+        word_timings_available = any(len(s.words) > 0 for s in segments)
+
+        # 7. Determine language & script
+        resp_lang = str(getattr(info, "language", "") or whisper_lang or "").lower()
+        if "telugu" in resp_lang or resp_lang == "te":
+            detected_language = "Telugu"
+            lang_code = "te"
+            script_type = "Telugu"
+        elif "hindi" in resp_lang or resp_lang == "hi":
+            detected_language = "Hindi"
+            lang_code = "hi"
+            script_type = "Devanagari"
+        elif "english" in resp_lang or resp_lang == "en":
+            detected_language = "English"
+            lang_code = "en"
+            script_type = "Latin"
+        else:
+            lang_cfg = LANGUAGE_CONFIGS.get(language, LANGUAGE_CONFIGS["English"])
+            detected_language = language if language != "Tanglish" else "Telugu"
+            lang_code = lang_cfg.get("code", "en")
+            script_type = lang_cfg.get("script", "Latin")
+
+        result_lang = "Telugu" if language == "Tanglish" else detected_language
+        result_code = "te" if language == "Tanglish" else lang_code
+        result_script = "Telugu" if language == "Tanglish" else script_type
+
+        metadata: Dict[str, Any] = {
+            "video_filename": clean_filename,
+            "provider_model": f"faster_whisper_{self.model_size}",
+            "word_timings_available": word_timings_available,
+            "detected_speech_language": detected_language,
+            "extracted_audio_format": audio_result.audio_format,
+            "extracted_audio_size_bytes": audio_result.file_size_bytes,
+            "is_local_inference": True,
+        }
+
+        if language == "Tanglish":
+            metadata["underlying_speech_language"] = "te"
+            metadata["transliteration_note"] = (
+                "Transcription performed using source speech language (Telugu). "
+                "Transliteration into Romanized/Latin script is deferred to downstream processing."
+            )
+
+        return TranscriptionResult(
+            language=result_lang,
+            language_code=result_code,
+            is_transliteration=False,
+            script_type=result_script,
+            segments=segments,
+            full_text="\n\n".join(full_text_parts),
+            duration_seconds=total_duration,
+            provider_name=self.provider_name,
+            is_production_provider=True,
+            confidence=0.95,
+            metadata=metadata,
+        )
+
+
 class ProductionTranscriptionProviderStub(BaseTranscriptionProvider):
     """
     Production Transcription Provider Stub adapter for backward compatibility.
@@ -641,22 +881,51 @@ def is_production_transcription_configured() -> bool:
 def get_transcription_provider(provider_type: Optional[str] = None) -> BaseTranscriptionProvider:
     """
     Factory function to retrieve the configured transcription provider.
-    Defaults to production speech recognition (OpenAIWhisperTranscriptionProvider).
-    MockDevelopmentTranscriptionProvider is strictly reserved for automated unit tests via provider_type='mock'.
-    Raises HTTPException if production provider is requested without configured credentials.
+    Supports:
+    - 'local_whisper' / 'local': Free local faster-whisper STT running on device.
+    - 'production' / 'openai': Cloud OpenAI Whisper STT API (requires OPENAI_API_KEY).
+    - 'mock' / 'development': Strictly reserved for automated unit tests.
+    Raises HTTPException if requested provider is unavailable or unconfigured.
     """
-    target = (provider_type or settings.TRANSCRIPTION_PROVIDER or "production").lower().strip()
+    target = (provider_type or settings.TRANSCRIPTION_PROVIDER or "local_whisper").lower().strip()
 
-    if target == "mock":
+    if target in ("mock", "development"):
         return MockDevelopmentTranscriptionProvider()
 
+    if target in ("local_whisper", "local", "faster_whisper", "faster-whisper"):
+        provider = LocalWhisperTranscriptionProvider()
+        if not provider.is_available():
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail=(
+                    "Local Whisper speech recognition runtime is not available. "
+                    "Please ensure 'faster-whisper' and 'ctranslate2' are installed in the backend environment."
+                ),
+            )
+        return provider
+
+    if target in ("production", "openai", "whisper", "openai_whisper"):
+        provider = OpenAIWhisperTranscriptionProvider()
+        if not provider.is_configured():
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=(
+                    "Production speech recognition is not configured. Production transcription is not configured. "
+                    "Please set OPENAI_API_KEY or WHISPER_API_KEY in apps/api/.env to enable speech-to-text."
+                ),
+            )
+        return provider
+
+    # Default fallback: prefer local whisper if available, else OpenAI whisper if configured
+    if is_local_whisper_available():
+        return LocalWhisperTranscriptionProvider()
+
     provider = OpenAIWhisperTranscriptionProvider()
-    if not provider.is_configured():
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=(
-                "Production speech recognition is not configured. Production transcription is not configured. "
-                "Please set OPENAI_API_KEY or WHISPER_API_KEY in apps/api/.env to enable speech-to-text."
-            ),
-        )
-    return provider
+    if provider.is_configured():
+        return provider
+
+    raise HTTPException(
+        status_code=status.HTTP_400_BAD_REQUEST,
+        detail=f"Unknown or unconfigured transcription provider '{target}'.",
+    )
+

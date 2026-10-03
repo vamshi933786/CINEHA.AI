@@ -51,14 +51,21 @@ def create_dummy_mp4_bytes(size: int = 1024) -> bytes:
 # 1. Real Provider Selection & Missing Credentials Handling
 # ---------------------------------------------------------------------------
 
-def test_default_transcription_provider_is_production():
-    """Verify get_transcription_provider defaults to production and does not silently return mock."""
-    # When credentials are missing, requesting default provider must raise HTTPException(400)
+def test_default_transcription_provider_is_production_when_configured():
+    """Verify get_transcription_provider('production') requires credentials and does not silently return mock."""
+    # When credentials are missing, requesting production provider must raise HTTPException(400)
     with patch("app.services.transcription_provider.is_production_transcription_configured", return_value=False):
         with pytest.raises(HTTPException) as exc_info:
-            get_transcription_provider()
+            get_transcription_provider("production")
         assert exc_info.value.status_code == 400
         assert "Production speech recognition is not configured" in exc_info.value.detail
+
+
+def test_default_transcription_provider_is_local_whisper():
+    """Verify get_transcription_provider defaults to local_whisper."""
+    from app.services.transcription_provider import LocalWhisperTranscriptionProvider
+    provider = get_transcription_provider()
+    assert isinstance(provider, LocalWhisperTranscriptionProvider)
 
 
 def test_mock_provider_strictly_requires_explicit_mock_flag():

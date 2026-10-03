@@ -185,6 +185,7 @@ export interface TranscriptionProviderInfo {
 export interface CaptionProvidersResponse {
   default_provider: string;
   is_production_configured: boolean;
+  is_local_whisper_configured?: boolean;
   is_production_language_configured?: boolean;
   default_language_processor?: string;
   providers: TranscriptionProviderInfo[];

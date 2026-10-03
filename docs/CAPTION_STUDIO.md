@@ -152,46 +152,51 @@ class BaseTranscriptionProvider(ABC):
 ```
 
 ### Implemented Providers:
-1. **`MockDevelopmentTranscriptionProvider`**:
-   - Deterministic offline development provider.
+1. **`LocalWhisperTranscriptionProvider` (Default / Free)**:
+   - Free on-device neural speech-to-text provider utilizing `faster-whisper` (CTranslate2).
+   - Runs locally on host hardware (Apple Silicon CPU/NEON acceleration) without OpenAI API credits or keys.
+   - Decodes audio directly via FFmpeg into a 16kHz float32 mono PCM NumPy array, completely bypassing PyAV decoding bugs.
+   - Model caching: Singleton pattern loads model once per model size (`base` by default, `tiny` alternative) and reuses across requests.
+   - Truthful metadata: populates `is_production_provider = True`, `provider_name = "local_whisper"`, and `word_timings_available = True`.
+   - Generates genuine word-level timestamps directly from model output; never fabricates timestamps.
+2. **`OpenAIWhisperTranscriptionProvider` (Cloud Optional)**:
+   - Production cloud neural speech-to-text provider adapter utilizing the OpenAI Whisper API (`v1/audio/transcriptions`).
+   - Extracts 16 kHz speech-optimized audio from video containers via `ffmpeg`.
+   - Requests granular word-level and segment-level timestamps via `timestamp_granularities[]=["word", "segment"]`.
+   - Normalizes raw Whisper responses into canonical `TranscriptionResult`, `TranscriptSegment`, and `TranscriptWord` models.
+   - Truthful metadata: populates `is_production_provider = True`, `provider_name = "openai_whisper"`, and `word_timings_available`.
+   - Never fabricates synthetic word timestamps if the provider only returns segment timings.
+   - Explicitly rejects unconfigured requests with a 400 error when credentials are missing, preventing deceptive mock substitution.
+3. **`MockDevelopmentTranscriptionProvider`**:
+   - Deterministic offline development provider reserved strictly for automated unit tests.
    - Generates realistic timed screenplay segments (0:00 to 0:19) with granular word-level start/end timestamps.
    - Strictly sets `is_production_provider = False` and `provider_name = "heuristic_dev_transcription"`.
    - Populates an explicit user-facing notice:
      `"Development Transcription Mode — production speech-to-text provider is not configured. Transcription is simulated based on cinematic screenplay heuristics."`
-2. **`OpenAIWhisperTranscriptionProvider`**:
-   - Production neural speech-to-text provider adapter utilizing the OpenAI Whisper API (`v1/audio/transcriptions`).
-   - Extracts 16 kHz speech-optimized audio from video containers via `ffmpeg`.
-   - Requests granular word-level and segment-level timestamps via `timestamp_granularities[]=["word", "segment"]`.
-   - Normalizes raw Whisper responses into canonical `TranscriptionResult`, `TranscriptSegment`, and `TranscriptWord` models.
-   - Truthful metadata: populates `is_production_provider = True`, `provider_name = "openai_whisper_api"`, and `word_timings_available`.
-   - Never fabricates synthetic word timestamps if the provider only returns segment timings.
-   - Explicitly rejects unconfigured requests with a 400 error when credentials are missing, preventing deceptive mock substitution.
-3. **`ProductionTranscriptionProviderStub`**:
+4. **`ProductionTranscriptionProviderStub`**:
    - Backward-compatible stub preserved for fallback scenarios.
 
 ---
 
 ## 5.1. Audio Extraction Pipeline (FFmpeg)
 
-Because the Whisper STT API accepts lightweight audio files (under 25 MB) rather than multi-gigabyte video containers, the backend extracts the audio track before transmission:
+Because the Whisper STT engines accept lightweight speech audio rather than multi-gigabyte video containers, the backend extracts and decodes the audio track:
 
 ```
 [ Uploaded Video Bytes ] ──> [ Temp Video File (.mp4/.mov/.webm) ]
                                             │
                                             ▼
-                           [ FFmpeg 16kHz MP3 Extraction ]
+                           [ FFmpeg 16kHz Audio Extraction ]
                            ffmpeg -i input.mp4 -vn -acodec libmp3lame -ar 16000 -ac 1 output.mp3
                                             │
-                                            ▼
-                           [ Extracted Audio Bytes Read ]
+                                            ├─► [ Local Whisper: FFmpeg PCM f32le pipe ] ──► np.ndarray (16kHz float32)
                                             │
-                                            ▼
-                           [ Guaranteed Cleanup in finally: rm input & output ]
+                                            └─► [ OpenAI Whisper: 16kHz MP3 bytes ] ─────► HTTP Multipart Request
 ```
 
 ### Extraction Reliability Guarantees:
 - **Zero Disk Leakage**: Input and output files are created in isolated temporary locations and strictly removed in `finally` blocks, even under timeouts or unhandled exceptions.
-- **Audio Stream Detection**: Video files lacking an audio track are identified via error analysis and rejected with an explicit `HTTP 400: "Video has no audio track to transcribe"`.
+- **Audio Stream Detection**: Video files lacking an audio track are identified via error analysis and rejected with an explicit `HTTP 400: "No audio track was detected in this video."`.
 - **FFmpeg Discovery**: Automatically discovers `ffmpeg` in system paths, user Anaconda environments (`/opt/anaconda3/bin/ffmpeg`), or custom paths specified by `FFMPEG_PATH`.
 
 ---
@@ -200,9 +205,10 @@ Because the Whisper STT API accepts lightweight audio files (under 25 MB) rather
 
 | Variable | Default | Description |
 |---|---|---|
-| `TRANSCRIPTION_PROVIDER` | `mock` | Default engine: `mock` (development heuristics) or `whisper` / `production` |
-| `WHISPER_API_KEY` | None | OpenAI API key for Whisper transcription (falls back to `OPENAI_API_KEY`) |
-| `WHISPER_MODEL` | `whisper-1` | Target Whisper model ID |
+| `TRANSCRIPTION_PROVIDER` | `local_whisper` | Default engine: `local_whisper` (free on-device), `production` (OpenAI cloud API), or `mock` (unit tests only) |
+| `LOCAL_WHISPER_MODEL` | `base` | Model size for Local Whisper (`tiny`, `base`, `small`, `medium`, `large-v3`) |
+| `WHISPER_API_KEY` | None | Dedicated OpenAI API key for Whisper transcription (falls back to `OPENAI_API_KEY`) |
+| `WHISPER_MODEL` | `whisper-1` | Target OpenAI Whisper model ID |
 | `WHISPER_API_URL` | `https://api.openai.com/v1/audio/transcriptions` | Whisper API endpoint URL |
 | `FFMPEG_PATH` | None | Optional absolute path to system `ffmpeg` binary |
 
@@ -214,26 +220,39 @@ Because the Whisper STT API accepts lightweight audio files (under 25 MB) rather
 
 ```json
 {
-  "default_provider": "mock",
+  "default_provider": "local_whisper",
   "is_production_configured": false,
+  "is_local_whisper_configured": true,
   "providers": [
     {
-      "id": "mock",
-      "name": "Development Mock",
-      "is_production": false,
+      "id": "local_whisper",
+      "name": "Local Whisper",
+      "is_production": true,
       "is_configured": true,
-      "description": "Deterministic simulated screenplay cues for offline testing without cloud credentials"
+      "description": "Free on-device neural speech-to-text with word-level timestamps and Apple Silicon acceleration"
     },
     {
       "id": "production",
       "name": "OpenAI Whisper",
       "is_production": true,
       "is_configured": false,
-      "description": "Production neural speech-to-text with word-level timestamps and multi-lingual audio extraction"
+      "description": "Cloud neural speech-to-text with word-level timestamps and multi-lingual audio extraction"
+    },
+    {
+      "id": "mock",
+      "name": "Development Mock",
+      "is_production": false,
+      "is_configured": true,
+      "description": "Deterministic simulated screenplay cues for offline testing without local models or cloud credentials"
     }
   ]
 }
 ```
+
+### Caption Studio UI Provider Status Indicators:
+- **Local Whisper** — `Available`
+- **OpenAI Whisper** — `Available` (if configured) / `Not configured` (if API key missing)
+- **Development Mock** — `Development only`
 
 ---
 
