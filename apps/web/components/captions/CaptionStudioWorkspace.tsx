@@ -125,25 +125,36 @@ export function CaptionStudioWorkspace() {
       return;
     }
 
+    const isTeluguOrTanglish = selectedLanguage === "Telugu" || selectedLanguage === "Tanglish";
+    const isLocal = selectedProvider === "local_whisper";
+
     setIsTranscribing(true);
     setError(null);
-    setTranscriptionPhase("Extracting Audio & Transcribing...");
+    setTranscriptionPhase(
+      isLocal && isTeluguOrTanglish
+        ? "Stage 1/3: Audio transcription via Local Whisper..."
+        : "Extracting Audio & Transcribing..."
+    );
 
     const t1 = setTimeout(() => {
-      setTranscriptionPhase("Transcribing speech...");
-    }, 400);
+      setTranscriptionPhase(
+        isLocal && isTeluguOrTanglish
+          ? "Stage 2/3: Telugu speech restoration via Gemini (authoritative Whisper timings)..."
+          : "Transcribing speech..."
+      );
+    }, 600);
 
     const t2 = setTimeout(() => {
-      if (selectedLanguage === "Tanglish" || selectedLanguage === "Telugu") {
-        setTranscriptionPhase("Processing language...");
+      if (selectedLanguage === "Tanglish") {
+        setTranscriptionPhase("Stage 3/3: Transliterating to Tanglish & generating cues...");
       } else {
-        setTranscriptionPhase("Generating timed captions...");
+        setTranscriptionPhase("Stage 3/3: Generating synchronized caption cues...");
       }
-    }, 1100);
+    }, 1400);
 
     const t3 = setTimeout(() => {
-      setTranscriptionPhase("Generating timed captions...");
-    }, 1800);
+      setTranscriptionPhase("Finalizing synchronized captions...");
+    }, 2200);
 
     try {
       const durationSeconds = metadata?.duration;
@@ -381,9 +392,15 @@ export function CaptionStudioWorkspace() {
               <div>
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    <span className="text-xs font-semibold">Local Whisper</span>
+                    <span className="text-xs font-semibold">
+                      {selectedLanguage === "Telugu" || selectedLanguage === "Tanglish"
+                        ? "Local Whisper + Gemini Telugu Restoration"
+                        : "Local Whisper"}
+                    </span>
                     <span className="px-1.5 py-0.5 rounded text-[9px] font-mono bg-cyan-500/10 text-cyan-300">
-                      Free / Local
+                      {selectedLanguage === "Telugu" || selectedLanguage === "Tanglish"
+                        ? "Hybrid Pipeline"
+                        : "Free / Local"}
                     </span>
                   </div>
                   <span
@@ -395,7 +412,9 @@ export function CaptionStudioWorkspace() {
                   </span>
                 </div>
                 <p className="text-[11px] text-slate-400 mt-1.5 leading-relaxed">
-                  Free on-device neural speech recognition (faster-whisper) with word-level timestamps. No cloud credits or API keys required.
+                  {selectedLanguage === "Telugu" || selectedLanguage === "Tanglish"
+                    ? "Two-stage hybrid pipeline: Local Whisper provides authoritative audio timestamps, and Gemini semantically restores native Telugu Unicode or Tanglish."
+                    : "Free on-device neural speech recognition (faster-whisper) with word-level timestamps. No cloud credits or API keys required."}
                 </p>
               </div>
               <div className="mt-3 pt-2 border-t border-[#21263d] flex items-center justify-between text-[10px] font-mono">
@@ -592,12 +611,14 @@ export function CaptionStudioWorkspace() {
               <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0 mt-0.5" />
               <div>
                 <h3 className="font-semibold text-emerald-200">
-                  Production Speech-to-Text Active
+                  {transcriptionResponse.transcription.provider_name.includes("Gemini")
+                    ? "Hybrid Telugu Speech Restoration Active"
+                    : "Production Speech-to-Text Active"}
                 </h3>
                 <p className="text-emerald-300/90 mt-0.5 leading-relaxed">
                   Audio successfully extracted from video container and transcribed via{" "}
                   {transcriptionResponse.transcription.provider_name}. Timed segments and
-                  word-level cues are ready for downstream caption styling.
+                  caption cues are ready for downstream caption styling.
                 </p>
               </div>
             </div>

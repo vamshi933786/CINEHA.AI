@@ -53,6 +53,10 @@ class Settings(BaseSettings):
         default="",
         description="Optional custom path to ffmpeg binary (auto-detected if unset)",
     )
+    ENABLE_HYBRID_SPEECH_RESTORATION: bool = Field(
+        default=True,
+        description="Enable Gemini-powered Telugu/Tanglish speech restoration on top of local Whisper transcription",
+    )
 
     # Caption Studio Language Processing (Translation & Transliteration)
     LANGUAGE_PROCESSOR_PROVIDER: str = Field(

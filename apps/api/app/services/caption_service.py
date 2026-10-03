@@ -11,6 +11,7 @@ from app.schemas.captions import (
     CaptionCueGenerationRequest,
     CaptionCueGenerationResponse,
 )
+from app.core.config import settings
 from app.services.video_validator import validate_video_upload
 from app.services.transcription_provider import get_transcription_provider
 
@@ -62,6 +63,46 @@ class CaptionService:
             duration_seconds=duration_seconds,
         )
 
+        # 3b. Two-Stage Hybrid Speech Restoration for Telugu / Tanglish
+        restoration_notice = None
+        is_hybrid_enabled = getattr(settings, "ENABLE_HYBRID_SPEECH_RESTORATION", True)
+        is_local_whisper = (
+            transcription.provider_name in ("local_whisper", "faster_whisper", "faster_whisper_base")
+            or (hasattr(active_provider, "provider_name") and active_provider.provider_name == "local_whisper")
+        )
+
+        if is_hybrid_enabled and is_local_whisper and language in ("Telugu", "Tanglish") and transcription.segments:
+            from app.services.speech_restoration import get_speech_restoration_provider
+
+            restoration_provider = get_speech_restoration_provider()
+            restoration_result = await restoration_provider.restore_telugu_speech(
+                segments=transcription.segments,
+                context=f"Cinematography, filmmaking, and short-form video creation. Target language: {language}.",
+            )
+
+            if restoration_result.is_restored:
+                transcription.segments = restoration_result.segments
+                transcription.full_text = restoration_result.full_text
+                transcription.provider_name = "Local Whisper + Gemini Telugu Restoration"
+                if "speech_restoration" not in transcription.metadata:
+                    transcription.metadata["speech_restoration"] = {}
+                transcription.metadata["speech_restoration"] = {
+                    "applied": True,
+                    "provider": restoration_result.provider_name,
+                    "target_language": language,
+                    "model": restoration_result.metadata.get("model"),
+                }
+            elif restoration_result.notice:
+                # Restoration fallback occurred (timeout, quota, network, etc.)
+                restoration_notice = restoration_result.notice
+                if "speech_restoration" not in transcription.metadata:
+                    transcription.metadata["speech_restoration"] = {}
+                transcription.metadata["speech_restoration"] = {
+                    "applied": False,
+                    "notice": restoration_result.notice,
+                    "fallback_reason": restoration_result.metadata.get("fallback_reason", "unavailable"),
+                }
+
         # 4. Create CaptionSource metadata (never exposing server internal file paths)
         caption_source = CaptionSource(
             source_type="video_upload",
@@ -74,13 +115,15 @@ class CaptionService:
 
         project_id = f"proj_{uuid.uuid4().hex[:12]}"
 
-        # Truthful notice behavior: only present in development/mock mode
+        # Truthful notice behavior: only present in development/mock mode or restoration fallback
         notice = None
         if not transcription.is_production_provider:
             notice = (
                 "Development Transcription Mode — production speech-to-text provider is not configured. "
                 "Transcription is simulated based on screenplay heuristics."
             )
+        elif restoration_notice:
+            notice = restoration_notice
 
         return TranscriptionResponse(
             project_id=project_id,
@@ -166,7 +209,8 @@ class CaptionService:
         if source_transcription.language != language:
             from app.services.language_processor import get_language_processor
 
-            processor = get_language_processor()
+            processor_pref = "gemini" if (settings.GEMINI_API_KEY and getattr(settings, "ENABLE_HYBRID_SPEECH_RESTORATION", True) and settings.LANGUAGE_PROCESSOR_PROVIDER != "mock") else None
+            processor = get_language_processor(processor_pref)
 
             # Case A: Transcribed English -> User wants Telugu
             if source_transcription.language == "English" and language == "Telugu":
