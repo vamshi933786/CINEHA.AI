@@ -119,7 +119,9 @@ export type MotionCaptionPreset =
   | "punchy"
   | "hormozi"
   | "neon_pulse"
-  | "editorial";
+  | "editorial"
+  | "viral_pop"
+  | "cinematic";
 
 export type MotionEntranceAnimation = "none" | "fade" | "pop" | "slide_up";
 export type MotionExitAnimation = "none" | "fade" | "slide_down";
@@ -148,6 +150,89 @@ export interface MotionPresetDefinition {
   badge?: string;
   requiresWordTimings?: boolean;
   settings: Partial<MotionCaptionSettings>;
+}
+
+// -------------------------------------------------------------
+// Professional One-Click Caption Template System
+// -------------------------------------------------------------
+
+export type CaptionBackgroundType =
+  | "none"
+  | "solid"
+  | "translucent"
+  | "pill"
+  | "highlight"
+  | "outline"
+  | "gradient";
+
+export interface CaptionTemplateTypography {
+  fontFamily: string;
+  fontWeight: "normal" | "bold" | "black";
+  fontSize: "small" | "medium" | "large";
+  letterSpacing?: number;
+  textTransform?: "none" | "uppercase";
+  lineHeight?: number | string;
+}
+
+export interface CaptionTemplateColors {
+  text: string;
+  activeWord?: string;
+  secondary?: string;
+  background?: string;
+}
+
+export interface CaptionTemplateBackground {
+  type: CaptionBackgroundType;
+  color?: string;
+  opacity?: number;
+  radius?: number;
+  padding?: string;
+}
+
+export interface CaptionTemplateShadow {
+  enabled: boolean;
+  blur: number;
+  opacity: number;
+  color?: string;
+}
+
+export interface CaptionTemplateOutline {
+  enabled: boolean;
+  width: number;
+  color: string;
+}
+
+export interface CaptionTemplatePosition {
+  x: number;
+  y: number;
+}
+
+export interface CaptionTemplateAnimation {
+  entrance: MotionEntranceAnimation;
+  exit: MotionExitAnimation;
+  wordAnimation: MotionWordAnimation;
+  intensity: MotionAnimationIntensity;
+}
+
+export interface CaptionTemplate {
+  id: string;
+  name: string;
+  category: "Viral Creator" | "Clean & Minimal" | "High Impact" | "Cinematic" | "Modern Sync";
+  description: string;
+  badge?: string;
+  preset: MotionCaptionPreset;
+  typography: CaptionTemplateTypography;
+  colors: CaptionTemplateColors;
+  background: CaptionTemplateBackground;
+  shadow?: CaptionTemplateShadow;
+  outline?: CaptionTemplateOutline;
+  position: CaptionTemplatePosition;
+  alignment: "left" | "center" | "right";
+  animation: CaptionTemplateAnimation;
+  activeWordStyle?: MotionActiveWordStyle;
+  safeArea: boolean;
+  teluguPreview?: string;
+  englishPreview?: string;
 }
 
 export interface CaptionProject {

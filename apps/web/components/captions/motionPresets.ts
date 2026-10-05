@@ -173,6 +173,48 @@ export const MOTION_PRESETS: Record<MotionCaptionPreset, MotionPresetDefinition>
       respect_reduced_motion: true,
     },
   },
+  viral_pop: {
+    id: "viral_pop",
+    name: "Viral Pop",
+    description:
+      "High-energy creator look with electric cyan accent highlight and dynamic word pops.",
+    badge: "TikTok & Shorts",
+    requiresWordTimings: false,
+    settings: {
+      preset: "viral_pop",
+      entrance_animation: "pop",
+      exit_animation: "fade",
+      word_animation: "pop",
+      intensity: "high",
+      active_word_style: "highlight",
+      font_weight: "black",
+      primary_color: "#FFFFFF",
+      active_color: "#06B6D4",
+      active_bg_color: "rgba(6, 182, 212, 0.25)",
+      respect_reduced_motion: true,
+    },
+  },
+  cinematic: {
+    id: "cinematic",
+    name: "Cinematic Gold",
+    description:
+      "Warm golden aesthetic with elegant typography and gentle subtle illumination.",
+    badge: "Film & Premium",
+    requiresWordTimings: false,
+    settings: {
+      preset: "cinematic",
+      entrance_animation: "fade",
+      exit_animation: "fade",
+      word_animation: "highlight",
+      intensity: "low",
+      active_word_style: "highlight",
+      font_weight: "bold",
+      primary_color: "#FFFBEB",
+      active_color: "#F59E0B",
+      active_bg_color: "rgba(245, 158, 11, 0.2)",
+      respect_reduced_motion: true,
+    },
+  },
 };
 
 export const DEFAULT_MOTION_SETTINGS: MotionCaptionSettings = {

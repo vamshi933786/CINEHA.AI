@@ -38,7 +38,7 @@ def normalize_goal(goal: str) -> str:
 
 
 class ScriptChangeItem(BaseModel):
-    model_config = ConfigDict(extra="forbid")
+    model_config = ConfigDict(extra="ignore")
 
     section: str = Field(..., description="Section of the script, e.g. HOOK, PROBLEM, SOLUTION, CTA, or GLOBAL")
     field: str = Field(..., description="Field changed: voiceover, hook, cta, visual_direction, on_screen_text, timing")

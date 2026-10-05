@@ -40,10 +40,19 @@ import {
   MotionCaptionSettings,
   CaptionRenderOptions,
   CaptionRenderResult,
+  CaptionTemplate,
 } from "@/types/caption";
 import { DEFAULT_MOTION_SETTINGS } from "./motionPresets";
 import { MotionCaptionOverlay } from "./MotionCaptionOverlay";
 import { MotionCaptionControls } from "./MotionCaptionControls";
+import { CaptionTemplatePicker } from "./CaptionTemplatePicker";
+import {
+  CAPTION_TEMPLATES,
+  DEFAULT_TEMPLATE,
+  getTemplateById,
+  templateToAppearance,
+  templateToMotionSettings,
+} from "./captionTemplates";
 
 interface CaptionCueWorkspaceProps {
   activeTranscription?: TranscriptionResult;
@@ -69,9 +78,9 @@ export const DEFAULT_APPEARANCE_SETTINGS: CaptionAppearanceSettings = {
   alignment: "center",
   vertical_position: "bottom",
   position_x: 0.5,
-  position_y: 0.85,
+  position_y: 0.82,
   font_size: "medium",
-  background: "box",
+  background: "none",
   show_safe_area: false,
 };
 
@@ -105,8 +114,31 @@ export function CaptionCueWorkspace({
   const [captionMode, setCaptionMode] = useState<CaptionMode>("plain");
   const [motionSettings, setMotionSettings] =
     useState<MotionCaptionSettings>(DEFAULT_MOTION_SETTINGS);
+  const [selectedTemplateId, setSelectedTemplateId] = useState<string>("clean");
   const [showSettingsDrawer, setShowSettingsDrawer] = useState<boolean>(false);
   const [showConfirmRegenerate, setShowConfirmRegenerate] = useState<boolean>(false);
+
+  const currentTemplate = useMemo(() => {
+    return getTemplateById(selectedTemplateId);
+  }, [selectedTemplateId]);
+
+  const isNativeTelugu = useMemo(() => {
+    const lang = selectedLanguage || activeTranscription?.language || "";
+    const code = activeTranscription?.language_code || "";
+    return (
+      (lang.toLowerCase().includes("telugu") || code === "te") &&
+      !activeTranscription?.is_transliteration &&
+      !lang.toLowerCase().includes("tanglish") &&
+      !code.includes("te-Latn")
+    );
+  }, [selectedLanguage, activeTranscription]);
+
+  const handleSelectTemplate = useCallback((template: CaptionTemplate) => {
+    setSelectedTemplateId(template.id);
+    setCaptionMode("motion");
+    setAppearance((prev) => templateToAppearance(template, prev));
+    setMotionSettings(templateToMotionSettings(template));
+  }, []);
 
   // Video Render & Export state
   const [isRendering, setIsRendering] = useState<boolean>(false);
@@ -722,6 +754,19 @@ export function CaptionCueWorkspace({
         </div>
       )}
 
+      {/* 5.1 Prominent One-Click Professional Caption Styles & Template System */}
+      {cues.length > 0 && (
+        <CaptionTemplatePicker
+          selectedTemplateId={selectedTemplateId}
+          onSelectTemplate={handleSelectTemplate}
+          language={selectedLanguage || activeTranscription?.language || "English"}
+          languageCode={activeTranscription?.language_code || "en"}
+          isTransliteration={activeTranscription?.is_transliteration || false}
+          hasWordTimings={timingGranularity === "word"}
+          disabled={disabled || isRendering}
+        />
+      )}
+
       {/* Main Workspace Layout (Desktop Side-by-Side / Mobile Stacked) */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 pt-2">
         {/* Left Column: Video Preview with Plain Captions (lg:col-span-5) */}
@@ -810,6 +855,7 @@ export function CaptionCueWorkspace({
                   currentTime={currentTime}
                   motionSettings={motionSettings}
                   appearance={appearance}
+                  template={currentTemplate}
                   isDragging={isDraggingCaption}
                   onPointerDown={handleCaptionPointerDown}
                   onPointerMove={handleContainerPointerMove}
@@ -824,7 +870,7 @@ export function CaptionCueWorkspace({
                     left: `${(appearance.position_x ?? 0.5) * 100}%`,
                     top:
                       appearance.vertical_position === "custom"
-                        ? `${(appearance.position_y ?? 0.85) * 100}%`
+                        ? `${(appearance.position_y ?? 0.82) * 100}%`
                         : undefined,
                     transform:
                       appearance.vertical_position === "custom" || appearance.vertical_position === "center"
@@ -835,8 +881,9 @@ export function CaptionCueWorkspace({
                   onPointerMove={handleContainerPointerMove}
                   onPointerUp={handleContainerPointerUp}
                   data-testid="active-caption-overlay"
+                  data-telugu-mode={isNativeTelugu ? "true" : "false"}
                   data-position-x={appearance.position_x ?? 0.5}
-                  data-position-y={appearance.position_y ?? 0.85}
+                  data-position-y={appearance.position_y ?? 0.82}
                 >
                   {/* Position Badge when dragging */}
                   {isDraggingCaption && (
@@ -844,21 +891,38 @@ export function CaptionCueWorkspace({
                       <Move className="w-2.5 h-2.5" />
                       <span>
                         X: {Math.round((appearance.position_x ?? 0.5) * 100)}% | Y:{" "}
-                        {Math.round((appearance.position_y ?? 0.85) * 100)}%
+                        {Math.round((appearance.position_y ?? 0.82) * 100)}%
                       </span>
                     </div>
                   )}
 
                   <div
-                    className={`inline-block font-sans font-semibold tracking-wide transition-all ${
+                    className={`inline-block ${
+                      isNativeTelugu
+                        ? "font-serif leading-relaxed sm:leading-loose"
+                        : "font-sans leading-snug"
+                    } font-semibold tracking-wide transition-all ${
                       appearance.background === "box"
-                        ? "bg-black/85 text-white px-3.5 py-2 rounded-xl shadow-lg border border-white/10"
+                        ? currentTemplate?.background?.type === "solid"
+                          ? "bg-black/95 text-white px-4 py-2.5 rounded-xl shadow-2xl border border-emerald-500/35"
+                          : currentTemplate?.background?.type === "translucent"
+                          ? "bg-black/40 text-white backdrop-blur-md px-3.5 py-1.5 rounded-xl border border-white/10"
+                          : currentTemplate?.background?.type === "pill"
+                          ? "bg-black/60 text-white backdrop-blur-md px-4 py-1.5 rounded-full border border-purple-500/30"
+                          : "bg-black/85 text-white px-3.5 py-2 rounded-xl shadow-lg border border-white/10"
                         : appearance.background === "outline"
                         ? "text-white drop-shadow-[0_0_8px_rgba(0,0,0,1)] text-stroke"
-                        : "text-white drop-shadow-[0_2px_4px_rgba(0,0,0,0.95)]"
+                        : "text-white drop-shadow-[0_2px_8px_rgba(0,0,0,0.95)]"
                     } ${getFontSizeClass()} ${
                       isDraggingCaption ? "ring-2 ring-cyan-400 ring-offset-2 ring-offset-black/60" : ""
                     }`}
+                    style={{
+                      fontFamily: isNativeTelugu
+                        ? "'Kohinoor Telugu', 'Telugu Sangam MN', 'Noto Sans Telugu', system-ui, sans-serif"
+                        : undefined,
+                      wordBreak: "keep-all",
+                      overflowWrap: "break-word",
+                    }}
                   >
                     {activeCue.lines && activeCue.lines.length > 0 ? (
                       activeCue.lines.map((line, idx) => (

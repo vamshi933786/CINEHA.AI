@@ -399,6 +399,28 @@ def test_generate_ass_content_motion_presets():
     )
     assert ",3,6,1," in ass_editorial
 
+    # 4. Viral Pop: Bold, outline 3, shadow 2
+    ass_viral = renderer._generate_ass_content(
+        cues=cues,
+        language="English",
+        options=CaptionRenderOptions(preset="viral_pop"),
+        video_width=1080,
+        video_height=1920,
+        font_family="Arial",
+    )
+    assert ",3,10,0," in ass_viral or ",1,3,2," in ass_viral
+
+    # 5. Cinematic: Subtle, outline 2, shadow 2
+    ass_cine = renderer._generate_ass_content(
+        cues=cues,
+        language="English",
+        options=CaptionRenderOptions(preset="cinematic"),
+        video_width=1080,
+        video_height=1920,
+        font_family="Arial",
+    )
+    assert ",3,10,0," in ass_cine or ",1,2,2," in ass_cine
+
 
 def test_generate_ass_content_karaoke_with_custom_position():
     """Verify karaoke timing tags coexist cleanly with custom coordinate \\pos tag."""

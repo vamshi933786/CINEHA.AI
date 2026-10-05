@@ -6,6 +6,7 @@ import {
   CaptionCue,
   MotionCaptionSettings,
   CaptionAppearanceSettings,
+  CaptionTemplate,
 } from "@/types/caption";
 
 interface MotionCaptionOverlayProps {
@@ -13,6 +14,7 @@ interface MotionCaptionOverlayProps {
   currentTime: number;
   motionSettings: MotionCaptionSettings;
   appearance: CaptionAppearanceSettings;
+  template?: CaptionTemplate;
   forceReducedMotion?: boolean;
   isDragging?: boolean;
   onPointerDown?: (e: React.PointerEvent) => void;
@@ -25,6 +27,7 @@ export function MotionCaptionOverlay({
   currentTime,
   motionSettings,
   appearance,
+  template,
   forceReducedMotion = false,
   isDragging = false,
   onPointerDown,
@@ -171,6 +174,68 @@ export function MotionCaptionOverlay({
     }
   };
 
+  // Native Telugu script detection
+  const isNativeTelugu = useMemo(() => {
+    return (
+      (cue.language?.toLowerCase().includes("telugu") ||
+        cue.language_code === "te" ||
+        /[\u0C00-\u0C7F]/.test(cue.text)) &&
+      !cue.language?.toLowerCase().includes("tanglish") &&
+      !cue.language_code?.includes("te-Latn")
+    );
+  }, [cue]);
+
+  // Container styling based on template background treatment or appearance
+  const getContainerBgClass = () => {
+    if (appearance.background === "none") {
+      return "drop-shadow-[0_2px_8px_rgba(0,0,0,0.95)]";
+    }
+    if (appearance.background === "outline") {
+      return motionSettings.preset === "neon_pulse"
+        ? "drop-shadow-[0_0_16px_rgba(0,240,255,0.7)] text-stroke"
+        : "drop-shadow-[0_0_8px_rgba(0,0,0,1)] text-stroke";
+    }
+
+    if (template) {
+      switch (template.background.type) {
+        case "none":
+          return "drop-shadow-[0_2px_8px_rgba(0,0,0,0.95)]";
+        case "outline":
+          return "drop-shadow-[0_0_16px_rgba(0,240,255,0.7)] text-stroke";
+        case "translucent":
+          return "bg-black/40 backdrop-blur-md px-3.5 py-1.5 rounded-xl border border-white/10 shadow-lg";
+        case "pill":
+          return "bg-black/60 backdrop-blur-md px-4 py-1.5 rounded-full border border-purple-500/30 shadow-lg";
+        case "highlight":
+          return "bg-black/80 px-3.5 py-1.5 rounded-lg border border-amber-400/40 shadow-lg";
+        case "gradient":
+          return "bg-gradient-to-b from-black/20 to-black/75 px-4 py-2 rounded-xl border border-amber-500/25 shadow-lg";
+        case "solid":
+          return "bg-black/95 px-4 py-2.5 rounded-2xl shadow-2xl border border-emerald-500/35 backdrop-blur-md";
+        default:
+          break;
+      }
+    }
+
+    // Default or appearance.background === "box"
+    if (motionSettings.preset === "neon_pulse") {
+      return "bg-black/90 px-4 py-2.5 rounded-2xl shadow-[0_0_25px_rgba(0,240,255,0.4)] border border-cyan-400/50 backdrop-blur-md";
+    } else if (motionSettings.preset === "hormozi") {
+      return "bg-black/95 px-4 py-2.5 rounded-2xl shadow-2xl border border-emerald-500/35 backdrop-blur-md";
+    } else if (motionSettings.preset === "editorial") {
+      return "bg-black/80 px-4 py-2 rounded-xl shadow-lg border border-slate-600/40 backdrop-blur-sm";
+    } else if (motionSettings.preset === "bold_bounce") {
+      return "bg-black/60 backdrop-blur-md px-4 py-1.5 rounded-full border border-purple-500/30 shadow-lg";
+    } else if (motionSettings.preset === "punchy") {
+      return "bg-black/80 px-3.5 py-1.5 rounded-lg border border-amber-400/40 shadow-lg";
+    } else if (motionSettings.preset === "cinematic") {
+      return "bg-gradient-to-b from-black/20 to-black/75 px-4 py-2 rounded-xl border border-amber-500/25 shadow-lg";
+    } else if (motionSettings.preset === "viral_pop") {
+      return "bg-black/45 backdrop-blur-md px-3.5 py-1.5 rounded-xl border border-white/10 shadow-lg";
+    }
+    return "bg-black/85 px-4 py-2.5 rounded-2xl shadow-2xl border border-white/10 backdrop-blur-sm";
+  };
+
   // Normalized free coordinates (0..1)
   const posX = appearance.position_x !== undefined ? appearance.position_x : 0.5;
   const posY =
@@ -198,6 +263,7 @@ export function MotionCaptionOverlay({
       data-testid="motion-caption-overlay"
       data-preset={motionSettings.preset}
       data-reduced-motion={isReducedMotion ? "true" : "false"}
+      data-telugu-mode={isNativeTelugu ? "true" : "false"}
       data-position-x={posX}
       data-position-y={posY}
     >
@@ -212,22 +278,21 @@ export function MotionCaptionOverlay({
       )}
 
       <div
-        className={`inline-block font-sans ${getFontWeightClass()} transition-all transform duration-150 ${getEntranceClass()} ${getExitClass()} ${
-          appearance.background === "box"
-            ? motionSettings.preset === "neon_pulse"
-              ? "bg-black/90 px-4 py-2.5 rounded-2xl shadow-[0_0_25px_rgba(0,240,255,0.4)] border border-cyan-400/50 backdrop-blur-md"
-              : motionSettings.preset === "hormozi"
-              ? "bg-black/95 px-4 py-2.5 rounded-2xl shadow-2xl border border-emerald-500/35 backdrop-blur-md"
-              : motionSettings.preset === "editorial"
-              ? "bg-black/80 px-4 py-2 rounded-xl shadow-lg border border-slate-600/40 backdrop-blur-sm"
-              : "bg-black/85 px-4 py-2.5 rounded-2xl shadow-2xl border border-white/10 backdrop-blur-sm"
-            : appearance.background === "outline"
-            ? "drop-shadow-[0_0_8px_rgba(0,0,0,1)] text-stroke"
-            : "drop-shadow-[0_2px_4px_rgba(0,0,0,0.95)]"
-        } ${getFontSizeClass()} ${
+        className={`inline-block ${
+          isNativeTelugu
+            ? "font-serif leading-relaxed sm:leading-loose"
+            : "font-sans leading-snug"
+        } ${getFontWeightClass()} transition-all transform duration-150 ${getEntranceClass()} ${getExitClass()} ${getContainerBgClass()} ${getFontSizeClass()} ${
           isDragging ? "ring-2 ring-cyan-400 ring-offset-2 ring-offset-black/60" : ""
         }`}
-        style={{ color: motionSettings.primary_color }}
+        style={{
+          color: motionSettings.primary_color,
+          fontFamily: isNativeTelugu
+            ? "'Kohinoor Telugu', 'Telugu Sangam MN', 'Noto Sans Telugu', system-ui, sans-serif"
+            : template?.typography?.fontFamily || undefined,
+          wordBreak: "keep-all",
+          overflowWrap: "break-word",
+        }}
       >
         {/* If word timings exist, render word-by-word with active styling */}
         {hasWordTimings && cue.words ? (
@@ -305,7 +370,11 @@ export function MotionCaptionOverlay({
               cue.lines.map((line, lIdx) => (
                 <div
                   key={`${cue.id}_line_${lIdx}`}
-                  className="leading-snug transition-colors duration-150"
+                  className={`${
+                    isNativeTelugu
+                      ? "leading-relaxed sm:leading-loose"
+                      : "leading-snug"
+                  } transition-colors duration-150`}
                   style={{
                     color:
                       motionSettings.preset === "karaoke"
@@ -319,7 +388,15 @@ export function MotionCaptionOverlay({
                 </div>
               ))
             ) : (
-              <div className="leading-snug">{cue.text}</div>
+              <div
+                className={
+                  isNativeTelugu
+                    ? "leading-relaxed sm:leading-loose"
+                    : "leading-snug"
+                }
+              >
+                {cue.text}
+              </div>
             )}
           </div>
         )}

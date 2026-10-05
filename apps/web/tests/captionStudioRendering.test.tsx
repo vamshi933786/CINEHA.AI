@@ -261,9 +261,9 @@ describe("Caption Studio — Direct Multilingual Caption Rendering Workflow", ()
       fireEvent.click(motionBtn);
 
       // Verify styling presets
-      expect(screen.getByRole("button", { name: /Pop/i })).toBeInTheDocument();
-      expect(screen.getByRole("button", { name: /Cinema/i })).toBeInTheDocument();
-      expect(screen.getByRole("button", { name: /Clean/i })).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: /Clean Pop/i })).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: /Cinematic Gold/i })).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: /Minimal Fade/i })).toBeInTheDocument();
       expect(screen.getByRole("button", { name: /Bold Bounce/i })).toBeInTheDocument();
 
       // Verify render button is present

@@ -238,6 +238,10 @@ class FFmpegCaptionRenderer(BaseCaptionRenderer):
             base_size += 10
         elif preset == "editorial":
             base_size += 6
+        elif preset == "viral_pop":
+            base_size += 8
+        elif preset == "cinematic":
+            base_size += 4
 
         scaled_font_size = max(24, int(base_size * scale_factor))
 
@@ -283,6 +287,18 @@ class FFmpegCaptionRenderer(BaseCaptionRenderer):
             border_style = 3
             outline_width = 6
             shadow_depth = 1
+            bold_flag = -1
+        elif preset == "viral_pop":
+            primary_color_ass = hex_to_ass_color(options.primary_color, "&H00FFFFFF")
+            secondary_color_ass = hex_to_ass_color(options.active_color, "&H00D4B606")
+            outline_width = 3
+            shadow_depth = 2
+            bold_flag = -1
+        elif preset == "cinematic":
+            primary_color_ass = hex_to_ass_color(options.primary_color, "&H00F7FBFD")
+            secondary_color_ass = hex_to_ass_color(options.active_color, "&H000BB5F5")
+            outline_width = 2
+            shadow_depth = 2
             bold_flag = -1
         elif preset == "bold_bounce":
             primary_color_ass = hex_to_ass_color(options.primary_color, "&H00FFFFFF")

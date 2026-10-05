@@ -258,6 +258,8 @@ class CaptionRenderOptions(BaseModel):
         "hormozi",
         "neon_pulse",
         "editorial",
+        "viral_pop",
+        "cinematic",
     ] = Field(
         default="clean_pop", description="Motion caption styling preset"
     )
