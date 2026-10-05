@@ -100,13 +100,24 @@ erDiagram
 
     CONTENT_ITEM {
         string id PK
-        string profile_id FK
-        string script_id FK
         string title
-        string platform
+        text description
+        string scheduled_date
+        string scheduled_time
         string status
-        date scheduled_date
+        string platform
+        string content_type
+        string language
+        string script_id FK
+        int script_version_id
+        string hook_id
+        string video_analysis_id FK
+        string content_pillar
+        string content_goal
+        string priority
+        json tags
         text notes
+        string cta
         datetime created_at
         datetime updated_at
     }

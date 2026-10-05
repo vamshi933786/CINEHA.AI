@@ -45,6 +45,14 @@ import type {
   CaptionPipelineResponse,
 } from "../types/caption";
 import type { VideoAnalysisResponse } from "../types/videoAnalysis";
+import type {
+  ContentItem,
+  ContentItemPayload,
+  CalendarQueryParams,
+  GenerateContentPlanRequest,
+  GenerateContentPlanResponse,
+  CalendarDashboardStats,
+} from "../types/calendar";
 
 export class ApiClient {
   private baseUrl: string;
@@ -876,6 +884,203 @@ export class ApiClient {
 
     const data = await response.json();
     return data as VideoAnalysisResponse;
+  }
+
+  async listVideoAnalyses(limit: number = 50): Promise<VideoAnalysisResponse[]> {
+    const response = await fetch(
+      `${this.baseUrl}/video-analysis?limit=${limit}`,
+      {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        cache: "no-store",
+      }
+    );
+
+    if (!response.ok) {
+      return [];
+    }
+
+    const data = await response.json();
+    return data as VideoAnalysisResponse[];
+  }
+
+  // --- Content Calendar Endpoints ---
+
+  async getContentItems(params?: CalendarQueryParams): Promise<ContentItem[]> {
+    const query = new URLSearchParams();
+    if (params) {
+      if (params.start_date) query.set("start_date", params.start_date);
+      if (params.end_date) query.set("end_date", params.end_date);
+      if (params.status) query.set("status", params.status);
+      if (params.platform) query.set("platform", params.platform);
+      if (params.content_type) query.set("content_type", params.content_type);
+      if (params.content_pillar) query.set("content_pillar", params.content_pillar);
+      if (params.priority) query.set("priority", params.priority);
+      if (params.search) query.set("search", params.search);
+    }
+
+    const queryString = query.toString() ? `?${query.toString()}` : "";
+    const response = await fetch(`${this.baseUrl}/calendar${queryString}`, {
+      method: "GET",
+      headers: { "Content-Type": "application/json" },
+      cache: "no-store",
+    });
+
+    if (!response.ok) {
+      let errorMessage = `Failed to fetch calendar items (${response.status})`;
+      try {
+        const errorJson = await response.json();
+        if (errorJson.detail) errorMessage = String(errorJson.detail);
+      } catch (_) {}
+      throw new Error(errorMessage);
+    }
+
+    return (await response.json()) as ContentItem[];
+  }
+
+  async getContentItem(itemId: string): Promise<ContentItem> {
+    const response = await fetch(
+      `${this.baseUrl}/calendar/${encodeURIComponent(itemId)}`,
+      {
+        method: "GET",
+        headers: { "Content-Type": "application/json" },
+        cache: "no-store",
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error(`Failed to fetch content item (${response.status})`);
+    }
+
+    return (await response.json()) as ContentItem;
+  }
+
+  async createContentItem(payload: ContentItemPayload): Promise<ContentItem> {
+    const response = await fetch(`${this.baseUrl}/calendar`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+
+    if (!response.ok) {
+      let errorMessage = `Failed to create content item (${response.status})`;
+      try {
+        const errorJson = await response.json();
+        if (errorJson.detail) {
+          errorMessage =
+            typeof errorJson.detail === "string"
+              ? errorJson.detail
+              : JSON.stringify(errorJson.detail);
+        }
+      } catch (_) {}
+      throw new Error(errorMessage);
+    }
+
+    return (await response.json()) as ContentItem;
+  }
+
+  async updateContentItem(
+    itemId: string,
+    payload: Partial<ContentItemPayload>
+  ): Promise<ContentItem> {
+    const response = await fetch(
+      `${this.baseUrl}/calendar/${encodeURIComponent(itemId)}`,
+      {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      }
+    );
+
+    if (!response.ok) {
+      let errorMessage = `Failed to update content item (${response.status})`;
+      try {
+        const errorJson = await response.json();
+        if (errorJson.detail) {
+          errorMessage =
+            typeof errorJson.detail === "string"
+              ? errorJson.detail
+              : JSON.stringify(errorJson.detail);
+        }
+      } catch (_) {}
+      throw new Error(errorMessage);
+    }
+
+    return (await response.json()) as ContentItem;
+  }
+
+  async deleteContentItem(
+    itemId: string
+  ): Promise<{ deleted: boolean; id: string }> {
+    const response = await fetch(
+      `${this.baseUrl}/calendar/${encodeURIComponent(itemId)}`,
+      {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error(`Failed to delete content item (${response.status})`);
+    }
+
+    return (await response.json()) as { deleted: boolean; id: string };
+  }
+
+  async duplicateContentItem(
+    itemId: string,
+    shiftDays: number = 0
+  ): Promise<ContentItem> {
+    const response = await fetch(
+      `${this.baseUrl}/calendar/${encodeURIComponent(itemId)}/duplicate?shift_days=${shiftDays}`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error(`Failed to duplicate content item (${response.status})`);
+    }
+
+    return (await response.json()) as ContentItem;
+  }
+
+  async generateContentPlan(
+    request: GenerateContentPlanRequest
+  ): Promise<GenerateContentPlanResponse> {
+    const response = await fetch(`${this.baseUrl}/calendar/generate-plan`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(request),
+    });
+
+    if (!response.ok) {
+      let errorMessage = `Failed to generate content plan (${response.status})`;
+      try {
+        const errorJson = await response.json();
+        if (errorJson.detail) errorMessage = String(errorJson.detail);
+      } catch (_) {}
+      throw new Error(errorMessage);
+    }
+
+    return (await response.json()) as GenerateContentPlanResponse;
+  }
+
+  async getCalendarDashboardStats(): Promise<CalendarDashboardStats> {
+    const response = await fetch(`${this.baseUrl}/calendar/stats/dashboard`, {
+      method: "GET",
+      headers: { "Content-Type": "application/json" },
+      cache: "no-store",
+    });
+
+    if (!response.ok) {
+      throw new Error(`Failed to fetch calendar dashboard stats (${response.status})`);
+    }
+
+    return (await response.json()) as CalendarDashboardStats;
   }
 }
 

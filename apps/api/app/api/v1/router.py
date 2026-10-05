@@ -8,6 +8,7 @@ from app.api.v1.endpoints import (
     optimizer,
     captions,
     video_analysis,
+    calendar,
 )
 
 api_router = APIRouter()
@@ -20,4 +21,5 @@ api_router.include_router(analyzer.router, tags=["Retention Analyzer"])
 api_router.include_router(optimizer.router, tags=["Script Optimizer"])
 api_router.include_router(captions.router, tags=["Caption Studio"])
 api_router.include_router(video_analysis.router, tags=["Video Analysis"])
+api_router.include_router(calendar.router, tags=["Content Calendar"])
 

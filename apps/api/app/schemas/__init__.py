@@ -43,6 +43,20 @@ from app.schemas.captions import (
     CaptionProject,
     TranscriptionResponse,
 )
+from app.schemas.content_item import (
+    ContentStatus,
+    PlatformType,
+    ContentType,
+    ContentPriority,
+    ContentItemBase,
+    ContentItemCreate,
+    ContentItemUpdate,
+    ContentItemResponse,
+    ContentPlanSuggestion,
+    GenerateContentPlanRequest,
+    GenerateContentPlanResponse,
+    CalendarDashboardStats,
+)
 
 __all__ = [
     "HealthResponse",
@@ -77,6 +91,18 @@ __all__ = [
     "CaptionCueGenerationResponse",
     "CaptionProject",
     "TranscriptionResponse",
+    "ContentStatus",
+    "PlatformType",
+    "ContentType",
+    "ContentPriority",
+    "ContentItemBase",
+    "ContentItemCreate",
+    "ContentItemUpdate",
+    "ContentItemResponse",
+    "ContentPlanSuggestion",
+    "GenerateContentPlanRequest",
+    "GenerateContentPlanResponse",
+    "CalendarDashboardStats",
 ]
 
 

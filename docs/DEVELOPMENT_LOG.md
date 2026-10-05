@@ -260,3 +260,36 @@ This document records chronological development checkpoints, environment finding
      - Frontend tests: 195/195 passed across 19 test files (`npm test`).
      - TypeScript: 0 errors (`npx tsc --noEmit`).
      - Production Build: PASS (`npm run build`, 15 static pages).
+
+## Log Entry 014: Content Calendar & Content Planning Engine Upgrade
+- **Date:** 2026-10-05
+- **Module:** Content Calendar & Planning Engine (`/calendar`)
+- **Author:** Antigravity Architect / Pair Programmer
+- **Summary of Implementation:**
+  Transformed the Content Calendar from a placeholder into a complete creator content planning workspace connecting Creator Persona, brainstormed content ideas, hooks, scripts, video analyses, and publishing schedules:
+  1. **SQLAlchemy Model & Database Storage**:
+     - Created `ContentItem` model in `apps/api/app/models/content_item.py` supporting title, description, scheduled_date (ISO YYYY-MM-DD), scheduled_time, status, platform, content_type, language, script_id, script_version_id, hook_id, video_analysis_id, content_pillar, content_goal, priority, tags, notes, and cta.
+     - Added automatic idempotent SQLite schema verification in `apps/api/app/core/database.py`.
+  2. **Comprehensive REST Endpoints**:
+     - Implemented `/calendar` endpoints in `apps/api/app/api/v1/endpoints/calendar.py`: CRUD operations, multi-field filtering (date range, status, platform, pillar, priority, search), item duplication with date shifts, and dashboard analytics aggregation.
+     - Added relational verification: `script_id` and `video_analysis_id` are validated against existing records and returned with summarized metadata (`script_summary`, `video_analysis_summary`).
+     - Added `GET /video-analysis` endpoint in `apps/api/app/api/v1/endpoints/video_analysis.py` for asset linking dropdowns.
+     - Added `POST /calendar/generate-plan` endpoint leveraging Gemini with deterministic persona fallback to synthesize multi-day publishing schedules based on creator pillars, posting cadence, and goals.
+  3. **Multi-View Frontend Workspace**:
+     - Built `CalendarWorkspace.tsx` mounted at `/calendar` with unified top banner linking active `CreatorProfile`, metric stats strip (`CalendarDashboardStatsCard`), and navigation/filter toolbar (`CalendarControls`).
+     - Implemented 3 interactive calendar views:
+       - `MonthView`: 35/42-cell responsive grid with status color-dots, quick schedule `+` triggers, and HTML5 native drag-and-drop rescheduling.
+       - `WeekView`: 7-day schedule with expanded day columns, time slots, and platform icons.
+       - `AgendaView`: Chronological grouped timeline with empty states.
+     - Created rich modals:
+       - `ContentItemModal`: Create/Edit modal with Persona pillar suggestions and dropdowns for linking existing scripts and video audits.
+       - `ContentDetailModal`: Detail view with 1-click deep links to Script Studio, Retention Analyzer, Script Optimizer, and Video Analysis, plus duplicate (+7 days) and quick publishing actions.
+       - `ContentPlanGeneratorModal`: Multi-day AI assistant with interactive suggestion preview, multi-selection, and batch addition to the calendar.
+  4. **Strict Scope & Zero Auto-Publishing Policy**:
+     - Strictly maintained planning-only posture: no automated publishing to third-party social media APIs.
+     - Zero regressions to Caption Studio, Video Analysis, Settings, Creator Profile, Script Studio, or AI Workflow.
+  5. **Testing & Verification**:
+     - Backend tests: **199/199 passed** (`pytest apps/api/tests`).
+     - Frontend tests: **215/215 passed** across 20 test files (`npm test` including 20 new tests in `tests/calendar.test.tsx`).
+     - TypeScript: **0 errors** (`npx tsc --noEmit`).
+     - Production Build: **PASS** (`npm run build`, 15 static pages, `/calendar` 17.6 kB).

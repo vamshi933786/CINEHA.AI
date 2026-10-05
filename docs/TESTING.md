@@ -86,7 +86,7 @@ pytest -v --asyncio-mode=auto
 
 ## 7. Current Test Suite Status (October 2026)
 
-- **Backend Pytest**: **194/194 tests passing** across 19 test files (including `test_profile.py` with 9 tests covering extended schema, list deduplication, completeness scoring, persona context endpoint, and Gemini summary generation with deterministic fallback).
-- **Frontend Vitest**: **195/195 tests passing** across 19 test files (including `profile.test.tsx` with 9 tests covering `ProfileSummaryCard`, `ProfileForm`, `TagListManager`, `CompletenessCard`, and `PersonaPreviewPanel`).
+- **Backend Pytest**: **199/199 tests passing** across 20 test files (including `test_calendar.py` with 5 integration tests covering CRUD, query filtering, stats aggregation, script/analysis relational linking, and fallback AI plan generation).
+- **Frontend Vitest**: **215/215 tests passing** across 20 test files (including `calendar.test.tsx` with 20 tests covering date helpers, card variants, drag-and-drop rescheduling, Month/Week/Agenda views, search/filters, modals, and workspace integration).
 - **TypeScript**: **0 errors** (`npx tsc --noEmit`).
 - **Next.js Production Build**: **PASS** (15 static pages rendered).

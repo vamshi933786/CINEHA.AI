@@ -114,3 +114,65 @@ async def get_video_analysis(
         analyzed_at=record.created_at,
         provider_used=record.provider_used,
     )
+
+
+@router.get(
+    "/video-analysis",
+    response_model=list[VideoAnalysisResponse],
+    status_code=status.HTTP_200_OK,
+    summary="List Recent Video Analyses",
+    description="Retrieves a list of recent video retention audit records.",
+)
+async def list_video_analyses(
+    limit: int = 50,
+    db: AsyncSession = Depends(get_db),
+) -> list[VideoAnalysisResponse]:
+    result = await db.execute(
+        select(VideoAnalysis)
+        .order_by(VideoAnalysis.created_at.desc())
+        .limit(limit)
+    )
+    records = result.scalars().all()
+    responses = []
+    for record in records:
+        video_meta = VideoMetadata(
+            filename=record.filename,
+            file_size_bytes=record.file_size_bytes,
+            file_size_mb=round(record.file_size_bytes / (1024 * 1024), 2),
+            duration_seconds=record.duration_seconds,
+            width=record.width,
+            height=record.height,
+            fps=record.fps,
+            has_audio=record.has_audio,
+            format=record.filename.split(".")[-1].lower() if "." in record.filename else "mp4",
+        )
+        t_meta = record.transcript_metadata or {}
+        transcript_info = VideoTranscriptInfo(
+            available=bool(record.transcript_text),
+            language=t_meta.get("language", "English"),
+            text=record.transcript_text or "",
+            segment_count=t_meta.get("segment_count", len(record.segments or [])),
+            word_count=t_meta.get("word_count", 0),
+            words_per_second=t_meta.get("words_per_second", 0.0),
+            silence_gaps_count=t_meta.get("silence_gaps_count", 0),
+            provider=t_meta.get("provider", record.provider_used),
+            notice=t_meta.get("notice"),
+        )
+        responses.append(
+            VideoAnalysisResponse(
+                id=record.id,
+                video=video_meta,
+                overall_score=record.overall_score,
+                overall_rating=record.overall_rating,
+                summary=record.summary,
+                metrics=record.metrics,
+                segments=record.segments,
+                findings=record.findings,
+                recommendations=record.recommendations,
+                transcript=transcript_info,
+                limitations=record.limitations,
+                analyzed_at=record.created_at,
+                provider_used=record.provider_used,
+            )
+        )
+    return responses

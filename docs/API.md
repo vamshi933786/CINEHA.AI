@@ -278,10 +278,36 @@ Unified processing endpoint executing multimodal video inspection and returning 
 
 ## 7. Content Calendar Endpoints
 
-- `GET /calendar` — List planned items filtered by date range or status.
-- `POST /calendar` — Create a scheduled content entry (linked to script ID).
-- `PUT /calendar/{id}` — Update status (`idea`, `scripted`, `recording`, `editing`, `scheduled`, `published`).
-- `DELETE /calendar/{id}` — Delete calendar entry.
+### `GET /calendar`
+Lists planned content items with optional query filters:
+- `start_date`, `end_date` (ISO `YYYY-MM-DD`)
+- `status` (`Idea`, `Planned`, `Script Ready`, `In Production`, `Ready to Publish`, `Published`, `Archived`)
+- `platform` (`Instagram Reels`, `YouTube Shorts`, `TikTok`, `Facebook Reels`, `Other`)
+- `content_type` (`Educational`, `Storytelling`, `Tutorial`, `Behind the Scenes`, `Review`, `Opinion`, `List`, `Transformation`, `Announcement`, `Entertainment`, `Other`)
+- `content_pillar` (String)
+- `priority` (`Low`, `Medium`, `High`, `Urgent`)
+- `search` (Search query across title, description, pillar, tags)
+
+### `GET /calendar/{id}`
+Retrieves a single content item with linked `script_summary` and `video_analysis_summary`.
+
+### `POST /calendar`
+Creates a new scheduled content item. Validates `script_id` and `video_analysis_id` against database foreign records if provided.
+
+### `PUT /calendar/{id}`
+Updates an existing scheduled content item. Validates foreign keys if updated.
+
+### `DELETE /calendar/{id}`
+Deletes a scheduled content item.
+
+### `POST /calendar/{id}/duplicate`
+Duplicates a content item, optionally shifting its scheduled date by `shift_days` (default: 7).
+
+### `GET /calendar/stats/dashboard`
+Returns aggregated calendar dashboard stats including `total_items`, `planned_count`, `ready_to_publish_count`, `published_count`, `platform_breakdown`, `content_type_breakdown`, and `pillar_coverage`.
+
+### `POST /calendar/generate-plan`
+Synthesizes a multi-day publishing schedule based on creator persona (`CreatorProfile`), target posting cadence, and goals. Supports Gemini AI synthesis with deterministic persona fallback.
 
 ---
 
