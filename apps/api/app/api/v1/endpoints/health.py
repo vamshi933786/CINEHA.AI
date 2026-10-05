@@ -41,6 +41,8 @@ async def check_health(db: AsyncSession = Depends(get_db)) -> HealthResponse:
     )
 
 
+from app.services.transcription_provider import is_local_whisper_available
+
 @router.get(
     "/health/providers",
     response_model=Dict[str, Any],
@@ -69,6 +71,11 @@ async def check_providers_diagnostic() -> Dict[str, Any]:
                 "script_optimizer",
             ],
             "fallback_provider": "OfflineHeuristicMockProvider",
+        },
+        "local_whisper": {
+            "available": is_local_whisper_available(),
+            "model": settings.LOCAL_WHISPER_MODEL,
+            "provider_class": "LocalWhisperTranscriptionProvider",
         },
         "caption_transcription": {
             "active_provider": settings.TRANSCRIPTION_PROVIDER,

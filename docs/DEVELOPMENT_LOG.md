@@ -195,10 +195,37 @@ This document records chronological development checkpoints, environment finding
   6. **Gemini Semantic Analysis**: Structured critique validating qualitative strengths/weaknesses with automatic fallback to local heuristics on network error or timeout.
   7. **Interactive Workspace UI**: Built `VideoAnalysisWorkspace`, `VideoPreview` (HTML5 custom controls with scrub bar and `seekTo` handle), `AnalysisScoreCard`, `MetricScoreGrid`, `AnalysisTimeline` (click-to-seek video), `FindingsAndRecommendations`, `TranscriptPanel`, and `HandoffActions` (handoff to Script Analyzer and Script Optimizer).
   8. **Testing & Build Verification**:
-     - Backend tests: 189/189 passed (`apps/api/tests/test_video_analysis.py`).
-     - Frontend tests: 174/174 passed (`apps/web/tests/videoAnalysis.test.tsx`).
-     - TypeScript: `npx tsc --noEmit` clean with 0 errors.
-     - Production Build: `npm run build` compiled 15/15 static pages successfully.
+---
+
+## Log Entry 012: Phase 1 — Settings & Workspace Module Upgrade
+- **Date:** 2026-10-05
+- **Phase:** Phase 1 (Settings & Workspace)
+- **Author:** Antigravity Architect / Pair Programmer
+- **Summary of Implementation:**
+  Upgraded the `/settings` module from a placeholder into a complete creator control center:
+  1. **Responsive 2-Column Layout**: Left sticky sidebar with section icons, badges, and smooth switching on desktop; horizontal scrollable tab strip with touch-optimized targets on mobile (375px–1440px without horizontal overflow).
+  2. **Typed Settings Persistence Layer**:
+     - Managed in `apps/web/lib/settingsStorage.ts` under `localStorage` key `cinehai_settings` with schema versioning (`version: 1`).
+     - Includes deep-merge fallback and recovery from malformed or corrupted JSON without crashing.
+     - Custom event broadcasting (`cinehai_settings_changed`) for cross-tab and component synchronization.
+     - Isolated data resetting that restores factory defaults without deleting creator profile, scripts, calendar, or database records.
+  3. **8 Granular Settings Sections**:
+     - **Appearance**: Theme selection (Cinema Dark, System Sync, Clean Light), Reduced Motion toggle, and Interface Density (Comfortable vs Compact).
+     - **AI Providers**: Safe diagnostic cards (Google Gemini 3.5 Flash Lite, Local Whisper, OpenAI Whisper, Heuristic Mock). Strict Zero-Leak security guarantee with zero API keys or bearer tokens rendered in DOM. Configurable preferred routing and Two-Stage Hybrid Telugu restoration toggle.
+     - **Language**: English interface, Caption Studio defaults strictly supporting English, Native Telugu (`te`), and Tanglish (`tanglish`) (strictly no Hindi in caption options), and spoken language defaults.
+     - **Video Defaults**: Aspect ratio (9:16 vertical, 1:1 square, 16:9 landscape), 100MB server upload limit badge, and automated retention audit toggles.
+     - **Caption Defaults**: 10 one-click motion templates, free X/Y positioning sliders with live 9:16 phone canvas preview, font sizes, animation intensity, and safe-area guide overlay switch.
+     - **Privacy & Data**: Transient video purge disclosure, zero cloud voice retention, local preferences isolation, and factory reset protected by accessible `ConfirmationModal`.
+     - **System Diagnostics**: Live metrics for FastAPI backend, SQLite database, Gemini, Local Whisper, OpenAI Whisper, and 100MB upload cap; "Run Diagnostics" interactive latency probe; sanitized telemetry JSON inspector.
+     - **About**: Creator persona attribution (Owner: Sai Panga), CINEHAI AI mission, active authentic product modules list, and full architecture specifications.
+  4. **Backend Diagnostics Enhancement**:
+     - Added `local_whisper` safe capabilities to `GET /health/providers` in `apps/api/app/api/v1/endpoints/health.py`.
+  5. **Testing & Verification**:
+     - Backend tests: 189/189 passed (`apps/api/tests/test_health.py`).
+     - Frontend tests: 189/189 passed across 19 test files (`apps/web/tests/settings.test.tsx`).
+     - TypeScript: 0 errors (`npx tsc --noEmit`).
+     - Production Build: `npm run build` compiled 15/15 static pages successfully (`/settings` 23.8 kB).
+
 
 
 

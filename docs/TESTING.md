@@ -42,9 +42,13 @@ apps/
 - **Form Validation:** Checks required field alerts for missing topic, invalid duration, or missing platform selection.
 - **Accessibility & ARIA:** Verifies all buttons, inputs, and tab navigation satisfy WCAG 2.1 AA keyboard navigability.
 - **3D Fallback:** Simulates WebGL error and asserts `Accessible2DWorkflow` is displayed without thrown runtime exceptions.
+- **Settings Workspace (`settings.test.tsx`):**
+  - Typed persistence layer: default loading, graceful malformed JSON recovery, non-object JSON handling, deep merge, and update broadcasting.
+  - Safe factory reset & cache clear: preserves creator profile persona and database items.
+  - 8-section tab navigation: theme/density controls, Zero-Leak security assertions, strict exclusion of Hindi from caption defaults, 100MB video limit badge, 10 caption templates & free positioning sliders, ConfirmationModal dialogs, and live diagnostics latency testing.
 
 ### B. Backend Unit & Integration Tests (Pytest + pytest-asyncio)
-- **API Health:** Verifies `GET /api/v1/health` responds with HTTP 200 and valid JSON schema.
+- **API Health (`test_health.py`):** Verifies `GET /api/v1/health` and `GET /api/v1/health/providers` respond with 200 and include safe Gemini and Local Whisper diagnostics without exposing credentials.
 - **Agent Schema Validation:** Asserts that invalid LLM outputs trigger Pydantic `ValidationError` and engage fallback handlers.
 - **Orchestrator Routing:** Tests full pipeline execution vs quick single-agent generation.
 - **Video Retention Analysis (`test_video_analysis.py`):**

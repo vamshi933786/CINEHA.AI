@@ -31,6 +31,8 @@ async def test_health_providers_diagnostic(async_client: AsyncClient):
     assert data["active_provider"] == settings.AI_PROVIDER
     assert "gemini" in data
     assert data["gemini"]["provider_class"] == "GeminiLLMProvider"
+    assert "local_whisper" in data
+    assert "available" in data["local_whisper"]
     assert "caption_transcription" in data
     # Ensure sensitive credentials are never leaked
     raw_text = response.text

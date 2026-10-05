@@ -1,5 +1,5 @@
 import { API_BASE_URL } from "./config";
-import type { HealthResponse } from "../types/api";
+import type { HealthResponse, HealthProvidersResponse } from "../types/api";
 import type {
   CreatorProfileData,
   ProfileContainerResponse,
@@ -87,6 +87,38 @@ export class ApiClient {
         max_video_size_mb: 100,
         timestamp: new Date().toISOString(),
       };
+    }
+  }
+
+  async getHealthProvidersDiagnostic(
+    timeoutMs: number = 5000
+  ): Promise<HealthProvidersResponse | null> {
+    try {
+      const controller =
+        typeof AbortController !== "undefined" ? new AbortController() : null;
+      const timer = controller
+        ? setTimeout(() => controller.abort(), timeoutMs)
+        : null;
+
+      const response = await fetch(`${this.baseUrl}/health/providers`, {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        cache: "no-store",
+        signal: controller ? controller.signal : undefined,
+      });
+
+      if (timer) clearTimeout(timer);
+
+      if (!response.ok) {
+        return null;
+      }
+
+      const data = await response.json();
+      return data as HealthProvidersResponse;
+    } catch (err: any) {
+      return null;
     }
   }
 

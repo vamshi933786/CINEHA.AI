@@ -15,10 +15,44 @@ Returns the operational health of the API server, database connectivity, and con
 ```json
 {
   "status": "healthy",
+  "project_name": "CINEHA AI API",
   "version": "1.0.0",
+  "environment": "development",
   "database": "connected",
-  "active_provider": "gemini_pro",
-  "timestamp": "2026-09-28T12:00:00Z"
+  "active_provider": "gemini",
+  "max_video_size_mb": 100,
+  "gemini_configured": true,
+  "gemini_model": "gemini-3.5-flash-lite",
+  "timestamp": "2026-10-05T12:00:00Z"
+}
+```
+
+### `GET /health/providers`
+Returns sanitized AI provider diagnostics, models, and capabilities without exposing credentials or API keys.
+
+**Response (200 OK):**
+```json
+{
+  "active_provider": "gemini",
+  "selected_llm_provider": "GeminiLLMProvider",
+  "gemini": {
+    "configured": true,
+    "model": "gemini-3.5-flash-lite",
+    "provider_class": "GeminiLLMProvider",
+    "supported_features": ["hook_generator", "script_generator", "retention_analyzer", "script_optimizer"],
+    "fallback_provider": "OfflineHeuristicMockProvider"
+  },
+  "local_whisper": {
+    "available": true,
+    "model": "base",
+    "provider_class": "LocalWhisperTranscriptionProvider"
+  },
+  "caption_transcription": {
+    "active_provider": "local_whisper",
+    "model": "whisper-1",
+    "configured": false,
+    "engine": "OpenAI Whisper (speech-to-text + genuine acoustic timestamps)"
+  }
 }
 ```
 
