@@ -348,10 +348,36 @@ export function RetentionWorkspace({ initialScriptId = null }: RetentionWorkspac
   useEffect(() => {
     if (initialScriptId) {
       runAnalysis(initialScriptId);
-    } else {
-      runSampleAnalysis("viral");
+      return;
     }
-  }, [initialScriptId, runAnalysis, runSampleAnalysis]);
+
+    // Check for transcript handoff from Video Analysis
+    try {
+      if (typeof window !== "undefined") {
+        const handoffRaw = window.sessionStorage.getItem("cineha_script_text_handoff");
+        if (handoffRaw) {
+          window.sessionStorage.removeItem("cineha_script_text_handoff");
+          const handoff = JSON.parse(handoffRaw);
+          if (handoff && handoff.script_text) {
+            setInputMode("unified");
+            runUnifiedAnalysis(
+              {
+                text: handoff.script_text,
+                sourceType: "text",
+                language: handoff.language || "English",
+                extractionMethod: "session_handoff",
+                metadata: { duration_seconds: handoff.duration_seconds || 30 },
+              },
+              handoff.title || "Video Transcript"
+            );
+            return;
+          }
+        }
+      }
+    } catch (_) {}
+
+    runSampleAnalysis("viral");
+  }, [initialScriptId, runAnalysis, runSampleAnalysis, runUnifiedAnalysis]);
 
   const handleSelectScript = (id: string) => {
     runAnalysis(id);

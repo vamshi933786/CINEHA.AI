@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { api } from "@/lib/api";
 import type { VideoAnalysisResponse, AnalysisLoadingStage } from "@/types/videoAnalysis";
 import { VideoAnalysisUpload } from "./VideoAnalysisUpload";
@@ -13,7 +13,11 @@ import { TranscriptPanel } from "./TranscriptPanel";
 import { HandoffActions } from "./HandoffActions";
 import { StageProgress } from "./StageProgress";
 
-export function VideoAnalysisWorkspace() {
+interface VideoAnalysisWorkspaceProps {
+  initialAnalysisId?: string;
+}
+
+export function VideoAnalysisWorkspace({ initialAnalysisId }: VideoAnalysisWorkspaceProps = {}) {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [loadingStage, setLoadingStage] = useState<AnalysisLoadingStage>("reading");
@@ -23,6 +27,34 @@ export function VideoAnalysisWorkspace() {
 
   const videoPreviewRef = useRef<VideoPreviewHandle>(null);
   const transcriptRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!initialAnalysisId) return;
+
+    let isMounted = true;
+    setIsLoading(true);
+    setLoadingStage("reading");
+    setError(null);
+
+    api
+      .getVideoAnalysis(initialAnalysisId)
+      .then((data) => {
+        if (!isMounted) return;
+        setAnalysisResult(data);
+        setLoadingStage("complete");
+      })
+      .catch((err: any) => {
+        if (!isMounted) return;
+        setError(err?.message || `Failed to load video analysis record: ${initialAnalysisId}`);
+      })
+      .finally(() => {
+        if (isMounted) setIsLoading(false);
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [initialAnalysisId]);
 
   const handleAnalyze = async (file: File, language: string) => {
     setSelectedFile(file);

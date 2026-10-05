@@ -13,6 +13,7 @@ function ScriptStudioContent() {
   const initialHook = searchParams.get("hook") || "";
   const initialPlatform = searchParams.get("platform") || "Instagram Reels";
   const initialLanguage = searchParams.get("language") || "English";
+  const scriptId = searchParams.get("id") || searchParams.get("script_id") || undefined;
 
   return (
     <ScriptWorkspace
@@ -20,6 +21,7 @@ function ScriptStudioContent() {
       initialHook={initialHook}
       initialPlatform={initialPlatform}
       initialLanguage={initialLanguage}
+      initialScriptId={scriptId}
     />
   );
 }

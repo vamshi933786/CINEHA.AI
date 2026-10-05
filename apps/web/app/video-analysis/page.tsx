@@ -1,9 +1,18 @@
 "use client";
 
-import React from "react";
+import React, { Suspense } from "react";
+import { useSearchParams } from "next/navigation";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Badge } from "@/components/ui/Badge";
 import { VideoAnalysisWorkspace } from "@/components/video-analysis";
+import { Sparkles } from "lucide-react";
+
+function VideoAnalysisContent() {
+  const searchParams = useSearchParams();
+  const initialId = searchParams.get("id") || searchParams.get("analysis_id") || undefined;
+
+  return <VideoAnalysisWorkspace initialAnalysisId={initialId} />;
+}
 
 export default function VideoAnalysisPage() {
   return (
@@ -24,7 +33,16 @@ export default function VideoAnalysisPage() {
       />
 
       {/* Main Workspace */}
-      <VideoAnalysisWorkspace />
+      <Suspense
+        fallback={
+          <div className="p-12 text-center text-slate-400 flex items-center justify-center gap-2">
+            <Sparkles className="w-5 h-5 animate-spin text-cyan-400" />
+            <span>Loading Video Retention Analyzer...</span>
+          </div>
+        }
+      >
+        <VideoAnalysisContent />
+      </Suspense>
     </div>
   );
 }

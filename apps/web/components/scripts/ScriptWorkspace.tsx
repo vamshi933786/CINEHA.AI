@@ -17,6 +17,7 @@ interface ScriptWorkspaceProps {
   initialHook?: string;
   initialPlatform?: string;
   initialLanguage?: string;
+  initialScriptId?: string;
 }
 
 export function ScriptWorkspace({
@@ -24,6 +25,7 @@ export function ScriptWorkspace({
   initialHook = "",
   initialPlatform = "Instagram Reels",
   initialLanguage = "English",
+  initialScriptId,
 }: ScriptWorkspaceProps) {
   const [formData, setFormData] = useState<ScriptFormData>({
     topic: initialTopic,
@@ -66,7 +68,58 @@ export function ScriptWorkspace({
         hookMode: "custom",
       }));
     }
-  }, [initialTopic, initialHook]);
+    if (initialPlatform) setFormData((prev) => ({ ...prev, platform: initialPlatform }));
+    if (initialLanguage) setFormData((prev) => ({ ...prev, language: initialLanguage }));
+  }, [initialTopic, initialHook, initialPlatform, initialLanguage]);
+
+  // Load existing script if initialScriptId is provided
+  useEffect(() => {
+    if (!initialScriptId) return;
+
+    let isMounted = true;
+    setIsGenerating(true);
+    setGenerationStage("Loading screenplay from database...");
+
+    api.getScript(initialScriptId)
+      .then(async (loaded) => {
+        if (!isMounted) return;
+        setActiveScript(loaded);
+        setSelectedVersionNumber(loaded.current_version);
+        setEditableTitle(loaded.title);
+        setEditableHook(loaded.hook);
+        setEditableCta(loaded.cta);
+        setEditableSegments(loaded.segments || []);
+        setFormData({
+          topic: loaded.topic || loaded.title,
+          context: "",
+          platform: loaded.platform || "Instagram Reels",
+          language: loaded.language || "English",
+          duration_seconds: loaded.duration_seconds || 30,
+          tone: "",
+          hookMode: loaded.hook ? "custom" : "auto",
+          hook: loaded.hook || "",
+          ctaPreset: "Custom CTA",
+          customCta: loaded.cta || "",
+        });
+
+        try {
+          const fetchedVersions = await api.getScriptVersions(loaded.id);
+          if (isMounted) setVersions(fetchedVersions);
+        } catch (_) {}
+      })
+      .catch((err: any) => {
+        if (isMounted) {
+          setError(err?.message || "Failed to load script by ID.");
+        }
+      })
+      .finally(() => {
+        if (isMounted) setIsGenerating(false);
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [initialScriptId]);
 
   const handleFormChange = (updates: Partial<ScriptFormData>) => {
     setFormData((prev) => ({ ...prev, ...updates }));

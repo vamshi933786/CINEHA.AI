@@ -442,5 +442,18 @@ describe("Video Analysis Module — Complete Creator Workspace", () => {
         expect(screen.getByText(/FFmpeg media container decode failed/i)).toBeInTheDocument();
       });
     });
+
+    it("loads existing analysis record when initialAnalysisId is provided", async () => {
+      (api.getVideoAnalysis as any).mockResolvedValue(mockAnalysisResponse);
+
+      render(<VideoAnalysisWorkspace initialAnalysisId="vanalysis_test123" />);
+
+      await waitFor(() => {
+        expect(api.getVideoAnalysis).toHaveBeenCalledWith("vanalysis_test123");
+        expect(screen.getByText("High Retention Potential")).toBeInTheDocument();
+      });
+
+      expect(screen.getByText("cinematic_tips.mp4")).toBeInTheDocument();
+    });
   });
 });
