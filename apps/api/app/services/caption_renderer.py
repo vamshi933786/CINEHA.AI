@@ -68,15 +68,31 @@ def cleanup_expired_renders() -> None:
         RENDER_REGISTRY.pop(r_id, None)
 
 
-def hex_to_ass_color(hex_color: str, default: str = "&H00FFFFFF") -> str:
+def hex_to_ass_color(color_str: str, default: str = "&H00FFFFFF") -> str:
     """
-    Convert standard CSS hex color (#RRGGBB or #AARRGGBB) to ASS color format (&HAABBGGRR).
-    Note: ASS uses BGR ordering with &H<Alpha><Blue><Green><Red>.
+    Convert CSS hex (#RRGGBB, #AARRGGBB) or rgb/rgba string into ASS color format (&HAABBGGRR).
+    Note: ASS uses inverted Alpha (00 = fully opaque, FF = fully transparent) and BGR ordering.
     """
-    if not hex_color:
+    if not color_str:
         return default
 
-    clean = hex_color.strip().lstrip("#")
+    color_str = color_str.strip()
+    # Check for rgba(r, g, b, a) or rgb(r, g, b)
+    rgba_match = re.match(
+        r"rgba?\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)(?:\s*,\s*([\d\.]+))?\s*\)",
+        color_str,
+        re.IGNORECASE,
+    )
+    if rgba_match:
+        r = int(rgba_match.group(1))
+        g = int(rgba_match.group(2))
+        b = int(rgba_match.group(3))
+        alpha_val = float(rgba_match.group(4)) if rgba_match.group(4) is not None else 1.0
+        # Invert alpha for ASS (1.0 opacity -> 0x00, 0.0 opacity -> 0xFF)
+        ass_alpha = max(0, min(255, int(round((1.0 - alpha_val) * 255))))
+        return f"&H{ass_alpha:02X}{b:02X}{g:02X}{r:02X}"
+
+    clean = color_str.lstrip("#")
     if len(clean) == 6:
         r, g, b = clean[0:2], clean[2:4], clean[4:6]
         return f"&H00{b.upper()}{g.upper()}{r.upper()}"
@@ -218,7 +234,38 @@ class FFmpegCaptionRenderer(BaseCaptionRenderer):
         """
         # Calculate proportional font scaling based on video resolution (1080x1920 baseline)
         scale_factor = video_height / 1920.0
-        preset = options.preset or "clean_pop"
+
+        # Normalization mapping for template IDs and preset names
+        preset_aliases = {
+            "clean": "clean_pop",
+            "clean_classic": "clean_pop",
+            "clean_pop": "clean_pop",
+            "hormozi": "hormozi",
+            "hormozi_impact": "hormozi",
+            "viral_pop": "viral_pop",
+            "viral": "viral_pop",
+            "karaoke": "karaoke",
+            "karaoke_glow": "karaoke",
+            "neon": "neon_pulse",
+            "neon_pulse": "neon_pulse",
+            "editorial": "editorial",
+            "editorial_reel": "editorial",
+            "minimal": "minimal_fade",
+            "minimal_fade": "minimal_fade",
+            "dynamic": "bold_bounce",
+            "dynamic_bounce": "bold_bounce",
+            "bold_bounce": "bold_bounce",
+            "punch": "punchy",
+            "punchy": "punchy",
+            "cinematic": "cinematic",
+            "cinematic_gold": "cinematic",
+        }
+        raw_key = (
+            getattr(options, "template_id", None)
+            or options.preset
+            or "clean_pop"
+        ).lower().strip().replace(" ", "_")
+        preset = preset_aliases.get(raw_key, raw_key)
 
         # Base font size calculation
         font_size_map = {
@@ -228,13 +275,13 @@ class FFmpegCaptionRenderer(BaseCaptionRenderer):
         }
         base_size = font_size_map.get(options.font_size, 64)
 
-        if preset == "bold_bounce":
+        if preset in ("bold_bounce", "dynamic"):
             base_size += 12
-        elif preset == "punchy":
+        elif preset in ("punchy", "punch"):
             base_size += 8
         elif preset == "hormozi":
             base_size += 16
-        elif preset == "neon_pulse":
+        elif preset in ("neon_pulse", "neon"):
             base_size += 10
         elif preset == "editorial":
             base_size += 6
@@ -245,16 +292,19 @@ class FFmpegCaptionRenderer(BaseCaptionRenderer):
 
         scaled_font_size = max(24, int(base_size * scale_factor))
 
-        # Colors
+        # Colors from options (which inherit the active template styling)
         primary_color_ass = hex_to_ass_color(options.primary_color, "&H00FFFFFF")
         active_color_ass = hex_to_ass_color(options.active_color, "&H0000F0FF")
-        bg_box_ass = hex_to_ass_color(options.active_bg_color, "&H4D000000")  # ~30% alpha
+        bg_box_ass = hex_to_ass_color(options.active_bg_color, "&H4D000000")  # ~30% alpha default
+        outline_color_ass = "&H00000000"  # Opaque black outline default
 
-        # Preset-specific color & style adjustments
+        # Template-specific styling configurations
         outline_width = 3
-        shadow_depth = 1
+        shadow_depth = 2
         border_style = 1  # 1 = outline + drop shadow, 3 = opaque box
         bold_flag = -1 if options.font_weight in ("bold", "black") else 0
+        fade_in_ms = 0
+        fade_out_ms = 0
 
         if preset == "karaoke":
             # Primary is active highlight, Secondary is inactive text
@@ -262,12 +312,15 @@ class FFmpegCaptionRenderer(BaseCaptionRenderer):
             secondary_color_ass = hex_to_ass_color(options.primary_color, "&H00FFFFFF")
             outline_width = 3
             shadow_depth = 2
-        elif preset == "punchy":
-            primary_color_ass = "&H0000D7FF"  # High-impact social yellow
-            secondary_color_ass = "&H00FFFFFF"
+            border_style = 1
+        elif preset in ("punchy", "punch"):
+            primary_color_ass = hex_to_ass_color(options.primary_color, "&H0000D7FF")
+            secondary_color_ass = active_color_ass
             outline_width = 4
             shadow_depth = 3
             bold_flag = -1
+            border_style = 3 if options.background == "box" else 1
+            bg_box_ass = hex_to_ass_color(options.active_bg_color, "&H1A000000")
         elif preset == "hormozi":
             primary_color_ass = hex_to_ass_color(options.primary_color, "&H00FFFFFF")
             secondary_color_ass = active_color_ass
@@ -275,12 +328,14 @@ class FFmpegCaptionRenderer(BaseCaptionRenderer):
             outline_width = 6
             shadow_depth = 3
             bold_flag = -1
-        elif preset == "neon_pulse":
+            bg_box_ass = hex_to_ass_color(options.active_bg_color, "&H14000000")
+        elif preset in ("neon_pulse", "neon"):
             primary_color_ass = hex_to_ass_color(options.primary_color, "&H00FFFFFF")
             secondary_color_ass = active_color_ass
             outline_width = 4
             shadow_depth = 4
             bold_flag = -1
+            border_style = 1
         elif preset == "editorial":
             primary_color_ass = hex_to_ass_color(options.primary_color, "&H00F8FAFC")
             secondary_color_ass = active_color_ass
@@ -288,49 +343,57 @@ class FFmpegCaptionRenderer(BaseCaptionRenderer):
             outline_width = 6
             shadow_depth = 1
             bold_flag = -1
+            bg_box_ass = hex_to_ass_color(options.active_bg_color, "&H33000000")
         elif preset == "viral_pop":
             primary_color_ass = hex_to_ass_color(options.primary_color, "&H00FFFFFF")
             secondary_color_ass = hex_to_ass_color(options.active_color, "&H00D4B606")
             outline_width = 3
             shadow_depth = 2
             bold_flag = -1
+            border_style = 3 if options.background == "box" else 1
+            bg_box_ass = hex_to_ass_color(options.active_bg_color, "&H59000000")
         elif preset == "cinematic":
             primary_color_ass = hex_to_ass_color(options.primary_color, "&H00F7FBFD")
             secondary_color_ass = hex_to_ass_color(options.active_color, "&H000BB5F5")
             outline_width = 2
             shadow_depth = 2
             bold_flag = -1
-        elif preset == "bold_bounce":
+            border_style = 1
+        elif preset in ("bold_bounce", "dynamic"):
             primary_color_ass = hex_to_ass_color(options.primary_color, "&H00FFFFFF")
             secondary_color_ass = active_color_ass
             outline_width = 5
             shadow_depth = 2
             bold_flag = -1
-        elif preset == "minimal_fade":
+            border_style = 3 if options.background == "box" else 1
+            bg_box_ass = hex_to_ass_color(options.active_bg_color, "&H66701C58")  # Purple backing
+        elif preset in ("minimal_fade", "minimal"):
             border_style = 3  # Clean bounding box
-            primary_color_ass = "&H00FFFFFF"
-            secondary_color_ass = "&H00FFFFFF"
-            outline_width = 8  # Box padding
+            primary_color_ass = hex_to_ass_color(options.primary_color, "&H00FFFFFF")
+            secondary_color_ass = primary_color_ass
+            outline_width = 8
             shadow_depth = 0
-        else:  # clean_pop
+        else:  # clean_pop (Clean Classic)
+            primary_color_ass = hex_to_ass_color(options.primary_color, "&H00FFFFFF")
             secondary_color_ass = active_color_ass
             outline_width = 3
             shadow_depth = 1
+            border_style = 1  # High contrast drop shadow, NO universal black box
 
-        # Background override if specified by options
+        # Background override if specified explicitly by options
         if options.background == "box" and preset not in ("minimal_fade", "hormozi", "editorial", "neon_pulse"):
             border_style = 3
             outline_width = 10  # box padding
             shadow_depth = 0
-        elif options.background == "none":
+        elif options.background == "none" and preset not in ("minimal_fade", "hormozi", "editorial"):
             border_style = 1
-            outline_width = 1
-            shadow_depth = 0
+            outline_width = 3 if preset in ("clean_pop", "clean") else 1
+            shadow_depth = 1 if preset in ("clean_pop", "clean") else 0
+        elif options.background == "outline":
+            border_style = 1
+            outline_width = max(outline_width, 4)
 
         # Alignment calculation (ASS numpad style)
-        # 1=bottom-left, 2=bottom-center, 3=bottom-right
-        # 4=middle-left, 5=middle-center, 6=middle-right
-        # 7=top-left,    8=top-center,    9=top-right
         align_row = 2  # bottom
         if options.vertical_position == "center":
             align_row = 5
@@ -360,7 +423,7 @@ class FFmpegCaptionRenderer(BaseCaptionRenderer):
             "",
             "[V4+ Styles]",
             "Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding",
-            f"Style: Default,{font_family},{scaled_font_size},{primary_color_ass},{secondary_color_ass},&H00000000,{bg_box_ass},{bold_flag},0,0,0,100,100,0,0,{border_style},{outline_width},{shadow_depth},{alignment_val},{margin_h},{margin_h},{margin_v},1",
+            f"Style: Default,{font_family},{scaled_font_size},{primary_color_ass},{secondary_color_ass},{outline_color_ass},{bg_box_ass},{bold_flag},0,0,0,100,100,0,0,{border_style},{outline_width},{shadow_depth},{alignment_val},{margin_h},{margin_h},{margin_v},1",
             "",
             "[Events]",
             "Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text",

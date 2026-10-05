@@ -31,7 +31,6 @@ Object.defineProperty(window, "matchMedia", {
 
 const mockTeluguCue: CaptionCue = {
   id: "cue_0",
-  index: 0,
   start_time: 0.0,
   end_time: 2.5,
   duration: 2.5,
@@ -39,6 +38,8 @@ const mockTeluguCue: CaptionCue = {
   lines: ["మీ వీడియోలు వైరల్ కావాలా?"],
   language: "Telugu",
   language_code: "te",
+  source_segment_ids: ["seg_0"],
+  manually_edited: false,
   words: [
     { text: "మీ", start_time: 0.0, end_time: 0.5 },
     { text: "వీడియోలు", start_time: 0.5, end_time: 1.2 },
@@ -49,7 +50,6 @@ const mockTeluguCue: CaptionCue = {
 
 const mockEnglishCue: CaptionCue = {
   id: "cue_1",
-  index: 1,
   start_time: 2.5,
   end_time: 5.0,
   duration: 2.5,
@@ -57,6 +57,8 @@ const mockEnglishCue: CaptionCue = {
   lines: ["Stop shooting at 60fps!"],
   language: "English",
   language_code: "en",
+  source_segment_ids: ["seg_1"],
+  manually_edited: false,
   words: [
     { text: "Stop", start_time: 2.5, end_time: 3.0 },
     { text: "shooting", start_time: 3.0, end_time: 3.5 },
@@ -71,6 +73,8 @@ const mockTeluguTranscription: TranscriptionResult = {
   is_transliteration: false,
   script_type: "Telugu",
   full_text: "మీ వీడియోలు వైరల్ కావాలా? Stop shooting at 60fps!",
+  provider_name: "local_whisper",
+  is_production_provider: true,
   segments: [
     {
       id: "seg_0",
@@ -108,7 +112,7 @@ describe("Caption Templates Catalog & Helpers", () => {
   it("defaults to Clean template without a dark box background", () => {
     expect(DEFAULT_TEMPLATE.id).toBe("clean");
     expect(DEFAULT_TEMPLATE.background.type).toBe("none");
-    expect(DEFAULT_TEMPLATE.shadow.enabled).toBe(true);
+    expect(DEFAULT_TEMPLATE.shadow?.enabled).toBe(true);
   });
 
   it("retrieves template by ID safely and falls back to Clean", () => {
@@ -138,6 +142,23 @@ describe("Caption Templates Catalog & Helpers", () => {
     expect(motion.intensity).toBe("high");
     expect(motion.word_animation).toBe("pop");
     expect(motion.primary_color).toBe("#FFFFFF");
+  });
+
+  it("preserves custom user coordinates across templates when preservePosition is true", () => {
+    const neon = getTemplateById("neon");
+    const customPrev = {
+      position_x: 0.18,
+      position_y: 0.22,
+      alignment: "left" as const,
+    };
+    const preserved = templateToAppearance(neon, customPrev, true);
+    expect(preserved.position_x).toBe(0.18);
+    expect(preserved.position_y).toBe(0.22);
+    expect(preserved.alignment).toBe("left");
+
+    const reset = templateToAppearance(neon, customPrev, false);
+    expect(reset.position_x).toBe(neon.position.x);
+    expect(reset.position_y).toBe(neon.position.y);
   });
 });
 
@@ -324,5 +345,46 @@ describe("CaptionCueWorkspace — One-Click Template Integration", () => {
 
     // Verify Hormozi card is now selected (aria-checked="true")
     expect(hormoziCard).toHaveAttribute("aria-checked", "true");
+  });
+
+  it("preserves user dragged custom position when switching templates and restores on reset", () => {
+    render(
+      <CaptionCueWorkspace
+        initialCues={[mockTeluguCue]}
+        activeTranscription={mockTeluguTranscription}
+        videoPreviewUrl="blob:http://localhost/test-video"
+      />
+    );
+
+    // Click Clean template to activate motion template mode
+    const cleanCard = screen.getByTestId("template-card-clean");
+    fireEvent.click(cleanCard);
+
+    // Initial template overlay is Clean (data-position-x=0.5, data-position-y=0.82)
+    const overlay = screen.getByTestId("motion-caption-overlay");
+    expect(overlay).toHaveAttribute("data-position-x", "0.5");
+    expect(overlay).toHaveAttribute("data-position-y", "0.82");
+
+    // Click "Top (15%)" shortcut
+    const topBtn = screen.getByRole("button", { name: "top" });
+    fireEvent.click(topBtn);
+
+    // Overlay should now be at Y=0.15
+    expect(overlay).toHaveAttribute("data-position-y", "0.15");
+
+    // Switch template to Neon
+    const neonCard = screen.getByTestId("template-card-neon");
+    fireEvent.click(neonCard);
+
+    // User's custom position (Y=0.15) must be preserved across template change!
+    expect(overlay).toHaveAttribute("data-position-y", "0.15");
+
+    // Click "Reset" button
+    const resetBtn = screen.getByRole("button", { name: "reset" });
+    fireEvent.click(resetBtn);
+
+    // Should restore Neon default position (0.8)
+    const neonTemplate = getTemplateById("neon");
+    expect(overlay).toHaveAttribute("data-position-y", String(neonTemplate.position.y));
   });
 });

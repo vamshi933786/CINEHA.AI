@@ -411,6 +411,7 @@ export const CAPTION_STUDIO_LANGUAGES: CaptionStudioLanguageOption[] = [
 
 export interface CaptionRenderOptions {
   preset: MotionCaptionPreset;
+  template_id?: string;
   font_size: "small" | "medium" | "large";
   alignment: "left" | "center" | "right";
   vertical_position: "top" | "center" | "bottom" | "custom";

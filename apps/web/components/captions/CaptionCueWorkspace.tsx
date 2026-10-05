@@ -133,12 +133,17 @@ export function CaptionCueWorkspace({
     );
   }, [selectedLanguage, activeTranscription]);
 
-  const handleSelectTemplate = useCallback((template: CaptionTemplate) => {
-    setSelectedTemplateId(template.id);
-    setCaptionMode("motion");
-    setAppearance((prev) => templateToAppearance(template, prev));
-    setMotionSettings(templateToMotionSettings(template));
-  }, []);
+  const [userHasCustomPosition, setUserHasCustomPosition] = useState<boolean>(false);
+
+  const handleSelectTemplate = useCallback(
+    (template: CaptionTemplate) => {
+      setSelectedTemplateId(template.id);
+      setCaptionMode("motion");
+      setAppearance((prev) => templateToAppearance(template, prev, userHasCustomPosition));
+      setMotionSettings(templateToMotionSettings(template));
+    },
+    [userHasCustomPosition]
+  );
 
   // Video Render & Export state
   const [isRendering, setIsRendering] = useState<boolean>(false);
@@ -217,6 +222,7 @@ export function CaptionCueWorkspace({
       vPos = "bottom";
     }
 
+    setUserHasCustomPosition(true);
     setAppearance((prev) => ({
       ...prev,
       position_x: Math.round(clampedX * 1000) / 1000,
@@ -235,6 +241,19 @@ export function CaptionCueWorkspace({
   };
 
   const handlePositionPreset = (preset: "top" | "center" | "bottom" | "reset") => {
+    if (preset === "reset") {
+      setUserHasCustomPosition(false);
+      setAppearance((a) => ({
+        ...a,
+        vertical_position: "custom",
+        position_x: currentTemplate.position.x,
+        position_y: currentTemplate.position.y,
+        alignment: currentTemplate.alignment,
+      }));
+      return;
+    }
+
+    setUserHasCustomPosition(true);
     if (preset === "top") {
       setAppearance((a) => ({
         ...a,
@@ -250,7 +269,7 @@ export function CaptionCueWorkspace({
         position_y: 0.50,
       }));
     } else {
-      // bottom or reset
+      // bottom
       setAppearance((a) => ({
         ...a,
         vertical_position: "bottom",
@@ -466,6 +485,7 @@ export function CaptionCueWorkspace({
     try {
       const renderOptions: Partial<CaptionRenderOptions> = {
         preset: motionSettings.preset,
+        template_id: selectedTemplateId,
         font_size: appearance.font_size,
         alignment: appearance.alignment,
         vertical_position: appearance.vertical_position,
@@ -1011,6 +1031,7 @@ export function CaptionCueWorkspace({
                   value={Math.round((appearance.position_x ?? 0.5) * 100)}
                   onChange={(e) => {
                     const val = parseInt(e.target.value, 10) / 100;
+                    setUserHasCustomPosition(true);
                     setAppearance((a) => ({
                       ...a,
                       position_x: val,
@@ -1036,6 +1057,7 @@ export function CaptionCueWorkspace({
                   value={Math.round((appearance.position_y ?? 0.85) * 100)}
                   onChange={(e) => {
                     const val = parseInt(e.target.value, 10) / 100;
+                    setUserHasCustomPosition(true);
                     let vPos: "top" | "center" | "bottom" | "custom" = "custom";
                     if (Math.abs(val - 0.15) < 0.05) vPos = "top";
                     else if (Math.abs(val - 0.50) < 0.05) vPos = "center";

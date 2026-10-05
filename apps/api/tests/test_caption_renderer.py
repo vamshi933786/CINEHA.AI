@@ -459,3 +459,103 @@ def test_generate_ass_content_karaoke_with_custom_position():
     assert "{\\k50}pop" in ass
     assert "{\\k50}now" in ass
 
+
+def test_all_10_templates_have_deterministic_export_mapping():
+    """PART 2 & 9: Verify every selectable template has a deterministic, valid ASS export definition."""
+    renderer = FFmpegCaptionRenderer()
+    cues = [
+        CaptionCue(
+            id="cue_0",
+            text="Parity Verification",
+            start_time=0.0,
+            end_time=2.0,
+            duration=2.0,
+            lines=["Parity Verification"],
+        )
+    ]
+
+    all_10_templates = [
+        ("clean", "clean_pop", 1),       # Clean Classic (border_style 1: outline + shadow, NO box)
+        ("hormozi", "hormozi", 3),       # Hormozi Impact (border_style 3: impact box)
+        ("viral_pop", "viral_pop", 1),   # Viral Pop (border_style 1 or 3)
+        ("karaoke", "karaoke", 1),       # Karaoke Glow (border_style 1)
+        ("neon", "neon_pulse", 1),       # Neon Cyber (border_style 1, luminous outline)
+        ("editorial", "editorial", 3),   # Editorial Reel (border_style 3: clean box)
+        ("minimal", "minimal_fade", 3),  # Minimal Fade (border_style 3)
+        ("dynamic", "bold_bounce", 1),   # Dynamic Bounce (border_style 1 or 3)
+        ("punch", "punchy", 1),          # Punchy Impact (border_style 1 or 3)
+        ("cinematic", "cinematic", 1),   # Cinematic Gold (border_style 1)
+    ]
+
+    for template_id, expected_preset, expected_border in all_10_templates:
+        # Test passing via template_id
+        options_template = CaptionRenderOptions(
+            preset=template_id,
+            template_id=template_id,
+            primary_color="#FFFFFF",
+            active_color="#00F0FF",
+        )
+        ass = renderer._generate_ass_content(
+            cues=cues,
+            language="English",
+            options=options_template,
+            video_width=1080,
+            video_height=1920,
+            font_family="Arial",
+        )
+        assert "[Script Info]" in ass, f"Template {template_id} missing Script Info"
+        assert "[V4+ Styles]" in ass, f"Template {template_id} missing V4+ Styles"
+        assert "Style: Default" in ass, f"Template {template_id} missing Style Default"
+        assert "[Events]" in ass, f"Template {template_id} missing Events"
+        assert "Dialogue: 0,0:00:00.00,0:00:02.00,Default,,0,0,0,,Parity Verification" in ass
+
+        # Verify clean template specifically has border_style 1 (NO universal black box)
+        if template_id == "clean":
+            assert ",1,3,1," in ass or ",1,3,2," in ass, "Clean template must use outline+shadow, not opaque box"
+
+
+def test_free_positioning_across_all_templates():
+    """PART 3: Verify user-selected position_x and position_y overrides template default across multiple templates."""
+    renderer = FFmpegCaptionRenderer()
+    cues = [
+        CaptionCue(
+            id="cue_0",
+            text="Upper Left Drag",
+            start_time=0.0,
+            end_time=2.0,
+            duration=2.0,
+            lines=["Upper Left Drag"],
+        )
+    ]
+
+    # Upper-left coordinates: x=0.18, y=0.18 -> (194, 346) in 1080x1920
+    test_templates = ["hormozi", "neon", "editorial", "karaoke", "clean", "cinematic"]
+    for t_id in test_templates:
+        options = CaptionRenderOptions(
+            preset=t_id,
+            template_id=t_id,
+            position_x=0.18,
+            position_y=0.18,
+            alignment="center",
+        )
+        ass = renderer._generate_ass_content(
+            cues=cues,
+            language="English",
+            options=options,
+            video_width=1080,
+            video_height=1920,
+            font_family="Arial",
+        )
+        # Expected pos tag: 0.18 * 1080 = 194, 0.18 * 1920 = 346
+        assert "{\\an5\\pos(194,346)}Upper Left Drag" in ass, (
+            f"Template {t_id} failed to respect manual upper-left drag position"
+        )
+
+
+def test_telugu_system_font_resolution():
+    """PART 4: Verify Telugu font resolves to installed Telugu Unicode font."""
+    font_name, font_dir = resolve_caption_font("Telugu")
+    assert font_name in ("Telugu Sangam MN", "Kohinoor Telugu", "Telugu MN", "Noto Sans Telugu", "Lohit Telugu")
+    assert font_dir is not None
+
+

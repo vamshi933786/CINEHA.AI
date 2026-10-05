@@ -1,5 +1,5 @@
 from typing import Optional, List, Dict, Any, Literal, Union
-from pydantic import BaseModel, Field, ConfigDict
+from pydantic import BaseModel, Field, ConfigDict, field_validator
 
 
 class CaptionSource(BaseModel):
@@ -249,19 +249,12 @@ class CaptionRenderOptions(BaseModel):
     """Visual style, typography, and layout options for video caption rendering."""
     model_config = ConfigDict(extra="ignore")
 
-    preset: Literal[
-        "clean_pop",
-        "karaoke",
-        "bold_bounce",
-        "minimal_fade",
-        "punchy",
-        "hormozi",
-        "neon_pulse",
-        "editorial",
-        "viral_pop",
-        "cinematic",
-    ] = Field(
-        default="clean_pop", description="Motion caption styling preset"
+    preset: str = Field(
+        default="clean_pop", description="Motion caption styling preset or template ID"
+    )
+    template_id: Optional[str] = Field(
+        default=None,
+        description="Optional caption template ID (e.g. clean, hormozi, viral_pop, karaoke, neon, editorial, minimal, dynamic, punch, cinematic)",
     )
     font_size: Literal["small", "medium", "large"] = Field(
         default="medium", description="Relative caption font size"
@@ -278,13 +271,29 @@ class CaptionRenderOptions(BaseModel):
     position_y: Optional[float] = Field(
         default=None, ge=0.0, le=1.0, description="Normalized vertical center (0.0=top, 1.0=bottom)"
     )
-    background: Literal["none", "box", "outline"] = Field(
-        default="box", description="Caption background box or outline style"
+    background: Optional[Literal["none", "box", "outline"]] = Field(
+        default=None, description="Caption background box or outline style"
     )
     primary_color: str = Field(default="#FFFFFF", description="Main caption text hex color")
     active_color: str = Field(default="#00F0FF", description="Active word or highlight hex color")
     active_bg_color: str = Field(default="#33000000", description="Background box fill color")
     font_weight: Literal["normal", "bold", "black"] = Field(default="bold", description="Font weight")
+
+    @field_validator("preset", mode="before")
+    @classmethod
+    def normalize_preset_name(cls, v: Any) -> str:
+        if not v:
+            return "clean_pop"
+        alias_map = {
+            "clean": "clean_pop",
+            "clean_classic": "clean_pop",
+            "neon": "neon_pulse",
+            "minimal": "minimal_fade",
+            "dynamic": "bold_bounce",
+            "punch": "punchy",
+        }
+        cleaned = str(v).lower().strip().replace(" ", "_")
+        return alias_map.get(cleaned, cleaned)
 
 
 class CaptionRenderResult(BaseModel):

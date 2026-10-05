@@ -542,7 +542,8 @@ export function getTemplateById(id: string): CaptionTemplate {
 
 export function templateToAppearance(
   template: CaptionTemplate,
-  prevAppearance?: Partial<CaptionAppearanceSettings>
+  prevAppearance?: Partial<CaptionAppearanceSettings>,
+  preservePosition: boolean = false
 ): CaptionAppearanceSettings {
   const bgType: "none" | "box" | "outline" =
     template.background.type === "none"
@@ -552,10 +553,19 @@ export function templateToAppearance(
       : "box";
 
   return {
-    alignment: template.alignment,
+    alignment:
+      preservePosition && prevAppearance?.alignment
+        ? prevAppearance.alignment
+        : template.alignment,
     vertical_position: "custom",
-    position_x: template.position.x,
-    position_y: template.position.y,
+    position_x:
+      preservePosition && prevAppearance?.position_x !== undefined
+        ? prevAppearance.position_x
+        : template.position.x,
+    position_y:
+      preservePosition && prevAppearance?.position_y !== undefined
+        ? prevAppearance.position_y
+        : template.position.y,
     font_size: template.typography.fontSize,
     background: bgType,
     show_safe_area: prevAppearance?.show_safe_area ?? template.safeArea,
