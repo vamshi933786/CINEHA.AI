@@ -253,3 +253,187 @@ async def test_api_render_validation_and_download():
             "/api/v1/captions/render/12345678-1234-1234-1234-123456789abc/download"
         )
         assert resp6.status_code == 404
+
+
+def test_generate_ass_content_free_positioning():
+    """Verify ASS output includes pixel-accurate \\pos tags for custom coordinates."""
+    renderer = FFmpegCaptionRenderer()
+    cues = [
+        CaptionCue(
+            id="cue_0",
+            text="Centered high cue",
+            start_time=0.0,
+            end_time=2.0,
+            duration=2.0,
+            lines=["Centered high cue"],
+        )
+    ]
+    options = CaptionRenderOptions(
+        preset="clean_pop",
+        position_x=0.5,
+        position_y=0.25,
+        alignment="center",
+    )
+    ass = renderer._generate_ass_content(
+        cues=cues,
+        language="English",
+        options=options,
+        video_width=1080,
+        video_height=1920,
+        font_family="Arial",
+    )
+    # 0.5 * 1080 = 540, 0.25 * 1920 = 480
+    assert "{\\an5\\pos(540,480)}Centered high cue" in ass
+
+    # Test left alignment (\an4)
+    options_left = CaptionRenderOptions(
+        preset="clean_pop",
+        position_x=0.2,
+        position_y=0.8,
+        alignment="left",
+    )
+    ass_left = renderer._generate_ass_content(
+        cues=cues,
+        language="English",
+        options=options_left,
+        video_width=1080,
+        video_height=1920,
+        font_family="Arial",
+    )
+    # 0.2 * 1080 = 216, 0.8 * 1920 = 1536
+    assert "{\\an4\\pos(216,1536)}Centered high cue" in ass_left
+
+    # Test right alignment (\an6)
+    options_right = CaptionRenderOptions(
+        preset="clean_pop",
+        position_x=0.8,
+        position_y=0.5,
+        alignment="right",
+    )
+    ass_right = renderer._generate_ass_content(
+        cues=cues,
+        language="English",
+        options=options_right,
+        video_width=1080,
+        video_height=1920,
+        font_family="Arial",
+    )
+    # 0.8 * 1080 = 864, 0.5 * 1920 = 960
+    assert "{\\an6\\pos(864,960)}Centered high cue" in ass_right
+
+
+def test_generate_ass_content_cue_level_position_override():
+    """Verify cue-level position dict overrides global render options."""
+    renderer = FFmpegCaptionRenderer()
+    cues = [
+        CaptionCue(
+            id="cue_0",
+            text="Cue with individual position",
+            start_time=0.0,
+            end_time=2.0,
+            duration=2.0,
+            lines=["Cue with individual position"],
+            position={"x": 0.3, "y": 0.4},
+        )
+    ]
+    options = CaptionRenderOptions(preset="clean_pop", position_x=0.5, position_y=0.85)
+    ass = renderer._generate_ass_content(
+        cues=cues,
+        language="English",
+        options=options,
+        video_width=1080,
+        video_height=1920,
+        font_family="Arial",
+    )
+    # 0.3 * 1080 = 324, 0.4 * 1920 = 768
+    assert "{\\an5\\pos(324,768)}Cue with individual position" in ass
+
+
+def test_generate_ass_content_motion_presets():
+    """Verify ASS styling headers for new motion presets: hormozi, neon_pulse, editorial."""
+    renderer = FFmpegCaptionRenderer()
+    cues = [
+        CaptionCue(
+            id="cue_0",
+            text="Template test",
+            start_time=0.0,
+            end_time=2.0,
+            duration=2.0,
+            lines=["Template test"],
+        )
+    ]
+
+    # 1. Hormozi: BorderStyle 3 (box), scaled font size
+    ass_hormozi = renderer._generate_ass_content(
+        cues=cues,
+        language="English",
+        options=CaptionRenderOptions(preset="hormozi"),
+        video_width=1080,
+        video_height=1920,
+        font_family="Arial",
+    )
+    assert "[V4+ Styles]" in ass_hormozi
+    assert "Style: Default" in ass_hormozi
+    # Check border style 3 in style line
+    assert ",3,6,3," in ass_hormozi
+
+    # 2. Neon Pulse: Bold, outline 4, shadow 4
+    ass_neon = renderer._generate_ass_content(
+        cues=cues,
+        language="English",
+        options=CaptionRenderOptions(preset="neon_pulse"),
+        video_width=1080,
+        video_height=1920,
+        font_family="Arial",
+    )
+    assert ",1,4,4," in ass_neon
+
+    # 3. Editorial: Subtle, outline 1, shadow 0
+    ass_editorial = renderer._generate_ass_content(
+        cues=cues,
+        language="English",
+        options=CaptionRenderOptions(preset="editorial"),
+        video_width=1080,
+        video_height=1920,
+        font_family="Arial",
+    )
+    assert ",3,6,1," in ass_editorial
+
+
+def test_generate_ass_content_karaoke_with_custom_position():
+    """Verify karaoke timing tags coexist cleanly with custom coordinate \\pos tag."""
+    renderer = FFmpegCaptionRenderer()
+    cues = [
+        CaptionCue(
+            id="cue_0",
+            text="Viral pop now",
+            start_time=0.0,
+            end_time=1.5,
+            duration=1.5,
+            lines=["Viral pop now"],
+            words=[
+                CaptionCueWord(text="Viral", start_time=0.0, end_time=0.5),
+                CaptionCueWord(text="pop", start_time=0.5, end_time=1.0),
+                CaptionCueWord(text="now", start_time=1.0, end_time=1.5),
+            ],
+        )
+    ]
+    options = CaptionRenderOptions(
+        preset="karaoke",
+        position_x=0.5,
+        position_y=0.3,
+    )
+    ass = renderer._generate_ass_content(
+        cues=cues,
+        language="English",
+        options=options,
+        video_width=1080,
+        video_height=1920,
+        font_family="Arial",
+    )
+    # 0.5 * 1080 = 540, 0.3 * 1920 = 576
+    assert "{\\an5\\pos(540,576)}" in ass
+    assert "{\\k50}Viral" in ass
+    assert "{\\k50}pop" in ass
+    assert "{\\k50}now" in ass
+

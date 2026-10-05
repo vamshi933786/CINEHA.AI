@@ -232,6 +232,12 @@ class FFmpegCaptionRenderer(BaseCaptionRenderer):
             base_size += 12
         elif preset == "punchy":
             base_size += 8
+        elif preset == "hormozi":
+            base_size += 16
+        elif preset == "neon_pulse":
+            base_size += 10
+        elif preset == "editorial":
+            base_size += 6
 
         scaled_font_size = max(24, int(base_size * scale_factor))
 
@@ -258,6 +264,26 @@ class FFmpegCaptionRenderer(BaseCaptionRenderer):
             outline_width = 4
             shadow_depth = 3
             bold_flag = -1
+        elif preset == "hormozi":
+            primary_color_ass = hex_to_ass_color(options.primary_color, "&H00FFFFFF")
+            secondary_color_ass = active_color_ass
+            border_style = 3  # Impact box
+            outline_width = 6
+            shadow_depth = 3
+            bold_flag = -1
+        elif preset == "neon_pulse":
+            primary_color_ass = hex_to_ass_color(options.primary_color, "&H00FFFFFF")
+            secondary_color_ass = active_color_ass
+            outline_width = 4
+            shadow_depth = 4
+            bold_flag = -1
+        elif preset == "editorial":
+            primary_color_ass = hex_to_ass_color(options.primary_color, "&H00F8FAFC")
+            secondary_color_ass = active_color_ass
+            border_style = 3
+            outline_width = 6
+            shadow_depth = 1
+            bold_flag = -1
         elif preset == "bold_bounce":
             primary_color_ass = hex_to_ass_color(options.primary_color, "&H00FFFFFF")
             secondary_color_ass = active_color_ass
@@ -276,7 +302,7 @@ class FFmpegCaptionRenderer(BaseCaptionRenderer):
             shadow_depth = 1
 
         # Background override if specified by options
-        if options.background == "box" and preset != "minimal_fade":
+        if options.background == "box" and preset not in ("minimal_fade", "hormozi", "editorial", "neon_pulse"):
             border_style = 3
             outline_width = 10  # box padding
             shadow_depth = 0
@@ -328,6 +354,38 @@ class FFmpegCaptionRenderer(BaseCaptionRenderer):
             start_str = format_ass_timestamp(cue.start_time)
             end_str = format_ass_timestamp(cue.end_time)
 
+            # Determine free position override if configured on options or cue
+            cue_pos_x = options.position_x
+            cue_pos_y = options.position_y
+            if cue.position and isinstance(cue.position, dict):
+                if "x" in cue.position:
+                    try:
+                        cue_pos_x = float(cue.position["x"])
+                    except (ValueError, TypeError):
+                        pass
+                if "y" in cue.position:
+                    try:
+                        cue_pos_y = float(cue.position["y"])
+                    except (ValueError, TypeError):
+                        pass
+
+            pos_tag = ""
+            if cue_pos_x is not None and cue_pos_y is not None:
+                # Clamp to safe bounds [0.05, 0.95]
+                clamped_x = max(0.05, min(0.95, cue_pos_x))
+                clamped_y = max(0.05, min(0.95, cue_pos_y))
+                pos_x_px = int(round(clamped_x * video_width))
+                pos_y_px = int(round(clamped_y * video_height))
+
+                # Align code: 4=left, 6=right, 5=center
+                align_code = 5
+                if options.alignment == "left":
+                    align_code = 4
+                elif options.alignment == "right":
+                    align_code = 6
+
+                pos_tag = f"{{\\an{align_code}\\pos({pos_x_px},{pos_y_px})}}"
+
             cue_text = ""
             # Handle Karaoke preset if word timings exist
             if preset == "karaoke" and cue.words and len(cue.words) > 0:
@@ -349,7 +407,7 @@ class FFmpegCaptionRenderer(BaseCaptionRenderer):
                     cue_text = cue.text.replace("\n", "\\N")
 
             ass_lines.append(
-                f"Dialogue: 0,{start_str},{end_str},Default,,0,0,0,,{cue_text}"
+                f"Dialogue: 0,{start_str},{end_str},Default,,0,0,0,,{pos_tag}{cue_text}"
             )
 
         return "\n".join(ass_lines) + "\n"

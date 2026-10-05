@@ -672,7 +672,19 @@ Rendered MP4 artifacts are stored in a dedicated scratch cache directory (`RENDE
 - **Milestone 6**: Direct Multilingual Video Rendering Engine (FFmpeg libass burned-in captions, Telugu Unicode font support, MP4 export & download).
 - **Milestone 7**: Real Speech Transcription Accuracy & Audio Track Validation (Audio stream detection, strict no-mock production policy, Whisper verbose word timings, isolated temp sessions, and upload state reset).
 - **Milestone 8**: Two-Stage Hybrid Telugu Speech Restoration Pipeline (Local Whisper authoritative timing + Gemini batched semantic restoration, anti-hallucination guardrails, timing immutability, Tanglish transliteration, and robust graceful fallbacks).
+- **Milestone 9**: Free Caption Positioning & Professional Motion-Graphic Caption Templates (Draggable overlay on 9:16 vertical video container, pointer capture dragging, normalized 0..1 coordinates, ASS `{\an5\pos(X,Y)}` burned-in positioning, and creator-grade templates: Hormozi, Neon Pulse, and Editorial Reel).
 
+---
 
+## 14. Free Caption Positioning & Professional Motion Templates
 
+### Free Caption Positioning:
+1. **Interactive Screen Dragging**: Creators can drag captions freely across the 9:16 vertical video preview using mouse, trackpad, or touch/pointer gestures.
+2. **Normalized Coordinates**: Coordinates are normalized to relative floats `position_x: [0..1]` and `position_y: [0..1]`, clamped to the 9:16 safe viewing frame (`0.05` to `0.95`).
+3. **Precision Numerical Sliders & Shortcuts**: Position shortcuts (Top 15%, Center 50%, Bottom 85%, Reset) and fine-tuning sliders allow accurate manual coordinate placement.
+4. **ASS Subtitle Integration**: The FFmpeg rendering engine translates `position_x` and `position_y` into ASS `{\an5\pos(X, Y)}` override tags, matching browser CSS center-anchor transforms (`translate(-50%, -50%)`).
 
+### Professional Motion-Graphic Templates:
+1. **Hormozi / Viral Creator**: High-energy uppercase typography, emerald highlight accents, high-intensity scale pop, and solid dark bounding box for maximum readability on fast-paced reels.
+2. **Neon Pulse / Cyber Luminous**: Electric cyan glow (`#00F0FF`), luminous drop shadows, bold lettering, and vibrant edge definition designed for tech, gaming, and futuristic content.
+3. **Editorial Reel / Documentary Style**: Refined slate styling, subtle charcoal framing, smooth slide entrances, and disciplined typography for thought leadership and documentary-style short video.

@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useMemo, useState, useEffect } from "react";
+import { Move } from "lucide-react";
 import {
   CaptionCue,
   MotionCaptionSettings,
@@ -13,6 +14,10 @@ interface MotionCaptionOverlayProps {
   motionSettings: MotionCaptionSettings;
   appearance: CaptionAppearanceSettings;
   forceReducedMotion?: boolean;
+  isDragging?: boolean;
+  onPointerDown?: (e: React.PointerEvent) => void;
+  onPointerMove?: (e: React.PointerEvent) => void;
+  onPointerUp?: (e: React.PointerEvent) => void;
 }
 
 export function MotionCaptionOverlay({
@@ -21,6 +26,10 @@ export function MotionCaptionOverlay({
   motionSettings,
   appearance,
   forceReducedMotion = false,
+  isDragging = false,
+  onPointerDown,
+  onPointerMove,
+  onPointerUp,
 }: MotionCaptionOverlayProps) {
   // Detect system reduced motion preference
   const [systemReducedMotion, setSystemReducedMotion] = useState(false);
@@ -117,18 +126,6 @@ export function MotionCaptionOverlay({
     }
   };
 
-  // Vertical position class
-  const getVerticalClass = () => {
-    switch (appearance.vertical_position) {
-      case "top":
-        return "top-10";
-      case "center":
-        return "top-1/2 -translate-y-1/2";
-      default:
-        return "bottom-12";
-    }
-  };
-
   // Font size class
   const getFontSizeClass = () => {
     switch (appearance.font_size) {
@@ -174,19 +171,62 @@ export function MotionCaptionOverlay({
     }
   };
 
+  // Normalized free coordinates (0..1)
+  const posX = appearance.position_x !== undefined ? appearance.position_x : 0.5;
+  const posY =
+    appearance.position_y !== undefined
+      ? appearance.position_y
+      : appearance.vertical_position === "top"
+      ? 0.15
+      : appearance.vertical_position === "center"
+      ? 0.50
+      : 0.85;
+
   return (
     <div
-      className={`absolute inset-x-4 pointer-events-none flex flex-col ${getVerticalClass()} ${getAlignmentClass()}`}
+      className={`absolute pointer-events-auto touch-none select-none z-20 flex flex-col ${getAlignmentClass()} ${
+        isDragging ? "cursor-grabbing" : "cursor-grab"
+      }`}
+      style={{
+        left: `${posX * 100}%`,
+        top: `${posY * 100}%`,
+        transform: "translate(-50%, -50%)",
+      }}
+      onPointerDown={onPointerDown}
+      onPointerMove={onPointerMove}
+      onPointerUp={onPointerUp}
       data-testid="motion-caption-overlay"
       data-preset={motionSettings.preset}
       data-reduced-motion={isReducedMotion ? "true" : "false"}
+      data-position-x={posX}
+      data-position-y={posY}
     >
+      {/* Visual Position Badge when dragged or hovered */}
+      {isDragging && (
+        <div className="absolute -top-7 left-1/2 -translate-x-1/2 flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-mono bg-cyan-500 text-black font-bold shadow-xl border border-cyan-300 pointer-events-none whitespace-nowrap animate-in fade-in zoom-in-95 duration-100">
+          <Move className="w-2.5 h-2.5" />
+          <span>
+            X: {Math.round(posX * 100)}% | Y: {Math.round(posY * 100)}%
+          </span>
+        </div>
+      )}
+
       <div
         className={`inline-block font-sans ${getFontWeightClass()} transition-all transform duration-150 ${getEntranceClass()} ${getExitClass()} ${
           appearance.background === "box"
-            ? "bg-black/85 px-4 py-2.5 rounded-2xl shadow-2xl border border-white/10 backdrop-blur-sm"
+            ? motionSettings.preset === "neon_pulse"
+              ? "bg-black/90 px-4 py-2.5 rounded-2xl shadow-[0_0_25px_rgba(0,240,255,0.4)] border border-cyan-400/50 backdrop-blur-md"
+              : motionSettings.preset === "hormozi"
+              ? "bg-black/95 px-4 py-2.5 rounded-2xl shadow-2xl border border-emerald-500/35 backdrop-blur-md"
+              : motionSettings.preset === "editorial"
+              ? "bg-black/80 px-4 py-2 rounded-xl shadow-lg border border-slate-600/40 backdrop-blur-sm"
+              : "bg-black/85 px-4 py-2.5 rounded-2xl shadow-2xl border border-white/10 backdrop-blur-sm"
+            : appearance.background === "outline"
+            ? "drop-shadow-[0_0_8px_rgba(0,0,0,1)] text-stroke"
             : "drop-shadow-[0_2px_4px_rgba(0,0,0,0.95)]"
-        } ${getFontSizeClass()}`}
+        } ${getFontSizeClass()} ${
+          isDragging ? "ring-2 ring-cyan-400 ring-offset-2 ring-offset-black/60" : ""
+        }`}
         style={{ color: motionSettings.primary_color }}
       >
         {/* If word timings exist, render word-by-word with active styling */}
@@ -221,7 +261,9 @@ export function MotionCaptionOverlay({
                 if (
                   motionSettings.active_word_style === "highlight" ||
                   motionSettings.preset === "clean_pop" ||
-                  motionSettings.preset === "punchy"
+                  motionSettings.preset === "punchy" ||
+                  motionSettings.preset === "hormozi" ||
+                  motionSettings.preset === "neon_pulse"
                 ) {
                   wordBg = motionSettings.active_bg_color;
                 }
@@ -268,6 +310,8 @@ export function MotionCaptionOverlay({
                     color:
                       motionSettings.preset === "karaoke"
                         ? motionSettings.active_color
+                        : motionSettings.preset === "hormozi"
+                        ? "#FFFFFF"
                         : motionSettings.primary_color,
                   }}
                 >

@@ -249,7 +249,16 @@ class CaptionRenderOptions(BaseModel):
     """Visual style, typography, and layout options for video caption rendering."""
     model_config = ConfigDict(extra="ignore")
 
-    preset: Literal["clean_pop", "karaoke", "bold_bounce", "minimal_fade", "punchy"] = Field(
+    preset: Literal[
+        "clean_pop",
+        "karaoke",
+        "bold_bounce",
+        "minimal_fade",
+        "punchy",
+        "hormozi",
+        "neon_pulse",
+        "editorial",
+    ] = Field(
         default="clean_pop", description="Motion caption styling preset"
     )
     font_size: Literal["small", "medium", "large"] = Field(
@@ -258,8 +267,14 @@ class CaptionRenderOptions(BaseModel):
     alignment: Literal["left", "center", "right"] = Field(
         default="center", description="Horizontal text alignment"
     )
-    vertical_position: Literal["top", "center", "bottom"] = Field(
+    vertical_position: Literal["top", "center", "bottom", "custom"] = Field(
         default="bottom", description="Vertical placement on video frame"
+    )
+    position_x: Optional[float] = Field(
+        default=None, ge=0.0, le=1.0, description="Normalized horizontal center (0.0=left, 1.0=right)"
+    )
+    position_y: Optional[float] = Field(
+        default=None, ge=0.0, le=1.0, description="Normalized vertical center (0.0=top, 1.0=bottom)"
     )
     background: Literal["none", "box", "outline"] = Field(
         default="box", description="Caption background box or outline style"

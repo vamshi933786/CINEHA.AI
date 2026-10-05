@@ -110,6 +110,69 @@ export const MOTION_PRESETS: Record<MotionCaptionPreset, MotionPresetDefinition>
       respect_reduced_motion: true,
     },
   },
+  hormozi: {
+    id: "hormozi",
+    name: "Hormozi Viral",
+    description:
+      "Signature short-form creator style. Extra-bold typography with punchy spring scaling and vivid emerald-green highlight box.",
+    badge: "Viral Creator",
+    requiresWordTimings: false,
+    settings: {
+      preset: "hormozi",
+      entrance_animation: "pop",
+      exit_animation: "fade",
+      word_animation: "pop",
+      intensity: "high",
+      active_word_style: "scale",
+      font_weight: "black",
+      primary_color: "#FFFFFF",
+      active_color: "#22C55E", // Emerald-500
+      active_bg_color: "rgba(34, 197, 94, 0.35)",
+      respect_reduced_motion: true,
+    },
+  },
+  neon_pulse: {
+    id: "neon_pulse",
+    name: "Neon Cyber",
+    description:
+      "Luminous futuristic aesthetic. High-tech electric cyan glowing text and soft pulsating illumination.",
+    badge: "Luminous Glow",
+    requiresWordTimings: false,
+    settings: {
+      preset: "neon_pulse",
+      entrance_animation: "fade",
+      exit_animation: "fade",
+      word_animation: "highlight",
+      intensity: "high",
+      active_word_style: "highlight",
+      font_weight: "bold",
+      primary_color: "#FFFFFF",
+      active_color: "#00F0FF", // Electric Cyan
+      active_bg_color: "rgba(0, 240, 255, 0.3)",
+      respect_reduced_motion: true,
+    },
+  },
+  editorial: {
+    id: "editorial",
+    name: "Editorial Reel",
+    description:
+      "Sophisticated documentary presentation. Smooth slide entrance with refined slate accents and subtle contrast.",
+    badge: "Documentary",
+    requiresWordTimings: false,
+    settings: {
+      preset: "editorial",
+      entrance_animation: "slide_up",
+      exit_animation: "fade",
+      word_animation: "emphasis",
+      intensity: "low",
+      active_word_style: "bold",
+      font_weight: "bold",
+      primary_color: "#F8FAFC",
+      active_color: "#CBD5E1", // Slate-300
+      active_bg_color: "rgba(203, 213, 225, 0.15)",
+      respect_reduced_motion: true,
+    },
+  },
 };
 
 export const DEFAULT_MOTION_SETTINGS: MotionCaptionSettings = {

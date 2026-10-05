@@ -27,6 +27,7 @@ import {
   Download,
   Film,
   Loader2,
+  Move,
 } from "lucide-react";
 import { api } from "@/lib/api";
 import {
@@ -67,6 +68,8 @@ export const DEFAULT_CUE_SETTINGS: CaptionCueSettings = {
 export const DEFAULT_APPEARANCE_SETTINGS: CaptionAppearanceSettings = {
   alignment: "center",
   vertical_position: "bottom",
+  position_x: 0.5,
+  position_y: 0.85,
   font_size: "medium",
   background: "box",
   show_safe_area: false,
@@ -148,6 +151,83 @@ export function CaptionCueWorkspace({
     return cues.some((c) => c.manually_edited);
   }, [cues]);
 
+  // Free caption dragging state
+  const [isDraggingCaption, setIsDraggingCaption] = useState<boolean>(false);
+  const videoContainerRef = useRef<HTMLDivElement>(null);
+
+  const handleCaptionPointerDown = (e: React.PointerEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDraggingCaption(true);
+    try {
+      (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+    } catch (_) {}
+  };
+
+  const handleContainerPointerMove = (e: React.PointerEvent) => {
+    if (!isDraggingCaption) return;
+    e.preventDefault();
+    if (!videoContainerRef.current) return;
+    const rect = videoContainerRef.current.getBoundingClientRect();
+    const rawX = (e.clientX - rect.left) / rect.width;
+    const rawY = (e.clientY - rect.top) / rect.height;
+
+    // Clamped inside safe region [0.08, 0.92]
+    const clampedX = Math.max(0.08, Math.min(0.92, rawX));
+    const clampedY = Math.max(0.08, Math.min(0.92, rawY));
+
+    let vPos: "top" | "center" | "bottom" | "custom" = "custom";
+    if (Math.abs(clampedY - 0.15) < 0.05 && Math.abs(clampedX - 0.5) < 0.08) {
+      vPos = "top";
+    } else if (Math.abs(clampedY - 0.50) < 0.05 && Math.abs(clampedX - 0.5) < 0.08) {
+      vPos = "center";
+    } else if (Math.abs(clampedY - 0.85) < 0.05 && Math.abs(clampedX - 0.5) < 0.08) {
+      vPos = "bottom";
+    }
+
+    setAppearance((prev) => ({
+      ...prev,
+      position_x: Math.round(clampedX * 1000) / 1000,
+      position_y: Math.round(clampedY * 1000) / 1000,
+      vertical_position: vPos,
+    }));
+  };
+
+  const handleContainerPointerUp = (e: React.PointerEvent) => {
+    if (isDraggingCaption) {
+      try {
+        (e.currentTarget as HTMLElement).releasePointerCapture(e.pointerId);
+      } catch (_) {}
+      setIsDraggingCaption(false);
+    }
+  };
+
+  const handlePositionPreset = (preset: "top" | "center" | "bottom" | "reset") => {
+    if (preset === "top") {
+      setAppearance((a) => ({
+        ...a,
+        vertical_position: "top",
+        position_x: 0.5,
+        position_y: 0.15,
+      }));
+    } else if (preset === "center") {
+      setAppearance((a) => ({
+        ...a,
+        vertical_position: "center",
+        position_x: 0.5,
+        position_y: 0.50,
+      }));
+    } else {
+      // bottom or reset
+      setAppearance((a) => ({
+        ...a,
+        vertical_position: "bottom",
+        position_x: 0.5,
+        position_y: 0.85,
+      }));
+    }
+  };
+
   // Find currently active cue based on video currentTime
   const activeCue = useMemo(() => {
     if (!cues.length) return null;
@@ -155,6 +235,7 @@ export function CaptionCueWorkspace({
       (cue) => currentTime >= cue.start_time && currentTime < cue.end_time
     ) || null;
   }, [cues, currentTime]);
+
 
   // Auto-scroll or track active cue in cue list if playing
   useEffect(() => {
@@ -317,6 +398,8 @@ export function CaptionCueWorkspace({
         return "top-10";
       case "center":
         return "top-1/2 -translate-y-1/2";
+      case "custom":
+        return "";
       default:
         return "bottom-12";
     }
@@ -354,6 +437,8 @@ export function CaptionCueWorkspace({
         font_size: appearance.font_size,
         alignment: appearance.alignment,
         vertical_position: appearance.vertical_position,
+        position_x: appearance.position_x,
+        position_y: appearance.position_y,
         background: appearance.background,
         primary_color: motionSettings.primary_color,
         active_color: motionSettings.active_color,
@@ -667,8 +752,12 @@ export function CaptionCueWorkspace({
 
           {/* Video Player Container */}
           <div
-            className="relative w-full max-w-sm mx-auto aspect-[9/16] bg-black rounded-2xl overflow-hidden border border-[#262b3e] shadow-2xl flex items-center justify-center group"
+            ref={videoContainerRef}
+            className="relative w-full max-w-sm mx-auto aspect-[9/16] bg-black rounded-2xl overflow-hidden border border-[#262b3e] shadow-2xl flex items-center justify-center group select-none touch-none"
             data-testid="caption-video-container"
+            onPointerMove={handleContainerPointerMove}
+            onPointerUp={handleContainerPointerUp}
+            onPointerCancel={handleContainerPointerUp}
           >
             {videoPreviewUrl ? (
               <video
@@ -713,7 +802,7 @@ export function CaptionCueWorkspace({
               </div>
             )}
 
-            {/* Synchronized Caption Overlay: Plain vs Motion */}
+            {/* Synchronized Caption Overlay: Plain vs Motion with Free Dragging */}
             {activeCue &&
               (captionMode === "motion" ? (
                 <MotionCaptionOverlay
@@ -721,18 +810,55 @@ export function CaptionCueWorkspace({
                   currentTime={currentTime}
                   motionSettings={motionSettings}
                   appearance={appearance}
+                  isDragging={isDraggingCaption}
+                  onPointerDown={handleCaptionPointerDown}
+                  onPointerMove={handleContainerPointerMove}
+                  onPointerUp={handleContainerPointerUp}
                 />
               ) : (
                 <div
-                  className={`absolute inset-x-4 pointer-events-none flex flex-col ${getVerticalClass()} ${getAlignmentClass()}`}
+                  className={`absolute pointer-events-auto touch-none select-none z-20 flex flex-col ${getAlignmentClass()} ${getVerticalClass()} ${
+                    isDraggingCaption ? "cursor-grabbing" : "cursor-grab"
+                  }`}
+                  style={{
+                    left: `${(appearance.position_x ?? 0.5) * 100}%`,
+                    top:
+                      appearance.vertical_position === "custom"
+                        ? `${(appearance.position_y ?? 0.85) * 100}%`
+                        : undefined,
+                    transform:
+                      appearance.vertical_position === "custom" || appearance.vertical_position === "center"
+                        ? "translate(-50%, -50%)"
+                        : "translateX(-50%)",
+                  }}
+                  onPointerDown={handleCaptionPointerDown}
+                  onPointerMove={handleContainerPointerMove}
+                  onPointerUp={handleContainerPointerUp}
                   data-testid="active-caption-overlay"
+                  data-position-x={appearance.position_x ?? 0.5}
+                  data-position-y={appearance.position_y ?? 0.85}
                 >
+                  {/* Position Badge when dragging */}
+                  {isDraggingCaption && (
+                    <div className="absolute -top-7 left-1/2 -translate-x-1/2 flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-mono bg-cyan-500 text-black font-bold shadow-xl border border-cyan-300 pointer-events-none whitespace-nowrap animate-in fade-in zoom-in-95 duration-100">
+                      <Move className="w-2.5 h-2.5" />
+                      <span>
+                        X: {Math.round((appearance.position_x ?? 0.5) * 100)}% | Y:{" "}
+                        {Math.round((appearance.position_y ?? 0.85) * 100)}%
+                      </span>
+                    </div>
+                  )}
+
                   <div
                     className={`inline-block font-sans font-semibold tracking-wide transition-all ${
                       appearance.background === "box"
                         ? "bg-black/85 text-white px-3.5 py-2 rounded-xl shadow-lg border border-white/10"
+                        : appearance.background === "outline"
+                        ? "text-white drop-shadow-[0_0_8px_rgba(0,0,0,1)] text-stroke"
                         : "text-white drop-shadow-[0_2px_4px_rgba(0,0,0,0.95)]"
-                    } ${getFontSizeClass()}`}
+                    } ${getFontSizeClass()} ${
+                      isDraggingCaption ? "ring-2 ring-cyan-400 ring-offset-2 ring-offset-black/60" : ""
+                    }`}
                   >
                     {activeCue.lines && activeCue.lines.length > 0 ? (
                       activeCue.lines.map((line, idx) => (
@@ -754,14 +880,119 @@ export function CaptionCueWorkspace({
             <span className="text-cyan-300 font-bold">{formatSeconds(currentTime)}</span>
           </div>
 
-          {/* Plain Caption Basic Appearance Controls */}
-          <div className="p-3.5 rounded-xl border border-[#232738] bg-[#141622] space-y-3">
-            <h4 className="text-[11px] font-bold text-slate-300 uppercase tracking-wider">
-              Plain Caption Appearance
-            </h4>
+          {/* Caption Positioning & Appearance Controls */}
+          <div className="p-3.5 rounded-xl border border-[#232738] bg-[#141622] space-y-3.5">
+            <div className="flex items-center justify-between border-b border-[#21253a] pb-2">
+              <h4 className="text-[11px] font-bold text-slate-300 uppercase tracking-wider flex items-center gap-1.5">
+                <Move className="w-3.5 h-3.5 text-cyan-400" />
+                <span>Caption Placement & Positioning</span>
+              </h4>
+              <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-cyan-500/10 text-cyan-300 border border-cyan-500/20">
+                X: {Math.round((appearance.position_x ?? 0.5) * 100)}% | Y:{" "}
+                {Math.round((appearance.position_y ?? 0.85) * 100)}%
+              </span>
+            </div>
 
-            {/* Alignment & Position */}
-            <div className="grid grid-cols-2 gap-2 text-xs">
+            {/* Position Shortcuts */}
+            <div>
+              <label className="block text-[10px] text-slate-400 mb-1 font-medium">
+                Position Shortcuts
+              </label>
+              <div className="grid grid-cols-4 gap-1.5 text-xs">
+                {(
+                  [
+                    { id: "top", label: "Top (15%)" },
+                    { id: "center", label: "Center (50%)" },
+                    { id: "bottom", label: "Bottom (85%)" },
+                    { id: "reset", label: "Reset" },
+                  ] as const
+                ).map((preset) => {
+                  const isSelected =
+                    preset.id === "reset"
+                      ? false
+                      : appearance.vertical_position === preset.id;
+                  return (
+                    <button
+                      key={preset.id}
+                      type="button"
+                      aria-label={preset.id}
+                      onClick={() => handlePositionPreset(preset.id)}
+                      className={`py-1.5 px-2 rounded-lg text-center text-xs font-medium transition border ${
+                        isSelected
+                          ? "bg-cyan-500 border-cyan-400 text-black font-bold shadow-md shadow-cyan-950/40"
+                          : "bg-[#1b1e2e] border-[#292f46] text-slate-300 hover:text-white hover:border-slate-500"
+                      }`}
+                    >
+                      {preset.label}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Fine-Tuning Numerical Sliders */}
+            <div className="grid grid-cols-2 gap-3 pt-1">
+              <div>
+                <div className="flex items-center justify-between text-[10px] text-slate-400 mb-1">
+                  <span>Horizontal (X)</span>
+                  <span className="font-mono text-cyan-300 font-bold">
+                    {Math.round((appearance.position_x ?? 0.5) * 100)}%
+                  </span>
+                </div>
+                <input
+                  type="range"
+                  min={8}
+                  max={92}
+                  step={1}
+                  value={Math.round((appearance.position_x ?? 0.5) * 100)}
+                  onChange={(e) => {
+                    const val = parseInt(e.target.value, 10) / 100;
+                    setAppearance((a) => ({
+                      ...a,
+                      position_x: val,
+                      vertical_position: "custom",
+                    }));
+                  }}
+                  className="w-full accent-cyan-400 cursor-pointer h-1.5 bg-[#1b1e2f] rounded-lg"
+                />
+              </div>
+
+              <div>
+                <div className="flex items-center justify-between text-[10px] text-slate-400 mb-1">
+                  <span>Vertical (Y)</span>
+                  <span className="font-mono text-cyan-300 font-bold">
+                    {Math.round((appearance.position_y ?? 0.85) * 100)}%
+                  </span>
+                </div>
+                <input
+                  type="range"
+                  min={8}
+                  max={92}
+                  step={1}
+                  value={Math.round((appearance.position_y ?? 0.85) * 100)}
+                  onChange={(e) => {
+                    const val = parseInt(e.target.value, 10) / 100;
+                    let vPos: "top" | "center" | "bottom" | "custom" = "custom";
+                    if (Math.abs(val - 0.15) < 0.05) vPos = "top";
+                    else if (Math.abs(val - 0.50) < 0.05) vPos = "center";
+                    else if (Math.abs(val - 0.85) < 0.05) vPos = "bottom";
+                    setAppearance((a) => ({
+                      ...a,
+                      position_y: val,
+                      vertical_position: vPos,
+                    }));
+                  }}
+                  className="w-full accent-cyan-400 cursor-pointer h-1.5 bg-[#1b1e2f] rounded-lg"
+                />
+              </div>
+            </div>
+
+            <p className="text-[10px] text-slate-400/90 leading-tight">
+              💡 Drag the caption directly on the 9:16 video screen or adjust sliders above for precise placement.
+            </p>
+
+            {/* Alignment & Typography Styling */}
+            <div className="pt-2 border-t border-[#21253a] grid grid-cols-3 gap-2 text-xs">
               <div>
                 <label className="block text-[10px] text-slate-400 mb-1">
                   Text Alignment
@@ -786,33 +1017,6 @@ export function CaptionCueWorkspace({
                 </div>
               </div>
 
-              <div>
-                <label className="block text-[10px] text-slate-400 mb-1">
-                  Vertical Position
-                </label>
-                <div className="flex items-center rounded-lg bg-[#1b1e2e] p-0.5 border border-[#292f46]">
-                  {(["top", "center", "bottom"] as const).map((pos) => (
-                    <button
-                      key={pos}
-                      type="button"
-                      onClick={() =>
-                        setAppearance((a) => ({ ...a, vertical_position: pos }))
-                      }
-                      className={`flex-1 py-1 rounded text-center text-xs capitalize transition ${
-                        appearance.vertical_position === pos
-                          ? "bg-cyan-500 text-black font-bold"
-                          : "text-slate-400 hover:text-white"
-                      }`}
-                    >
-                      {pos}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            </div>
-
-            {/* Font Size & Background */}
-            <div className="grid grid-cols-2 gap-2 text-xs">
               <div>
                 <label className="block text-[10px] text-slate-400 mb-1">
                   Font Size
@@ -842,7 +1046,7 @@ export function CaptionCueWorkspace({
                   Background
                 </label>
                 <div className="flex items-center rounded-lg bg-[#1b1e2e] p-0.5 border border-[#292f46]">
-                  {(["none", "box"] as const).map((bg) => (
+                  {(["none", "box", "outline"] as const).map((bg) => (
                     <button
                       key={bg}
                       type="button"
@@ -855,7 +1059,7 @@ export function CaptionCueWorkspace({
                           : "text-slate-400 hover:text-white"
                       }`}
                     >
-                      {bg === "none" ? "None" : "Box"}
+                      {bg === "none" ? "None" : bg === "outline" ? "Outline" : "Box"}
                     </button>
                   ))}
                 </div>

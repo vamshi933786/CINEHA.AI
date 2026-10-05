@@ -101,9 +101,11 @@ export interface CaptionCueGenerationResponse {
 
 export interface CaptionAppearanceSettings {
   alignment: "left" | "center" | "right";
-  vertical_position: "top" | "center" | "bottom";
+  vertical_position: "top" | "center" | "bottom" | "custom";
+  position_x?: number; // 0..1 (default 0.5 for center)
+  position_y?: number; // 0..1 (default 0.85 for bottom)
   font_size: "small" | "medium" | "large";
-  background: "none" | "box";
+  background: "none" | "box" | "outline";
   show_safe_area: boolean;
 }
 
@@ -114,7 +116,10 @@ export type MotionCaptionPreset =
   | "karaoke"
   | "bold_bounce"
   | "minimal_fade"
-  | "punchy";
+  | "punchy"
+  | "hormozi"
+  | "neon_pulse"
+  | "editorial";
 
 export type MotionEntranceAnimation = "none" | "fade" | "pop" | "slide_up";
 export type MotionExitAnimation = "none" | "fade" | "slide_down";
@@ -323,7 +328,9 @@ export interface CaptionRenderOptions {
   preset: MotionCaptionPreset;
   font_size: "small" | "medium" | "large";
   alignment: "left" | "center" | "right";
-  vertical_position: "top" | "center" | "bottom";
+  vertical_position: "top" | "center" | "bottom" | "custom";
+  position_x?: number;
+  position_y?: number;
   background: "none" | "box" | "outline";
   primary_color: string;
   active_color: string;
