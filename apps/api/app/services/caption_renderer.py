@@ -146,9 +146,11 @@ def resolve_caption_font(language: str) -> Tuple[str, Optional[str]]:
 
         # 2. Known Telugu font paths on macOS / Linux
         candidate_paths = [
-            # macOS system font locations
-            ("/System/Library/Fonts/Supplemental/Telugu Sangam MN.ttc", "Telugu Sangam MN"),
+            # macOS system font locations (Kohinoor Telugu has full OpenType GSUB/GPOS shaping for libass)
             ("/System/Library/Fonts/KohinoorTelugu.ttc", "Kohinoor Telugu"),
+            ("/Library/Fonts/KohinoorTelugu.ttc", "Kohinoor Telugu"),
+            ("/System/Library/Fonts/Supplemental/KohinoorTelugu.ttc", "Kohinoor Telugu"),
+            ("/System/Library/Fonts/Supplemental/Telugu Sangam MN.ttc", "Telugu Sangam MN"),
             ("/System/Library/Fonts/Supplemental/Telugu MN.ttc", "Telugu MN"),
             ("/Library/Fonts/Telugu Sangam MN.ttc", "Telugu Sangam MN"),
             ("/Library/Fonts/Arial Unicode.ttf", "Arial Unicode MS"),

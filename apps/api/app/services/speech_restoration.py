@@ -1,6 +1,7 @@
 import re
 import json
 import logging
+import asyncio
 import httpx
 from abc import ABC, abstractmethod
 from typing import List, Optional, Dict, Any
@@ -235,72 +236,84 @@ class GeminiSpeechRestorationProvider(BaseSpeechRestorationProvider):
             },
         }
 
-        try:
-            async with httpx.AsyncClient(timeout=self.timeout) as client:
-                response = await client.post(url, json=request_body)
+        max_attempts = 2
+        for attempt in range(max_attempts):
+            try:
+                async with httpx.AsyncClient(timeout=self.timeout) as client:
+                    response = await client.post(url, json=request_body)
 
-            if response.status_code != 200:
-                logger.warning(
-                    "Gemini speech restoration HTTP error (status %d). Falling back to local Whisper transcript.",
-                    response.status_code,
-                )
-                return self._fallback_result(
-                    segments=segments,
-                    reason=f"http_error_{response.status_code}",
-                )
+                if response.status_code == 503 and attempt < max_attempts - 1:
+                    logger.info("Gemini 503 transient error, retrying in 1.5s...")
+                    await asyncio.sleep(1.5)
+                    continue
 
-            data = response.json()
-            raw_text = data["candidates"][0]["content"]["parts"][0]["text"]
-            parsed_json = json.loads(raw_text)
-
-            # Strict 1:1 validation
-            validated_items = validate_restoration_output(segments, parsed_json)
-
-            # Build restored segments while strictly preserving original timestamps
-            restored_segments: List[TranscriptSegment] = []
-            for orig, item in zip(segments, validated_items):
-                restored_text = str(item["text"]).strip()
-                restored_segments.append(
-                    TranscriptSegment(
-                        id=orig.id,
-                        text=restored_text,
-                        start_time=orig.start_time,  # 100% authoritative Whisper start
-                        end_time=orig.end_time,      # 100% authoritative Whisper end
-                        words=[],                    # Word timestamps not fabricated
-                        speaker=orig.speaker,
-                        confidence=0.95,
+                if response.status_code != 200:
+                    logger.warning(
+                        "Gemini speech restoration HTTP error (status %d). Falling back to local Whisper transcript.",
+                        response.status_code,
                     )
+                    return self._fallback_result(
+                        segments=segments,
+                        reason=f"http_error_{response.status_code}",
+                    )
+
+                data = response.json()
+                raw_text = data["candidates"][0]["content"]["parts"][0]["text"]
+                parsed_json = json.loads(raw_text)
+
+                # Strict 1:1 validation
+                validated_items = validate_restoration_output(segments, parsed_json)
+
+                # Build restored segments while strictly preserving original timestamps
+                restored_segments: List[TranscriptSegment] = []
+                for orig, item in zip(segments, validated_items):
+                    restored_text = str(item["text"]).strip()
+                    restored_segments.append(
+                        TranscriptSegment(
+                            id=orig.id,
+                            text=restored_text,
+                            start_time=orig.start_time,  # 100% authoritative Whisper start
+                            end_time=orig.end_time,      # 100% authoritative Whisper end
+                            words=[],                    # Word timestamps not fabricated
+                            speaker=orig.speaker,
+                            confidence=0.95,
+                        )
+                    )
+
+                full_text = "\n\n".join(s.text for s in restored_segments)
+                return SpeechRestorationResult(
+                    segments=restored_segments,
+                    full_text=full_text,
+                    is_restored=True,
+                    provider_name=self.provider_name,
+                    notice=None,
+                    metadata={
+                        "model": self.model,
+                        "restored_count": len(restored_segments),
+                        "speech_restoration_applied": True,
+                    },
                 )
 
-            full_text = "\n\n".join(s.text for s in restored_segments)
-            return SpeechRestorationResult(
-                segments=restored_segments,
-                full_text=full_text,
-                is_restored=True,
-                provider_name=self.provider_name,
-                notice=None,
-                metadata={
-                    "model": self.model,
-                    "restored_count": len(restored_segments),
-                    "speech_restoration_applied": True,
-                },
-            )
-
-        except SpeechRestorationValidationError as e:
-            logger.warning(
-                "Gemini Telugu speech restoration contract validation failed: %s. Falling back to local Whisper transcript.",
-                str(e),
-            )
-            return self._fallback_result(segments=segments, reason="contract_validation_failed")
-        except httpx.TimeoutException:
-            logger.warning("Gemini Telugu speech restoration timed out. Falling back to local Whisper transcript.")
-            return self._fallback_result(segments=segments, reason="timeout")
-        except Exception as e:
-            logger.warning(
-                "Gemini Telugu speech restoration error (%s). Falling back to local Whisper transcript.",
-                type(e).__name__,
-            )
-            return self._fallback_result(segments=segments, reason=f"error_{type(e).__name__}")
+            except SpeechRestorationValidationError as e:
+                logger.warning(
+                    "Gemini Telugu speech restoration contract validation failed: %s. Falling back to local Whisper transcript.",
+                    str(e),
+                )
+                return self._fallback_result(segments=segments, reason="contract_validation_failed")
+            except (httpx.RemoteProtocolError, httpx.ConnectError, httpx.TimeoutException) as e:
+                if attempt < max_attempts - 1:
+                    logger.info("Gemini transient network error (%s), retrying in 1.5s...", type(e).__name__)
+                    await asyncio.sleep(1.5)
+                    continue
+                logger.warning("Gemini speech restoration network error (%s). Falling back.", type(e).__name__)
+                reason = "timeout" if isinstance(e, httpx.TimeoutException) else f"network_{type(e).__name__}"
+                return self._fallback_result(segments=segments, reason=reason)
+            except Exception as e:
+                logger.warning(
+                    "Gemini Telugu speech restoration error (%s). Falling back to local Whisper transcript.",
+                    type(e).__name__,
+                )
+                return self._fallback_result(segments=segments, reason=f"error_{type(e).__name__}")
 
     def _fallback_result(self, segments: List[TranscriptSegment], reason: str) -> SpeechRestorationResult:
         """Safe fallback returning original Whisper segments without modifying timestamps."""

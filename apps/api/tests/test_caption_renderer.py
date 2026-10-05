@@ -557,5 +557,8 @@ def test_telugu_system_font_resolution():
     font_name, font_dir = resolve_caption_font("Telugu")
     assert font_name in ("Telugu Sangam MN", "Kohinoor Telugu", "Telugu MN", "Noto Sans Telugu", "Lohit Telugu")
     assert font_dir is not None
+    # On macOS systems with KohinoorTelugu.ttc installed, Kohinoor Telugu is prioritized for OpenType shaping
+    if os.path.exists("/System/Library/Fonts/KohinoorTelugu.ttc"):
+        assert font_name == "Kohinoor Telugu"
 
 
