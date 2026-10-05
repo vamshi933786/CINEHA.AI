@@ -232,3 +232,31 @@ This document records chronological development checkpoints, environment finding
 
 
 
+
+## Log Entry 013: Creator Profile & Persona Engine Upgrade
+- **Date:** 2026-10-05
+- **Module:** Creator Profile / Persona Engine (`/profile`)
+- **Author:** Antigravity Architect / Pair Programmer
+- **Summary of Implementation:**
+  Transformed the Creator Profile from a basic form into a full Creator Persona Engine that serves as the central identity and voice authority for all AI generation pipelines (Hook Generator, Script Studio, Retention Analyzer, and Script Optimizer):
+  1. **Extended SQLAlchemy Model & SQLite Migration**:
+     - Extended `CreatorProfile` in `apps/api/app/models/creator_profile.py` with 28 new fields across Identity, Content & Pillars, Audience Persona, Voice & Style, Platform Preferences, and Brand Guidance.
+     - Implemented idempotent SQLite column addition (`sync_sqlite_schema`) in `apps/api/app/core/database.py` to prevent data loss or table drop errors on existing local databases.
+  2. **Deterministic Profile Completeness Scoring**:
+     - 7 weighted categories (0–100%): Identity & Bio (15%), Content & Pillars (20%), Audience (20%), Voice & Style (15%), Language (10%), Platforms (10%), Brand Guidance & CTA (10%).
+     - Implemented on both backend (`calculate_profile_completeness`) and client (`lib/profileHelpers.ts`) for zero-lag live feedback while typing.
+  3. **Live AI Persona Preview & Synthesis**:
+     - `PersonaPreviewPanel` renders instant client synthesis of creator summary, simulated hook (0–3s), simulated script intro, and call-to-action.
+     - "Generate AI Persona Summary" button calls `POST /profile/generate-summary` using Gemini with deterministic fallback.
+  4. **Downstream AI Agent Injection**:
+     - Created `CreatorPersonaContext` schema and `GET /profile/persona` endpoint.
+     - Enriched `HookAgent` and `ScriptAgent` prompts to inject tone matrix, storytelling style, energy, vocabulary level, signature phrases, and brand rules.
+  5. **Creator Profile Workspace UI**:
+     - 2-column desktop layout (`CreatorProfileWorkspace.tsx`) with form/summary on left and sticky live preview + completeness card on right.
+     - Sectioned tabbed editor (`ProfileForm.tsx`) with accessible `TagListManager` for dynamic list inputs, form dirty checking, and reset actions.
+     - Rich persona showcase card (`ProfileSummaryCard.tsx`) displaying archetype, voice matrix pills, audience demographics, and brand rules.
+  6. **Testing & Verification**:
+     - Backend tests: 194/194 passed (`pytest apps/api/tests`).
+     - Frontend tests: 195/195 passed across 19 test files (`npm test`).
+     - TypeScript: 0 errors (`npx tsc --noEmit`).
+     - Production Build: PASS (`npm run build`, 15 static pages).

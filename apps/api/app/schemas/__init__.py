@@ -4,6 +4,8 @@ from app.schemas.creator_profile import (
     CreatorProfileCreateOrUpdate,
     CreatorProfileResponse,
     ProfileContainerResponse,
+    CreatorPersonaContext,
+    ProfileCompleteness,
 )
 from app.schemas.script import (
     ScriptSegmentSchema,

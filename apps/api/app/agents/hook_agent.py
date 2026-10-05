@@ -42,6 +42,23 @@ class HookAgent:
         language = request.language or (active_persona.primary_language if active_persona else "English")
         persona_name = active_persona.creator_name if active_persona else None
 
+        # Enrich context with creator persona voice & brand guidance
+        extra_context_parts = []
+        if request.context:
+            extra_context_parts.append(request.context)
+        if active_persona:
+            if getattr(active_persona, "energy", None):
+                extra_context_parts.append(f"Energy: {active_persona.energy}")
+            if getattr(active_persona, "vocabulary", None):
+                extra_context_parts.append(f"Vocabulary: {active_persona.vocabulary}")
+            if getattr(active_persona, "words_to_use", None) and active_persona.words_to_use:
+                extra_context_parts.append(f"Signature words to use: {', '.join(active_persona.words_to_use)}")
+            if getattr(active_persona, "words_to_avoid", None) and active_persona.words_to_avoid:
+                extra_context_parts.append(f"Words to strictly avoid: {', '.join(active_persona.words_to_avoid)}")
+            if getattr(active_persona, "topics_to_avoid", None) and active_persona.topics_to_avoid:
+                extra_context_parts.append(f"Topics to avoid: {', '.join(active_persona.topics_to_avoid)}")
+        enriched_context = " | ".join(extra_context_parts)
+
         # Desired categories (defaults to all 9 if not specified)
         categories = request.categories or VALID_TAXONOMIES
 
@@ -56,7 +73,7 @@ class HookAgent:
                 audience=audience,
                 categories=categories,
                 count=request.count,
-                context=request.context or "",
+                context=enriched_context,
             )
         except Exception as e:
             logger.error(f"Error in HookAgent provider execution: {e}")

@@ -81,3 +81,12 @@ npm test
 cd apps/api
 pytest -v --asyncio-mode=auto
 ```
+
+---
+
+## 7. Current Test Suite Status (October 2026)
+
+- **Backend Pytest**: **194/194 tests passing** across 19 test files (including `test_profile.py` with 9 tests covering extended schema, list deduplication, completeness scoring, persona context endpoint, and Gemini summary generation with deterministic fallback).
+- **Frontend Vitest**: **195/195 tests passing** across 19 test files (including `profile.test.tsx` with 9 tests covering `ProfileSummaryCard`, `ProfileForm`, `TagListManager`, `CompletenessCard`, and `PersonaPreviewPanel`).
+- **TypeScript**: **0 errors** (`npx tsc --noEmit`).
+- **Next.js Production Build**: **PASS** (15 static pages rendered).

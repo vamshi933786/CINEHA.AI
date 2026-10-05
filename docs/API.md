@@ -58,28 +58,56 @@ Returns sanitized AI provider diagnostics, models, and capabilities without expo
 
 ---
 
-## 2. Creator Profile Endpoints
+## 2. Creator Profile & Persona Engine Endpoints
 
 ### `GET /profile`
-Retrieves the saved creator persona and generation preferences.
+Retrieves the saved creator persona, generation preferences, and deterministic completeness score.
 
 ### `PUT /profile`
-Updates creator persona (niche, target audience, preferred language, tone, CTA style).
+Creates or updates creator persona (identity, niche & pillars, audience, voice & style matrix, platforms, language, brand guidance).
 
 **Request Body:**
 ```json
 {
   "creator_name": "Sai Panga",
-  "brand_name": "Cinehashoots",
-  "niche": "Cinematography & Mobile Filmmaking",
-  "target_audience": "Beginner creators & aspiring DP/editors",
-  "preferred_platforms": ["instagram_reels", "youtube_shorts"],
-  "content_style": "High aesthetic, practical breakdowns, cinematic B-roll",
-  "preferred_language": "te_en",
-  "tone": "Authoritative yet encouraging",
-  "cta_style": "Save this reel for your next shoot"
+  "display_name": "@cinehashoots",
+  "creator_type": "Filmmaker",
+  "niche": "Cinematography",
+  "secondary_niches": ["Mobile Filmmaking", "Lighting Setups"],
+  "content_pillars": ["Camera Angles", "Cinematic LUTs"],
+  "topics_to_avoid": ["Politics"],
+  "target_audience": "Beginner creators & aspiring mobile filmmakers",
+  "target_audience_age": "18–24",
+  "audience_sophistication": "Intermediate",
+  "audience_interests": ["DaVinci Resolve", "Smartphone filmmaking"],
+  "audience_pain_points": ["Flat lighting", "Shaky footage"],
+  "content_tones": ["Educational", "Cinematic", "Conversational"],
+  "energy": "High-energy",
+  "humor": "Light",
+  "storytelling_style": "Story-driven",
+  "vocabulary": "Balanced",
+  "primary_language": "Tanglish",
+  "secondary_languages": ["Telugu"],
+  "script_preference": "Tanglish / Romanized Telugu",
+  "platforms": ["Instagram Reels", "YouTube Shorts"],
+  "preferred_aspect_ratio": "9:16",
+  "typical_duration": "45 sec",
+  "cta_style": "Save",
+  "secondary_cta_styles": ["Follow"],
+  "content_goals": ["Increase retention", "Build personal brand"],
+  "brand_positioning": "Practical mobile filmmaking without cinema cameras",
+  "core_message": "Tell big stories with small gear",
+  "words_to_use": ["Cinema look", "Frame cheddam"],
+  "words_to_avoid": ["Don't forget to like"],
+  "style_rules": ["Hook within first 2.5 seconds"]
 }
 ```
+
+### `GET /profile/persona`
+Retrieves the distilled `CreatorPersonaContext` prepared specifically for injection into downstream AI agents (Hook Generator, Script Studio, Retention Analyzer, Script Optimizer).
+
+### `POST /profile/generate-summary`
+Synthesizes a live persona summary, sample hook, intro, and call-to-action using Gemini with deterministic fallback.
 
 ---
 

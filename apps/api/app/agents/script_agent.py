@@ -42,6 +42,26 @@ class ScriptAgent:
         # Resolve language
         language = request.language or (db_profile.primary_language if db_profile else "English")
 
+        # Resolve CTA: user override takes precedence, otherwise profile CTA style
+        cta = request.cta
+        if not cta and db_profile and getattr(db_profile, "cta_style", None):
+            cta = f"Call to action style: {db_profile.cta_style}"
+
+        # Resolve extended context
+        extra_context_parts = []
+        if request.context:
+            extra_context_parts.append(request.context)
+        if db_profile:
+            if getattr(db_profile, "storytelling_style", None):
+                extra_context_parts.append(f"Storytelling style: {db_profile.storytelling_style}")
+            if getattr(db_profile, "words_to_use", None) and db_profile.words_to_use:
+                extra_context_parts.append(f"Signature vocabulary: {', '.join(db_profile.words_to_use)}")
+            if getattr(db_profile, "words_to_avoid", None) and db_profile.words_to_avoid:
+                extra_context_parts.append(f"Words to strictly avoid: {', '.join(db_profile.words_to_avoid)}")
+            if getattr(db_profile, "custom_tone_notes", None):
+                extra_context_parts.append(f"Voice guidance: {db_profile.custom_tone_notes}")
+        enriched_context = " | ".join(extra_context_parts) if extra_context_parts else None
+
         try:
             result = await self.provider.generate_script(
                 topic=request.topic,
@@ -50,11 +70,11 @@ class ScriptAgent:
                 duration_seconds=request.duration_seconds,
                 tone=tone,
                 hook=request.hook,
-                cta=request.cta,
+                cta=cta,
                 creator_name=creator_name,
                 niche=niche,
                 audience=audience,
-                context=request.context,
+                context=enriched_context,
             )
         except Exception as e:
             logger.error(f"Error in ScriptAgent provider execution: {e}. Falling back to heuristic mock.")

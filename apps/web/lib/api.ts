@@ -3,6 +3,8 @@ import type { HealthResponse, HealthProvidersResponse } from "../types/api";
 import type {
   CreatorProfileData,
   ProfileContainerResponse,
+  CreatorPersonaContext,
+  PersonaPreviewResponse,
 } from "../types/creatorProfile";
 import type {
   HookGenerationRequest,
@@ -176,6 +178,42 @@ export class ApiClient {
 
     const data = await response.json();
     return data as ProfileContainerResponse;
+  }
+
+  async getPersonaContext(): Promise<CreatorPersonaContext> {
+    const response = await fetch(`${this.baseUrl}/profile/persona`, {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      cache: "no-store",
+    });
+
+    if (!response.ok) {
+      throw new Error(`Failed to load persona context (status: ${response.status})`);
+    }
+
+    const data = await response.json();
+    return data as CreatorPersonaContext;
+  }
+
+  async generatePersonaSummary(
+    profileData?: CreatorProfileData
+  ): Promise<PersonaPreviewResponse> {
+    const response = await fetch(`${this.baseUrl}/profile/generate-summary`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: profileData ? JSON.stringify(profileData) : undefined,
+    });
+
+    if (!response.ok) {
+      throw new Error(`Failed to generate persona summary (status: ${response.status})`);
+    }
+
+    const data = await response.json();
+    return data as PersonaPreviewResponse;
   }
 
   async generateHooks(

@@ -12,6 +12,7 @@ import type {
   CreatorProfile,
   CreatorProfileData,
   ProfileContainerResponse,
+  PersonaPreviewResponse,
 } from "@/types/creatorProfile";
 
 interface CreatorProfileContextType {
@@ -21,6 +22,7 @@ interface CreatorProfileContextType {
   error: string | null;
   refreshProfile: () => Promise<void>;
   saveProfile: (data: CreatorProfileData) => Promise<ProfileContainerResponse>;
+  generatePersonaSummary: (data?: CreatorProfileData) => Promise<PersonaPreviewResponse>;
 }
 
 const CreatorProfileContext = createContext<CreatorProfileContextType | null>(
@@ -75,6 +77,13 @@ export function CreatorProfileProvider({
     []
   );
 
+  const generatePersonaSummary = useCallback(
+    async (data?: CreatorProfileData): Promise<PersonaPreviewResponse> => {
+      return await api.generatePersonaSummary(data);
+    },
+    []
+  );
+
   return (
     <CreatorProfileContext.Provider
       value={{
@@ -84,6 +93,7 @@ export function CreatorProfileProvider({
         error,
         refreshProfile,
         saveProfile,
+        generatePersonaSummary,
       }}
     >
       {children}

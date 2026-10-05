@@ -23,12 +23,39 @@ erDiagram
     CREATOR_PROFILE {
         string id PK
         string creator_name
-        string brand_name
+        string display_name
+        string creator_type
+        string creator_bio
+        string location
         string niche
+        json secondary_niches
+        json content_pillars
+        json topics_to_avoid
         string target_audience
-        json preferred_platforms
-        string preferred_language
-        string tone
+        string target_audience_age
+        json audience_interests
+        json audience_pain_points
+        string audience_sophistication
+        json content_tones
+        string energy
+        string humor
+        string storytelling_style
+        string vocabulary
+        string custom_tone_notes
+        string primary_language
+        json secondary_languages
+        string script_preference
+        json platforms
+        string preferred_aspect_ratio
+        string typical_duration
+        string cta_style
+        json secondary_cta_styles
+        json content_goals
+        string brand_positioning
+        string core_message
+        json words_to_use
+        json words_to_avoid
+        json style_rules
         datetime created_at
         datetime updated_at
     }
