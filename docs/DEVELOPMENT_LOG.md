@@ -179,6 +179,28 @@ This document records chronological development checkpoints, environment finding
 - **Known Limitations & Future Work:**
   Current implementation visualizes the authentic idle architecture blueprint and interactive simulation presets without fabricating live agent telemetry. Live streaming execution telemetry will be integrated in Phase 9/11 with the background orchestrator.
 
+---
+
+## Log Entry 011: Phase 11 — Video Retention Analyzer Upgrade
+- **Date:** 2026-10-05
+- **Phase:** Phase 11 (Video Retention Analyzer)
+- **Author:** Antigravity Architect / Pair Programmer
+- **Summary of Implementation:**
+  Transformed the `/video-analysis` module from a placeholder into a complete multimodal short-form video retention workspace:
+  1. **Upload & Container Validation**: Enforced strict 100MB limit via `MAX_VIDEO_SIZE_BYTES=100*1024*1024`, non-empty checks, extension whitelist (`.mp4`, `.mov`, `.webm`), and magic-byte signature inspection (`ftyp` / EBML).
+  2. **Technical Metadata Extraction**: Probed input video parameters via FFmpeg (resolution, duration, fps, and audio stream presence).
+  3. **Speech-to-Text Integration**: Reused on-device Local Whisper pipeline with genuine acoustic timestamps and Two-Stage Hybrid Telugu restoration (Gemini 3.5 Flash Lite) without requiring cloud Whisper credits. Built graceful degradation for videos without audio.
+  4. **10-Dimensional Scoring Model (0–100)**: Evaluated Hook Strength, Opening Clarity, Retention Structure, Pacing, Information Density, Filler / Repetition, Story / Narrative Flow, Curiosity / Open Loops, CTA Strength, and Caption / Accessibility Readiness. Bounded strictly between 0 and 100 with empirical evidence and recommendations.
+  5. **Narrative Segment Mapping**: Segmented real Whisper speech timings into `[HOOK]`, `[CONTEXT]`, `[VALUE]`, `[PAYOFF]`, and `[CTA]` without fabricating timestamps.
+  6. **Gemini Semantic Analysis**: Structured critique validating qualitative strengths/weaknesses with automatic fallback to local heuristics on network error or timeout.
+  7. **Interactive Workspace UI**: Built `VideoAnalysisWorkspace`, `VideoPreview` (HTML5 custom controls with scrub bar and `seekTo` handle), `AnalysisScoreCard`, `MetricScoreGrid`, `AnalysisTimeline` (click-to-seek video), `FindingsAndRecommendations`, `TranscriptPanel`, and `HandoffActions` (handoff to Script Analyzer and Script Optimizer).
+  8. **Testing & Build Verification**:
+     - Backend tests: 189/189 passed (`apps/api/tests/test_video_analysis.py`).
+     - Frontend tests: 174/174 passed (`apps/web/tests/videoAnalysis.test.tsx`).
+     - TypeScript: `npx tsc --noEmit` clean with 0 errors.
+     - Production Build: `npm run build` compiled 15/15 static pages successfully.
+
+
 
 
 

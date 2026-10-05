@@ -42,6 +42,7 @@ import type {
   CaptionRenderResponse,
   CaptionPipelineResponse,
 } from "../types/caption";
+import type { VideoAnalysisResponse } from "../types/videoAnalysis";
 
 export class ApiClient {
   private baseUrl: string;
@@ -740,6 +741,71 @@ export class ApiClient {
 
   getRenderDownloadUrl(renderId: string): string {
     return `${this.baseUrl}/captions/render/${encodeURIComponent(renderId)}/download`;
+  }
+
+  async analyzeVideo(
+    file: File,
+    language: string = "English",
+    provider?: string
+  ): Promise<VideoAnalysisResponse> {
+    const formData = new FormData();
+    formData.append("file", file);
+    formData.append("language", language);
+    if (provider) {
+      formData.append("provider", provider);
+    }
+
+    const response = await fetch(`${this.baseUrl}/video-analysis/analyze`, {
+      method: "POST",
+      body: formData,
+    });
+
+    if (!response.ok) {
+      let errorMessage = `Video analysis failed (status: ${response.status})`;
+      try {
+        const errorJson = await response.json();
+        if (errorJson.detail) {
+          if (Array.isArray(errorJson.detail)) {
+            errorMessage = errorJson.detail
+              .map((d: any) => d.msg || JSON.stringify(d))
+              .join(", ");
+          } else {
+            errorMessage = errorJson.detail;
+          }
+        }
+      } catch (_) {}
+      throw new Error(errorMessage);
+    }
+
+    const data = await response.json();
+    return data as VideoAnalysisResponse;
+  }
+
+  async getVideoAnalysis(analysisId: string): Promise<VideoAnalysisResponse> {
+    const response = await fetch(
+      `${this.baseUrl}/video-analysis/${encodeURIComponent(analysisId)}`,
+      {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        cache: "no-store",
+      }
+    );
+
+    if (!response.ok) {
+      let errorMessage = `Failed to fetch video analysis (status: ${response.status})`;
+      try {
+        const errorJson = await response.json();
+        if (errorJson.detail) {
+          errorMessage = typeof errorJson.detail === "string" ? errorJson.detail : JSON.stringify(errorJson.detail);
+        }
+      } catch (_) {}
+      throw new Error(errorMessage);
+    }
+
+    const data = await response.json();
+    return data as VideoAnalysisResponse;
   }
 }
 

@@ -1,5 +1,14 @@
 from fastapi import APIRouter
-from app.api.v1.endpoints import health, profile, hooks, scripts, analyzer, optimizer, captions
+from app.api.v1.endpoints import (
+    health,
+    profile,
+    hooks,
+    scripts,
+    analyzer,
+    optimizer,
+    captions,
+    video_analysis,
+)
 
 api_router = APIRouter()
 
@@ -10,4 +19,5 @@ api_router.include_router(scripts.router, tags=["Script Studio"])
 api_router.include_router(analyzer.router, tags=["Retention Analyzer"])
 api_router.include_router(optimizer.router, tags=["Script Optimizer"])
 api_router.include_router(captions.router, tags=["Caption Studio"])
+api_router.include_router(video_analysis.router, tags=["Video Analysis"])
 

@@ -47,8 +47,16 @@ apps/
 - **API Health:** Verifies `GET /api/v1/health` responds with HTTP 200 and valid JSON schema.
 - **Agent Schema Validation:** Asserts that invalid LLM outputs trigger Pydantic `ValidationError` and engage fallback handlers.
 - **Orchestrator Routing:** Tests full pipeline execution vs quick single-agent generation.
-- **Video Analysis & Script Guardrails:** Asserts rejection of non-video MIME types (e.g. `.exe`, `.pdf`) and files exceeding size limit (>100MB enforced by `MAX_VIDEO_SIZE_MB=100`).
+- **Video Retention Analysis (`test_video_analysis.py`):**
+  - Container validation: 100MB boundary, >100MB rejection (413), zero-byte check (400), extension check (415).
+  - Metadata extraction via FFmpeg probe: dimensions, FPS, duration, audio stream detection.
+  - Silent/no-audio video graceful degradation: returns 200 with `transcript.available=False` and clear limitations notice.
+  - Deterministic metrics scoring bounds: all 10 retention criteria strictly bounded 0–100.
+  - Anti-hallucination timestamps: zero fabricated timestamps; segment timestamps match audio model 1:1.
+  - Gemini semantic analysis: validates structured response and verifies graceful local heuristic fallback on timeout/error.
+  - Database persistence: persists to `video_analyses` and verifies retrieval via `GET /video-analysis/{analysis_id}`.
 - **Database Persistence:** Confirms SQLite/PostgreSQL CRUD operations, cascade deletes, and version increments.
+
 
 ### C. Heuristic Quality Tests
 - Asserts that Telugu script generation outputs proper Telugu and Tenglish vocabulary rather than generic transliteration errors.

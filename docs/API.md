@@ -220,3 +220,21 @@ Unified processing endpoint executing multimodal video inspection and returning 
 - `POST /calendar` — Create a scheduled content entry (linked to script ID).
 - `PUT /calendar/{id}` — Update status (`idea`, `scripted`, `recording`, `editing`, `scheduled`, `published`).
 - `DELETE /calendar/{id}` — Delete calendar entry.
+
+---
+
+## 8. Video Retention Analyzer Endpoints
+
+### `POST /video-analysis/analyze`
+Multipart video ingest and audit. Validates container header (MP4, MOV, WebM up to 100MB), extracts technical metadata via FFmpeg, transcribes speech with Local Whisper (+ Two-Stage Hybrid Telugu restoration), calculates 10 standardized retention criteria (0–100), and enriches with Gemini semantic qualitative critique.
+
+**Form Data:**
+- `file`: Video binary stream (MP4, MOV, WebM, <= 100 MB).
+- `language`: Source language (`English`, `Telugu`, `Tanglish`, `Hindi`).
+- `provider`: Optional provider override (`local_whisper`, `production`, `mock`).
+
+**Response (200 OK):** `VideoAnalysisResponse` with `video` metadata, `overall_score`, `metrics` (10 items), `segments` (timed structural beats), `findings`, `recommendations`, `transcript`, and `limitations`.
+
+### `GET /video-analysis/{analysis_id}`
+Retrieves a previously computed video audit by ID. Returns 404 if the record does not exist.
+
