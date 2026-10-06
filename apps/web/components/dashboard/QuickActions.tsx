@@ -63,7 +63,7 @@ export function QuickActions() {
     <section>
       <div className="flex items-center justify-between mb-4">
         <div>
-          <h3 className="text-sm font-semibold tracking-tight text-white uppercase font-mono">
+          <h3 className="text-sm font-semibold tracking-tight text-cine-text uppercase font-mono">
             Quick Studio Actions
           </h3>
           <p className="text-xs text-cine-muted mt-0.5">
@@ -91,7 +91,7 @@ export function QuickActions() {
                   </Badge>
                 </div>
 
-                <h4 className="font-semibold text-white text-base group-hover:text-cine-accent transition-colors flex items-center gap-1.5">
+                <h4 className="font-semibold text-cine-text text-base group-hover:text-cine-accent transition-colors flex items-center gap-1.5">
                   {action.title}
                 </h4>
 
@@ -100,7 +100,7 @@ export function QuickActions() {
                 </p>
               </div>
 
-              <div className="mt-4 pt-3 border-t border-cine-border/40 flex items-center justify-between text-xs font-medium text-slate-400 group-hover:text-white transition-colors">
+              <div className="mt-4 pt-3 border-t border-cine-border/40 flex items-center justify-between text-xs font-medium text-cine-muted group-hover:text-cine-text transition-colors">
                 <span>Launch Workflow</span>
                 <ArrowRight className="w-3.5 h-3.5 transform group-hover:translate-x-1 transition-transform" />
               </div>

@@ -69,7 +69,7 @@ export function Header({ onMenuToggle }: HeaderProps) {
           onClick={onMenuToggle}
           type="button"
           aria-label="Open mobile navigation menu"
-          className="lg:hidden p-2 rounded-lg text-slate-400 hover:text-white hover:bg-cine-card border border-cine-border focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cine-accent min-h-[44px] min-w-[44px] flex items-center justify-center"
+          className="lg:hidden p-2 rounded-lg text-cine-muted hover:text-cine-text hover:bg-cine-card border border-cine-border focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cine-accent min-h-[44px] min-w-[44px] flex items-center justify-center"
         >
           <Menu className="w-5 h-5" />
         </button>
@@ -83,10 +83,10 @@ export function Header({ onMenuToggle }: HeaderProps) {
           </div>
           <div className="flex flex-col">
             <div className="flex items-center gap-2">
-              <span className="font-extrabold tracking-tight text-white text-base sm:text-lg">
+              <span className="font-extrabold tracking-tight text-cine-text text-base sm:text-lg">
                 CINEHA<span className="text-cine-accent">.AI</span>
               </span>
-              <span className="hidden sm:inline-block text-[10px] px-1.5 py-0.2 rounded bg-cine-accent/20 text-indigo-300 font-mono border border-cine-accent/30">
+              <span className="hidden sm:inline-block text-[10px] px-1.5 py-0.2 rounded bg-cine-accent/15 text-cine-accent dark:text-indigo-300 font-mono border border-cine-accent/30">
                 v1.0
               </span>
             </div>
@@ -137,7 +137,7 @@ export function Header({ onMenuToggle }: HeaderProps) {
           <div className="w-6 h-6 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white text-xs font-bold">
             SP
           </div>
-          <span className="hidden md:inline-block text-xs font-medium text-slate-200">
+          <span className="hidden md:inline-block text-xs font-medium text-cine-text">
             Sai Panga
           </span>
           <ShieldCheck className="w-3.5 h-3.5 text-cine-accent hidden md:inline-block" />

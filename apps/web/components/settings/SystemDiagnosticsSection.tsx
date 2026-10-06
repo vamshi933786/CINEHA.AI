@@ -52,7 +52,7 @@ export function SystemDiagnosticsSection({
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h3 className="text-base font-semibold text-white">System Diagnostics</h3>
+                <h3 className="text-base font-semibold text-cine-text">System Diagnostics</h3>
                 <Badge
                   variant={isHealthy ? "emerald" : "amber"}
                   size="sm"
@@ -60,11 +60,11 @@ export function SystemDiagnosticsSection({
                   {isHealthy ? "Operational" : apiStatus}
                 </Badge>
               </div>
-              <p className="text-xs text-slate-400 mt-0.5 flex items-center gap-1.5">
-                <Clock className="w-3.5 h-3.5 text-slate-500" />
+              <p className="text-xs text-cine-muted mt-0.5 flex items-center gap-1.5">
+                <Clock className="w-3.5 h-3.5 text-cine-muted" />
                 Last inspected: {report?.lastChecked || "Just now"}
                 {report?.latencyMs !== undefined && (
-                  <span className="font-mono text-indigo-300">
+                  <span className="font-mono text-cine-accent dark:text-indigo-300">
                     ({report.latencyMs}ms latency)
                   </span>
                 )}
@@ -93,7 +93,7 @@ export function SystemDiagnosticsSection({
         <Card className="border-cine-border bg-cine-surface/70">
           <CardContent className="p-4 space-y-2">
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2 text-slate-400 text-xs font-medium">
+              <div className="flex items-center gap-2 text-cine-muted text-xs font-medium">
                 <Server className="w-4 h-4 text-indigo-400" />
                 FastAPI Backend
               </div>
@@ -101,12 +101,12 @@ export function SystemDiagnosticsSection({
                 {isHealthy ? "Online" : "Unreachable"}
               </Badge>
             </div>
-            <div className="text-lg font-bold text-white tracking-tight">
+            <div className="text-lg font-bold text-cine-text tracking-tight">
               {report?.version ? `v${report.version}` : "v1.0.0"}
             </div>
-            <div className="text-xs text-slate-400 flex items-center justify-between">
+            <div className="text-xs text-cine-muted flex items-center justify-between">
               <span>Environment:</span>
-              <span className="font-mono text-indigo-300 capitalize">
+              <span className="font-mono text-cine-accent dark:text-indigo-300 capitalize">
                 {report?.environment || "development"}
               </span>
             </div>
@@ -117,7 +117,7 @@ export function SystemDiagnosticsSection({
         <Card className="border-cine-border bg-cine-surface/70">
           <CardContent className="p-4 space-y-2">
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2 text-slate-400 text-xs font-medium">
+              <div className="flex items-center gap-2 text-cine-muted text-xs font-medium">
                 <Database className="w-4 h-4 text-emerald-400" />
                 SQLite Database
               </div>
@@ -128,12 +128,12 @@ export function SystemDiagnosticsSection({
                 {report?.databaseStatus === "connected" ? "Connected" : "Error"}
               </Badge>
             </div>
-            <div className="text-lg font-bold text-white tracking-tight">
+            <div className="text-lg font-bold text-cine-text tracking-tight">
               aiosqlite Async
             </div>
-            <div className="text-xs text-slate-400 flex items-center justify-between">
+            <div className="text-xs text-cine-muted flex items-center justify-between">
               <span>Pool State:</span>
-              <span className="font-mono text-emerald-300">Ready</span>
+              <span className="font-mono text-emerald-600 dark:text-emerald-300">Ready</span>
             </div>
           </CardContent>
         </Card>
@@ -142,7 +142,7 @@ export function SystemDiagnosticsSection({
         <Card className="border-cine-border bg-cine-surface/70">
           <CardContent className="p-4 space-y-2">
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2 text-slate-400 text-xs font-medium">
+              <div className="flex items-center gap-2 text-cine-muted text-xs font-medium">
                 <Cpu className="w-4 h-4 text-indigo-400" />
                 Google Gemini
               </div>
@@ -153,12 +153,12 @@ export function SystemDiagnosticsSection({
                 {report?.geminiConfigured ? "Configured" : "Missing Key"}
               </Badge>
             </div>
-            <div className="text-lg font-bold text-white tracking-tight truncate">
+            <div className="text-lg font-bold text-cine-text tracking-tight truncate">
               {report?.geminiModel || "gemini-3.5-flash-lite"}
             </div>
-            <div className="text-xs text-slate-400 flex items-center justify-between">
+            <div className="text-xs text-cine-muted flex items-center justify-between">
               <span>Provider:</span>
-              <span className="font-mono text-indigo-300">GeminiLLMProvider</span>
+              <span className="font-mono text-cine-accent dark:text-indigo-300">GeminiLLMProvider</span>
             </div>
           </CardContent>
         </Card>
@@ -167,7 +167,7 @@ export function SystemDiagnosticsSection({
         <Card className="border-cine-border bg-cine-surface/70">
           <CardContent className="p-4 space-y-2">
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2 text-slate-400 text-xs font-medium">
+              <div className="flex items-center gap-2 text-cine-muted text-xs font-medium">
                 <HardDrive className="w-4 h-4 text-emerald-400" />
                 Local Whisper
               </div>
@@ -178,12 +178,12 @@ export function SystemDiagnosticsSection({
                 {report?.localWhisperAvailable ? "Available" : "Standby"}
               </Badge>
             </div>
-            <div className="text-lg font-bold text-white tracking-tight">
+            <div className="text-lg font-bold text-cine-text tracking-tight">
               model: {report?.localWhisperModel || "base"}
             </div>
-            <div className="text-xs text-slate-400 flex items-center justify-between">
+            <div className="text-xs text-cine-muted flex items-center justify-between">
               <span>Acceleration:</span>
-              <span className="font-mono text-emerald-300">Apple Silicon / CPU</span>
+              <span className="font-mono text-emerald-600 dark:text-emerald-300">Apple Silicon / CPU</span>
             </div>
           </CardContent>
         </Card>
@@ -192,7 +192,7 @@ export function SystemDiagnosticsSection({
         <Card className="border-cine-border bg-cine-surface/70">
           <CardContent className="p-4 space-y-2">
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2 text-slate-400 text-xs font-medium">
+              <div className="flex items-center gap-2 text-cine-muted text-xs font-medium">
                 <Cloud className="w-4 h-4 text-sky-400" />
                 OpenAI Whisper
               </div>
@@ -203,12 +203,12 @@ export function SystemDiagnosticsSection({
                 {report?.openaiWhisperConfigured ? "Configured" : "Standby"}
               </Badge>
             </div>
-            <div className="text-lg font-bold text-white tracking-tight">
+            <div className="text-lg font-bold text-cine-text tracking-tight">
               whisper-1 Cloud
             </div>
-            <div className="text-xs text-slate-400 flex items-center justify-between">
+            <div className="text-xs text-cine-muted flex items-center justify-between">
               <span>Role:</span>
-              <span className="font-mono text-slate-400">Cloud Fallback</span>
+              <span className="font-mono text-cine-muted">Cloud Fallback</span>
             </div>
           </CardContent>
         </Card>
@@ -217,7 +217,7 @@ export function SystemDiagnosticsSection({
         <Card className="border-cine-border bg-cine-surface/70">
           <CardContent className="p-4 space-y-2">
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2 text-slate-400 text-xs font-medium">
+              <div className="flex items-center gap-2 text-cine-muted text-xs font-medium">
                 <Activity className="w-4 h-4 text-indigo-400" />
                 Video Ingestion Cap
               </div>
@@ -225,12 +225,12 @@ export function SystemDiagnosticsSection({
                 Strict Limit
               </Badge>
             </div>
-            <div className="text-lg font-bold text-white tracking-tight">
+            <div className="text-lg font-bold text-cine-text tracking-tight">
               {report?.maxVideoSizeMb || 100} MB
             </div>
-            <div className="text-xs text-slate-400 flex items-center justify-between">
+            <div className="text-xs text-cine-muted flex items-center justify-between">
               <span>Streaming Pipe:</span>
-              <span className="font-mono text-indigo-300">FFmpeg Multi-codec</span>
+              <span className="font-mono text-cine-accent dark:text-indigo-300">FFmpeg Multi-codec</span>
             </div>
           </CardContent>
         </Card>
@@ -241,13 +241,13 @@ export function SystemDiagnosticsSection({
         <CardHeader className="pb-3">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <Terminal className="w-4 h-4 text-slate-400" />
+              <Terminal className="w-4 h-4 text-cine-muted" />
               <CardTitle className="text-sm">Sanitized Diagnostic Telemetry</CardTitle>
             </div>
             <button
               type="button"
               onClick={() => setShowRawJson(!showRawJson)}
-              className="text-xs text-indigo-400 hover:text-indigo-300 font-mono"
+              className="text-xs text-cine-accent dark:text-indigo-300 hover:underline font-mono"
             >
               {showRawJson ? "Hide Telemetry" : "View JSON Payload"}
             </button>

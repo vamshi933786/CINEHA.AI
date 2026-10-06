@@ -61,7 +61,7 @@ export function RecentActivity() {
     <section className="p-5 sm:p-6 rounded-xl bg-cine-surface/90 border border-cine-border/70">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-6 pb-4 border-b border-cine-border/40">
         <div>
-          <h3 className="text-sm font-semibold tracking-tight text-white uppercase font-mono">
+          <h3 className="text-sm font-semibold tracking-tight text-cine-text uppercase font-mono">
             Recent Creator Activity
           </h3>
           <p className="text-xs text-cine-muted mt-0.5">
@@ -72,7 +72,7 @@ export function RecentActivity() {
           <Badge variant="neutral" size="sm">
             Prototype Feed
           </Badge>
-          <span className="text-[10px] text-slate-500 font-mono">Demo Data</span>
+          <span className="text-[10px] text-cine-muted font-mono">Demo Data</span>
         </div>
       </div>
 
@@ -89,7 +89,7 @@ export function RecentActivity() {
                   <Icon className={`w-4 h-4 ${act.iconColor}`} />
                 </div>
                 <div>
-                  <h4 className="text-sm font-medium text-white line-clamp-1">
+                  <h4 className="text-sm font-medium text-cine-text line-clamp-1">
                     {act.title}
                   </h4>
                   <p className="text-xs text-cine-muted mt-0.5 line-clamp-1">
@@ -102,7 +102,7 @@ export function RecentActivity() {
                 <Badge variant={act.badgeVariant} size="sm">
                   {act.badge}
                 </Badge>
-                <div className="flex items-center gap-1 text-[11px] font-mono text-slate-500">
+                <div className="flex items-center gap-1 text-[11px] font-mono text-cine-muted">
                   <Clock className="w-3 h-3" />
                   <span>{act.time}</span>
                 </div>

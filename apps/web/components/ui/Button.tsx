@@ -46,9 +46,9 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
       secondary:
         "bg-cine-card hover:bg-cine-surface text-cine-text border border-cine-border hover:border-cine-accent/40 shadow-sm",
       outline:
-        "bg-transparent hover:bg-cine-surface/60 text-slate-300 hover:text-white border border-cine-border hover:border-slate-500",
+        "bg-transparent hover:bg-cine-surface text-cine-text hover:text-cine-text border border-cine-border hover:border-cine-accent/40",
       ghost:
-        "bg-transparent hover:bg-cine-card/60 text-slate-300 hover:text-white border border-transparent",
+        "bg-transparent hover:bg-cine-card text-cine-muted hover:text-cine-text border border-transparent",
       danger:
         "bg-rose-600/90 hover:bg-rose-600 text-white shadow-sm border border-rose-500/30",
     };

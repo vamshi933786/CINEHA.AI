@@ -65,14 +65,14 @@ export function MobileNav({ isOpen, onClose }: MobileNavProps) {
                 onClick={onClose}
                 className={`flex items-center justify-between px-3.5 py-3 rounded-lg text-sm font-medium transition-colors min-h-[44px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cine-accent ${
                   isActive
-                    ? "bg-cine-accent/20 text-white font-semibold border border-cine-accent/40"
-                    : "text-slate-300 hover:text-white hover:bg-cine-card border border-transparent"
+                    ? "bg-cine-accent/15 text-cine-accent dark:text-white font-semibold border border-cine-accent/30"
+                    : "text-cine-muted hover:text-cine-text hover:bg-cine-card border border-transparent"
                 }`}
               >
                 <div className="flex items-center gap-3">
                   <Icon
                     className={`w-5 h-5 ${
-                      isActive ? "text-cine-accent" : "text-slate-400"
+                      isActive ? "text-cine-accent" : "text-cine-muted"
                     }`}
                   />
                   <span>{item.label}</span>
@@ -114,7 +114,7 @@ export function MobileNav({ isOpen, onClose }: MobileNavProps) {
               <div className="w-7 h-7 rounded-lg bg-gradient-to-tr from-cine-accent to-cine-rose flex items-center justify-center text-white">
                 <Sparkles className="w-3.5 h-3.5" />
               </div>
-              <span className="font-extrabold text-white text-base tracking-tight">
+              <span className="font-extrabold text-cine-text text-base tracking-tight">
                 CINEHA<span className="text-cine-accent">.AI</span>
               </span>
             </div>
@@ -123,7 +123,7 @@ export function MobileNav({ isOpen, onClose }: MobileNavProps) {
               onClick={onClose}
               type="button"
               aria-label="Close navigation menu"
-              className="p-2 rounded-lg text-slate-400 hover:text-white hover:bg-cine-card border border-cine-border min-h-[44px] min-w-[44px] flex items-center justify-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cine-accent"
+              className="p-2 rounded-lg text-cine-muted hover:text-cine-text hover:bg-cine-card border border-cine-border min-h-[44px] min-w-[44px] flex items-center justify-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cine-accent"
             >
               <X className="w-5 h-5" />
             </button>
@@ -132,14 +132,14 @@ export function MobileNav({ isOpen, onClose }: MobileNavProps) {
           {/* Navigation Sections */}
           <div className="space-y-6">
             <div>
-              <div className="px-2 pb-2 text-[10px] font-mono uppercase tracking-wider text-slate-500 font-semibold">
+              <div className="px-2 pb-2 text-[10px] font-mono uppercase tracking-wider text-cine-muted font-semibold">
                 Creator Studio
               </div>
               {renderNavList(PRIMARY_NAV_ITEMS)}
             </div>
 
             <div>
-              <div className="px-2 pb-2 text-[10px] font-mono uppercase tracking-wider text-slate-500 font-semibold">
+              <div className="px-2 pb-2 text-[10px] font-mono uppercase tracking-wider text-cine-muted font-semibold">
                 Preferences
               </div>
               {renderNavList(SECONDARY_NAV_ITEMS)}
@@ -154,7 +154,7 @@ export function MobileNav({ isOpen, onClose }: MobileNavProps) {
               <Video className="w-4 h-4" />
             </div>
             <div className="flex flex-col overflow-hidden">
-              <span className="text-xs font-semibold text-slate-200 truncate">
+              <span className="text-xs font-semibold text-cine-text truncate">
                 Cinehashoots
               </span>
               <span className="text-[10px] text-cine-muted truncate">

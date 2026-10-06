@@ -37,10 +37,10 @@ export function StatsGrid() {
   return (
     <section>
       <div className="flex items-center justify-between mb-4">
-        <h3 className="text-sm font-semibold tracking-tight text-white uppercase font-mono">
+        <h3 className="text-sm font-semibold tracking-tight text-cine-text uppercase font-mono">
           Creator Performance Pulse
         </h3>
-        <span className="text-[11px] text-slate-500 font-mono">
+        <span className="text-[11px] text-cine-muted font-mono">
           Prototype Metrics · Phase 3 Demo
         </span>
       </div>

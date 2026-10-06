@@ -53,33 +53,33 @@ export function PrivacySection({
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="p-4 rounded-xl bg-slate-900/40 border border-cine-border space-y-2">
-              <div className="flex items-center gap-2 text-white text-xs font-semibold">
+            <div className="p-4 rounded-xl bg-cine-card/60 border border-cine-border space-y-2">
+              <div className="flex items-center gap-2 text-cine-text text-xs font-semibold">
                 <HardDrive className="w-4 h-4 text-indigo-400" />
                 Transient Video Purge
               </div>
-              <p className="text-xs text-slate-400 leading-relaxed">
+              <p className="text-xs text-cine-muted leading-relaxed">
                 Raw video uploads are processed in memory and scratch temp paths during FFmpeg extraction. Files are automatically deleted immediately after audio separation.
               </p>
             </div>
 
-            <div className="p-4 rounded-xl bg-slate-900/40 border border-cine-border space-y-2">
-              <div className="flex items-center gap-2 text-white text-xs font-semibold">
+            <div className="p-4 rounded-xl bg-cine-card/60 border border-cine-border space-y-2">
+              <div className="flex items-center gap-2 text-cine-text text-xs font-semibold">
                 <EyeOff className="w-4 h-4 text-emerald-400" />
                 Zero Cloud Voice Retention
               </div>
-              <p className="text-xs text-slate-400 leading-relaxed">
+              <p className="text-xs text-cine-muted leading-relaxed">
                 Local Whisper operates 100% on-device on your local CPU/Apple Silicon. No raw audio waveforms or creator voices are saved to any cloud bucket or used for model training.
               </p>
             </div>
 
-            <div className="p-4 rounded-xl bg-slate-900/40 border border-cine-border space-y-2">
-              <div className="flex items-center gap-2 text-white text-xs font-semibold">
+            <div className="p-4 rounded-xl bg-cine-card/60 border border-cine-border space-y-2">
+              <div className="flex items-center gap-2 text-cine-text text-xs font-semibold">
                 <Lock className="w-4 h-4 text-amber-400" />
                 Local Client Preferences
               </div>
-              <p className="text-xs text-slate-400 leading-relaxed">
-                UI density, theme choices, and template defaults reside entirely inside your browser&apos;s isolated <code className="text-indigo-300 font-mono text-[11px]">localStorage</code>.
+              <p className="text-xs text-cine-muted leading-relaxed">
+                UI density, theme choices, and template defaults reside entirely inside your browser&apos;s isolated <code className="text-cine-accent dark:text-indigo-300 font-mono text-[11px]">localStorage</code>.
               </p>
             </div>
           </div>
@@ -96,10 +96,10 @@ export function PrivacySection({
         </CardHeader>
         <CardContent className="space-y-4">
           {/* Persist Drafts Locally */}
-          <div className="flex items-center justify-between gap-4 p-3.5 rounded-xl bg-slate-900/40 border border-cine-border">
+          <div className="flex items-center justify-between gap-4 p-3.5 rounded-xl bg-cine-card/60 border border-cine-border">
             <div>
-              <h4 className="text-sm font-medium text-white">Save Studio Drafts Locally</h4>
-              <p className="text-xs text-slate-400 mt-0.5">
+              <h4 className="text-sm font-medium text-cine-text">Save Studio Drafts Locally</h4>
+              <p className="text-xs text-cine-muted mt-0.5">
                 Caches unfinished script drafts and caption cues in browser memory so you don&apos;t lose progress on reload.
               </p>
             </div>
@@ -111,15 +111,15 @@ export function PrivacySection({
                 className="sr-only peer"
                 aria-label="Toggle Save Studio Drafts Locally"
               />
-              <div className="w-11 h-6 bg-slate-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-cine-accent"></div>
+              <div className="w-11 h-6 bg-slate-300 dark:bg-slate-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-cine-accent"></div>
             </label>
           </div>
 
           {/* Local Diagnostics */}
-          <div className="flex items-center justify-between gap-4 p-3.5 rounded-xl bg-slate-900/40 border border-cine-border">
+          <div className="flex items-center justify-between gap-4 p-3.5 rounded-xl bg-cine-card/60 border border-cine-border">
             <div>
-              <h4 className="text-sm font-medium text-white">Client Performance Diagnostics</h4>
-              <p className="text-xs text-slate-400 mt-0.5">
+              <h4 className="text-sm font-medium text-cine-text">Client Performance Diagnostics</h4>
+              <p className="text-xs text-cine-muted mt-0.5">
                 Collects local latency timestamps during health probes to diagnose offline connectivity issues.
               </p>
             </div>
@@ -131,33 +131,33 @@ export function PrivacySection({
                 className="sr-only peer"
                 aria-label="Toggle Client Diagnostics"
               />
-              <div className="w-11 h-6 bg-slate-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-cine-accent"></div>
+              <div className="w-11 h-6 bg-slate-300 dark:bg-slate-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-cine-accent"></div>
             </label>
           </div>
         </CardContent>
       </Card>
 
       {/* Danger Zone / Reset Actions */}
-      <Card className="border-rose-500/20 bg-rose-950/10">
+      <Card className="border-rose-300 dark:border-rose-500/20 bg-rose-50/50 dark:bg-rose-950/10">
         <CardHeader>
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2.5">
-              <div className="p-2 rounded-lg bg-rose-500/10 border border-rose-500/20 text-rose-400">
+              <div className="p-2 rounded-lg bg-rose-500/10 border border-rose-500/20 text-rose-500 dark:text-rose-400">
                 <AlertTriangle className="w-5 h-5" />
               </div>
-              <CardTitle className="text-rose-200">Reset & Cache Maintenance</CardTitle>
+              <CardTitle className="text-rose-900 dark:text-rose-200">Reset & Cache Maintenance</CardTitle>
             </div>
             <Badge variant="rose" size="sm">Workspace Reset</Badge>
           </div>
-          <CardDescription className="text-rose-300/70">
+          <CardDescription className="text-rose-700 dark:text-rose-300/70">
             Revert customized workspace preferences or purge cached settings.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 rounded-xl bg-slate-900/60 border border-slate-800">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 rounded-xl bg-cine-card/80 border border-cine-border">
             <div>
-              <h4 className="text-sm font-semibold text-white">Reset Settings to Factory Defaults</h4>
-              <p className="text-xs text-slate-400 mt-1 max-w-lg leading-relaxed">
+              <h4 className="text-sm font-semibold text-cine-text">Reset Settings to Factory Defaults</h4>
+              <p className="text-xs text-cine-muted mt-1 max-w-lg leading-relaxed">
                 Reverts all studio preferences, theme settings, caption template choices, and positioning coordinates back to original defaults. Your database scripts, creator profile persona, and calendar items are completely safe and untouched.
               </p>
             </div>
@@ -173,11 +173,11 @@ export function PrivacySection({
             </Button>
           </div>
 
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 rounded-xl bg-slate-900/60 border border-slate-800">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 rounded-xl bg-cine-card/80 border border-cine-border">
             <div>
-              <h4 className="text-sm font-semibold text-white">Clear Local Storage Cache</h4>
-              <p className="text-xs text-slate-400 mt-1 max-w-lg leading-relaxed">
-                Purges the local browser cache key (<code className="text-indigo-300 font-mono text-[11px]">cinehai_settings</code>).
+              <h4 className="text-sm font-semibold text-cine-text">Clear Local Storage Cache</h4>
+              <p className="text-xs text-cine-muted mt-1 max-w-lg leading-relaxed">
+                Purges the local browser cache key (<code className="text-cine-accent dark:text-indigo-300 font-mono text-[11px]">cinehai_settings</code>).
               </p>
             </div>
             <Button
@@ -186,7 +186,7 @@ export function PrivacySection({
               size="sm"
               onClick={() => setIsClearModalOpen(true)}
               leftIcon={<Trash2 className="w-4 h-4" />}
-              className="shrink-0 text-slate-300 hover:text-white"
+              className="shrink-0"
             >
               Clear Storage
             </Button>

@@ -20,17 +20,17 @@ export function WelcomeHeader() {
               <Sparkles className="w-3 h-3 mr-1" />
               Short-Form Creator Studio
             </Badge>
-            <div className="flex items-center gap-1.5 text-[11px] text-slate-400 font-mono">
-              <span className="w-1.5 h-1.5 rounded-full bg-slate-600" />
+            <div className="flex items-center gap-1.5 text-[11px] text-cine-muted font-mono">
+              <span className="w-1.5 h-1.5 rounded-full bg-cine-border" />
               <span>Instagram Reels</span>
-              <span className="text-slate-600">·</span>
+              <span className="text-cine-muted">·</span>
               <span>TikTok</span>
-              <span className="text-slate-600">·</span>
+              <span className="text-cine-muted">·</span>
               <span>YouTube Shorts</span>
             </div>
           </div>
 
-          <h2 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold tracking-tight text-white">
+          <h2 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold tracking-tight text-cine-text">
             Good morning, Creator
           </h2>
 

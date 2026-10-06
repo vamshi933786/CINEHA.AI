@@ -181,12 +181,18 @@ body {
 [data-theme="light"] button[class*="bg-cine-accent"],
 [data-theme="light"] button[class*="bg-rose-"],
 [data-theme="light"] button[class*="bg-emerald-"],
-[data-theme="light"] [class*="bg-gradient-to-r"] *,
+[data-theme="light"] button[class*="bg-gradient-to-r"],
+[data-theme="light"] button[class*="bg-gradient-to-r"] *,
+[data-theme="light"] a[class*="bg-gradient-to-r"],
+[data-theme="light"] a[class*="bg-gradient-to-r"] *,
 .light button[class*="from-cine-accent"],
 .light button[class*="bg-cine-accent"],
 .light button[class*="bg-rose-"],
 .light button[class*="bg-emerald-"],
-.light [class*="bg-gradient-to-r"] * {
+.light button[class*="bg-gradient-to-r"],
+.light button[class*="bg-gradient-to-r"] *,
+.light a[class*="bg-gradient-to-r"],
+.light a[class*="bg-gradient-to-r"] * {
   color: #ffffff !important;
 }
 
@@ -201,6 +207,11 @@ body {
 .light .text-slate-300,
 .light .text-slate-200 {
   color: #1e293b !important;
+}
+
+[data-theme="light"] .text-indigo-300,
+.light .text-indigo-300 {
+  color: #4338ca !important;
 }
 
 /* ==========================================================================

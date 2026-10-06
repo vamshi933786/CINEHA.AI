@@ -22,7 +22,7 @@ export function StatCard({
     <div className="p-4 sm:p-5 rounded-xl bg-cine-surface/90 border border-cine-border/70 hover:border-cine-accent/40 transition-all duration-200 flex flex-col justify-between group">
       <div className="flex items-center justify-between">
         <span className="text-xs font-medium text-cine-muted">{title}</span>
-        <div className="w-8 h-8 rounded-lg bg-cine-card border border-cine-border/80 flex items-center justify-center text-slate-300 group-hover:text-cine-accent group-hover:border-cine-accent/30 transition-colors">
+        <div className="w-8 h-8 rounded-lg bg-cine-card border border-cine-border/80 flex items-center justify-center text-cine-muted group-hover:text-cine-accent group-hover:border-cine-accent/30 transition-colors">
           {icon}
         </div>
       </div>
@@ -38,7 +38,7 @@ export function StatCard({
                 ? "text-cine-emerald"
                 : changeType === "negative"
                 ? "text-cine-rose"
-                : "text-slate-400"
+                : "text-cine-muted"
             }`}
           >
             {change}
@@ -51,7 +51,7 @@ export function StatCard({
           <Badge variant="neutral" size="sm">
             Prototype Metric
           </Badge>
-          <span className="text-[10px] text-slate-500 font-mono">Demo Data</span>
+          <span className="text-[10px] text-cine-muted font-mono">Demo Data</span>
         </div>
       )}
     </div>

@@ -18,7 +18,7 @@ export function Breadcrumbs({ items }: BreadcrumbsProps) {
         <li>
           <Link
             href="/"
-            className="hover:text-white transition-colors flex items-center gap-1 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-cine-accent rounded"
+            className="hover:text-cine-text transition-colors flex items-center gap-1 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-cine-accent rounded"
           >
             <Home className="w-3.5 h-3.5" />
             <span className="sr-only">Dashboard</span>
@@ -28,16 +28,16 @@ export function Breadcrumbs({ items }: BreadcrumbsProps) {
           const isLast = index === items.length - 1;
           return (
             <li key={item.label} className="flex items-center space-x-1.5 sm:space-x-2">
-              <ChevronRight className="w-3.5 h-3.5 text-slate-600 shrink-0" />
+              <ChevronRight className="w-3.5 h-3.5 text-cine-muted shrink-0" />
               {item.href && !isLast ? (
                 <Link
                   href={item.href}
-                  className="hover:text-white transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-cine-accent rounded"
+                  className="hover:text-cine-text transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-cine-accent rounded"
                 >
                   {item.label}
                 </Link>
               ) : (
-                <span className="text-slate-300 font-semibold truncate max-w-[200px] sm:max-w-none">
+                <span className="text-cine-text font-semibold truncate max-w-[200px] sm:max-w-none">
                   {item.label}
                 </span>
               )}

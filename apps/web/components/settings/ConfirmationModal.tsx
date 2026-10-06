@@ -63,7 +63,7 @@ export function ConfirmationModal({
         <button
           onClick={onClose}
           disabled={isLoading}
-          className="absolute top-4 right-4 p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
+          className="absolute top-4 right-4 p-1.5 rounded-lg text-cine-muted hover:text-cine-text hover:bg-cine-card transition-colors"
           aria-label="Close dialog"
         >
           <X className="w-5 h-5" />
@@ -77,11 +77,11 @@ export function ConfirmationModal({
           <div className="flex-1 min-w-0 pr-6">
             <h3
               id="modal-headline"
-              className="text-lg font-semibold text-white tracking-tight"
+              className="text-lg font-semibold text-cine-text tracking-tight"
             >
               {title}
             </h3>
-            <p className="mt-2 text-sm text-slate-400 leading-relaxed">
+            <p className="mt-2 text-sm text-cine-muted leading-relaxed">
               {description}
             </p>
           </div>

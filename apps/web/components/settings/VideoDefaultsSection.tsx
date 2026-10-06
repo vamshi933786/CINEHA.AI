@@ -60,7 +60,7 @@ export function VideoDefaultsSection({
   return (
     <div className="space-y-6">
       {/* Upload Guardrail Notice */}
-      <Card className="border-cine-border bg-gradient-to-r from-cine-surface to-slate-900/60">
+      <Card className="border-cine-border bg-cine-surface">
         <CardContent className="p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="flex items-start gap-3.5">
             <div className="p-2.5 rounded-xl bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 shrink-0">
@@ -68,10 +68,10 @@ export function VideoDefaultsSection({
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h4 className="text-sm font-semibold text-white">Centralized Server Upload Limit</h4>
+                <h4 className="text-sm font-semibold text-cine-text">Centralized Server Upload Limit</h4>
                 <Badge variant="accent" size="sm">{serverMaxUploadMb} MB Max</Badge>
               </div>
-              <p className="text-xs text-slate-400 mt-1 max-w-xl leading-relaxed">
+              <p className="text-xs text-cine-muted mt-1 max-w-xl leading-relaxed">
                 Applies globally across Caption Studio, Video Ingest, and Video Analysis modules. Enforced by backend streaming validators to ensure memory stability on local dev machines.
               </p>
             </div>
@@ -115,11 +115,11 @@ export function VideoDefaultsSection({
                 >
                   <div className="flex items-center justify-between w-full mb-3">
                     <div
-                      className={`${item.ratio} rounded bg-slate-800 border-2 ${
-                        isSelected ? "border-indigo-400" : "border-slate-700"
+                      className={`${item.ratio} rounded bg-cine-card border-2 ${
+                        isSelected ? "border-indigo-400" : "border-cine-border"
                       } flex items-center justify-center`}
                     >
-                      <span className="text-[9px] font-mono text-slate-400">{item.id}</span>
+                      <span className="text-[9px] font-mono text-cine-muted">{item.id}</span>
                     </div>
                     {isSelected && (
                       <div className="w-5 h-5 rounded-full bg-cine-accent flex items-center justify-center text-white">
@@ -127,9 +127,9 @@ export function VideoDefaultsSection({
                       </div>
                     )}
                   </div>
-                  <span className="font-semibold text-white text-sm">{item.label}</span>
-                  <span className="text-xs text-indigo-300 font-mono mt-0.5">{item.sublabel}</span>
-                  <p className="text-xs text-slate-400 mt-2 leading-relaxed">{item.desc}</p>
+                  <span className="font-semibold text-cine-text text-sm">{item.label}</span>
+                  <span className="text-xs text-cine-accent dark:text-indigo-300 font-mono mt-0.5">{item.sublabel}</span>
+                  <p className="text-xs text-cine-muted mt-2 leading-relaxed">{item.desc}</p>
                   {item.badge && (
                     <Badge variant="accent" size="sm" className="mt-3 w-fit text-[10px]">
                       {item.badge}
@@ -160,14 +160,14 @@ export function VideoDefaultsSection({
         </CardHeader>
         <CardContent className="space-y-4">
           {/* Pacing Toggle */}
-          <div className="flex items-center justify-between gap-4 p-3.5 rounded-xl bg-slate-900/40 border border-cine-border">
+          <div className="flex items-center justify-between gap-4 p-3.5 rounded-xl bg-cine-card/60 border border-cine-border">
             <div className="flex items-start gap-3">
-              <div className="p-2 rounded-lg bg-slate-800 border border-slate-700 text-slate-400 shrink-0">
+              <div className="p-2 rounded-lg bg-cine-card border border-cine-border text-cine-muted shrink-0">
                 <BarChart className="w-4 h-4" />
               </div>
               <div>
-                <h4 className="text-sm font-medium text-white">Auto-Run Pacing & Retention Audit</h4>
-                <p className="text-xs text-slate-400 mt-0.5">
+                <h4 className="text-sm font-medium text-cine-text">Auto-Run Pacing & Retention Audit</h4>
+                <p className="text-xs text-cine-muted mt-0.5">
                   Calculates speech cadence, syllable density, and predicted drop-off curves upon video ingestion.
                 </p>
               </div>
@@ -180,19 +180,19 @@ export function VideoDefaultsSection({
                 className="sr-only peer"
                 aria-label="Toggle Auto-Run Pacing Audit"
               />
-              <div className="w-11 h-6 bg-slate-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-cine-accent"></div>
+              <div className="w-11 h-6 bg-slate-300 dark:bg-slate-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-cine-accent"></div>
             </label>
           </div>
 
           {/* Visual Hook Toggle */}
-          <div className="flex items-center justify-between gap-4 p-3.5 rounded-xl bg-slate-900/40 border border-cine-border">
+          <div className="flex items-center justify-between gap-4 p-3.5 rounded-xl bg-cine-card/60 border border-cine-border">
             <div className="flex items-start gap-3">
-              <div className="p-2 rounded-lg bg-slate-800 border border-slate-700 text-slate-400 shrink-0">
+              <div className="p-2 rounded-lg bg-cine-card border border-cine-border text-cine-muted shrink-0">
                 <Eye className="w-4 h-4" />
               </div>
               <div>
-                <h4 className="text-sm font-medium text-white">Auto-Detect 3-Second Visual Hooks</h4>
-                <p className="text-xs text-slate-400 mt-0.5">
+                <h4 className="text-sm font-medium text-cine-text">Auto-Detect 3-Second Visual Hooks</h4>
+                <p className="text-xs text-cine-muted mt-0.5">
                   Audits the opening frames for kinetic motion, camera movement, or bold typography elements.
                 </p>
               </div>
@@ -205,19 +205,19 @@ export function VideoDefaultsSection({
                 className="sr-only peer"
                 aria-label="Toggle Auto-Detect Visual Hooks"
               />
-              <div className="w-11 h-6 bg-slate-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-cine-accent"></div>
+              <div className="w-11 h-6 bg-slate-300 dark:bg-slate-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-cine-accent"></div>
             </label>
           </div>
 
           {/* Scene Segmentation Toggle */}
-          <div className="flex items-center justify-between gap-4 p-3.5 rounded-xl bg-slate-900/40 border border-cine-border">
+          <div className="flex items-center justify-between gap-4 p-3.5 rounded-xl bg-cine-card/60 border border-cine-border">
             <div className="flex items-start gap-3">
-              <div className="p-2 rounded-lg bg-slate-800 border border-slate-700 text-slate-400 shrink-0">
+              <div className="p-2 rounded-lg bg-cine-card border border-cine-border text-cine-muted shrink-0">
                 <Scissors className="w-4 h-4" />
               </div>
               <div>
-                <h4 className="text-sm font-medium text-white">Auto-Segment Scene Beats</h4>
-                <p className="text-xs text-slate-400 mt-0.5">
+                <h4 className="text-sm font-medium text-cine-text">Auto-Segment Scene Beats</h4>
+                <p className="text-xs text-cine-muted mt-0.5">
                   Identifies scene cut points and aligns screenplay narrative blocks with video timecodes.
                 </p>
               </div>
@@ -230,7 +230,7 @@ export function VideoDefaultsSection({
                 className="sr-only peer"
                 aria-label="Toggle Auto-Segment Scene Beats"
               />
-              <div className="w-11 h-6 bg-slate-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-cine-accent"></div>
+              <div className="w-11 h-6 bg-slate-300 dark:bg-slate-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-cine-accent"></div>
             </label>
           </div>
         </CardContent>

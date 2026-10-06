@@ -249,10 +249,10 @@ export function SettingsWorkspace() {
         <aside className="lg:col-span-3 w-full">
           <div className="rounded-2xl bg-cine-surface/90 border border-cine-border/80 p-2 sm:p-3 sticky top-4">
             <div className="px-3 py-2 hidden lg:flex items-center justify-between border-b border-cine-border/50 mb-2">
-              <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
+              <span className="text-xs font-semibold text-cine-muted uppercase tracking-wider">
                 Settings Navigation
               </span>
-              <Sliders className="w-3.5 h-3.5 text-slate-500" />
+              <Sliders className="w-3.5 h-3.5 text-cine-muted" />
             </div>
 
             {/* Navigation Tabs List */}
@@ -271,11 +271,11 @@ export function SettingsWorkspace() {
                     className={`flex items-center justify-between gap-3 px-3.5 py-2.5 rounded-xl text-xs font-medium transition-all duration-150 whitespace-nowrap lg:whitespace-normal shrink-0 lg:shrink w-auto lg:w-full text-left ${
                       isActive
                         ? "bg-cine-accent text-white shadow-md shadow-cine-accent/25 font-semibold"
-                        : "text-slate-300 hover:text-white hover:bg-slate-800/60"
+                        : "text-cine-muted hover:text-cine-text hover:bg-cine-card"
                     }`}
                   >
                     <div className="flex items-center gap-2.5">
-                      <span className={isActive ? "text-white" : "text-slate-400"}>
+                      <span className={isActive ? "text-white" : "text-cine-muted"}>
                         {tab.icon}
                       </span>
                       <span>{tab.label}</span>
@@ -286,7 +286,7 @@ export function SettingsWorkspace() {
                         className={`hidden sm:inline-flex text-[10px] font-mono px-2 py-0.5 rounded-full ${
                           isActive
                             ? "bg-white/20 text-white"
-                            : "bg-slate-800 text-slate-400 border border-slate-700/60"
+                            : "bg-cine-card text-cine-muted border border-cine-border"
                         }`}
                       >
                         {tab.badge}

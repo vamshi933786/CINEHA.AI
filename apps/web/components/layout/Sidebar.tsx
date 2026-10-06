@@ -30,8 +30,8 @@ export function Sidebar() {
                 href={item.href}
                 className={`group flex items-center justify-between px-3 py-2 rounded-lg text-xs font-medium transition-all duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cine-accent ${
                   isActive
-                    ? "bg-cine-accent/15 text-white font-semibold border border-cine-accent/30 shadow-sm"
-                    : "text-slate-400 hover:text-slate-200 hover:bg-cine-surface border border-transparent"
+                    ? "bg-cine-accent/15 text-cine-accent dark:text-white font-semibold border border-cine-accent/30 shadow-sm"
+                    : "text-cine-muted hover:text-cine-text hover:bg-cine-surface border border-transparent"
                 }`}
               >
                 <div className="flex items-center gap-2.5">
@@ -39,7 +39,7 @@ export function Sidebar() {
                     className={`w-4 h-4 transition-colors ${
                       isActive
                         ? "text-cine-accent"
-                        : "text-slate-400 group-hover:text-slate-200"
+                        : "text-cine-muted group-hover:text-cine-text"
                     }`}
                   />
                   <span>{item.label}</span>
@@ -67,7 +67,7 @@ export function Sidebar() {
       <div className="space-y-6">
         {/* Navigation Group 1 */}
         <div>
-          <div className="px-3 pb-2 text-[10px] font-mono uppercase tracking-wider text-slate-500 font-semibold">
+          <div className="px-3 pb-2 text-[10px] font-mono uppercase tracking-wider text-cine-muted font-semibold">
             Creator Studio
           </div>
           {renderNavList(PRIMARY_NAV_ITEMS)}
@@ -75,7 +75,7 @@ export function Sidebar() {
 
         {/* Navigation Group 2 */}
         <div>
-          <div className="px-3 pb-2 text-[10px] font-mono uppercase tracking-wider text-slate-500 font-semibold">
+          <div className="px-3 pb-2 text-[10px] font-mono uppercase tracking-wider text-cine-muted font-semibold">
             Preferences
           </div>
           {renderNavList(SECONDARY_NAV_ITEMS)}
@@ -89,7 +89,7 @@ export function Sidebar() {
             <Video className="w-4 h-4" />
           </div>
           <div className="flex flex-col overflow-hidden">
-            <span className="text-xs font-semibold text-slate-200 truncate">
+            <span className="text-xs font-semibold text-cine-text truncate">
               Cinehashoots
             </span>
             <span className="text-[10px] text-cine-muted truncate">

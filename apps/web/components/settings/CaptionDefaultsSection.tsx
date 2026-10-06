@@ -55,9 +55,9 @@ export function CaptionDefaultsSection({
   return (
     <div className="space-y-6">
       {/* Session Scope Notice */}
-      <div className="flex items-start gap-3 p-4 rounded-xl bg-slate-900/60 border border-cine-border text-slate-300">
-        <Info className="w-5 h-5 text-indigo-400 shrink-0 mt-0.5" />
-        <p className="text-xs leading-relaxed">
+      <div className="flex items-start gap-3 p-4 rounded-xl bg-cine-card/60 border border-cine-border text-cine-muted">
+        <Info className="w-5 h-5 text-indigo-500 dark:text-indigo-400 shrink-0 mt-0.5" />
+        <p className="text-xs leading-relaxed text-cine-muted">
           These settings establish the initial canvas configuration for new Caption Studio sessions. Your currently active video drafts and previously saved caption cues are never overwritten.
         </p>
       </div>
@@ -68,7 +68,7 @@ export function CaptionDefaultsSection({
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2.5">
               <div className="p-2 rounded-lg bg-indigo-500/10 border border-indigo-500/20 text-indigo-400">
-                <Sparkles className="w-5 h-5" />
+                <Sparkles className="w-4 h-4" />
               </div>
               <CardTitle>Default Caption Template</CardTitle>
             </div>
@@ -100,11 +100,11 @@ export function CaptionDefaultsSection({
                   className={`flex flex-col text-left p-3.5 rounded-xl border transition-all relative ${
                     isSelected
                       ? "border-cine-accent bg-cine-accent/10 shadow-sm shadow-cine-accent/10 ring-1 ring-cine-accent/50"
-                      : "border-cine-border bg-cine-surface/60 hover:bg-cine-surface hover:border-slate-700"
+                      : "border-cine-border bg-cine-surface/60 hover:bg-cine-surface hover:border-slate-500"
                   }`}
                 >
                   <div className="flex items-center justify-between w-full mb-1">
-                    <span className="font-semibold text-white text-sm truncate">
+                    <span className="font-semibold text-cine-text text-sm truncate">
                       {tmpl.name}
                     </span>
                     {isSelected && (
@@ -115,7 +115,7 @@ export function CaptionDefaultsSection({
                   </div>
 
                   <div className="flex items-center gap-2 mb-2">
-                    <span className="text-[11px] text-slate-400 font-mono">
+                    <span className="text-[11px] text-cine-muted font-mono">
                       {tmpl.category}
                     </span>
                     {tmpl.badge && (
@@ -177,10 +177,10 @@ export function CaptionDefaultsSection({
                   }`}
                 >
                   <div className="flex items-center justify-between w-full mb-1">
-                    <span className="font-medium text-white text-sm">{item.label}</span>
+                    <span className="font-medium text-cine-text text-sm">{item.label}</span>
                     {isSelected && <Check className="w-4 h-4 text-cine-accent" />}
                   </div>
-                  <span className="text-xs text-slate-400">{item.script}</span>
+                  <span className="text-xs text-cine-muted">{item.script}</span>
                 </button>
               );
             })}
@@ -213,8 +213,8 @@ export function CaptionDefaultsSection({
               {/* X Slider */}
               <div className="space-y-2">
                 <div className="flex items-center justify-between text-xs">
-                  <span className="text-slate-300 font-medium">Horizontal Position (X)</span>
-                  <span className="font-mono text-indigo-300">{settings.positionX}%</span>
+                  <span className="text-cine-muted font-medium">Horizontal Position (X)</span>
+                  <span className="font-mono text-cine-accent dark:text-indigo-300">{settings.positionX}%</span>
                 </div>
                 <input
                   type="range"
@@ -222,10 +222,10 @@ export function CaptionDefaultsSection({
                   max="100"
                   value={settings.positionX}
                   onChange={(e) => onChange({ positionX: Number(e.target.value) })}
-                  className="w-full h-2 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-cine-accent"
+                  className="w-full h-2 bg-slate-200 dark:bg-slate-800 rounded-lg appearance-none cursor-pointer accent-cine-accent"
                   aria-label="Caption Horizontal Position X"
                 />
-                <div className="flex justify-between text-[10px] text-slate-500 font-mono">
+                <div className="flex justify-between text-[10px] text-cine-muted font-mono">
                   <span>0% (Left)</span>
                   <span>50% (Center)</span>
                   <span>100% (Right)</span>
@@ -235,8 +235,8 @@ export function CaptionDefaultsSection({
               {/* Y Slider */}
               <div className="space-y-2">
                 <div className="flex items-center justify-between text-xs">
-                  <span className="text-slate-300 font-medium">Vertical Position (Y)</span>
-                  <span className="font-mono text-indigo-300">{settings.positionY}%</span>
+                  <span className="text-cine-muted font-medium">Vertical Position (Y)</span>
+                  <span className="font-mono text-cine-accent dark:text-indigo-300">{settings.positionY}%</span>
                 </div>
                 <input
                   type="range"
@@ -244,10 +244,10 @@ export function CaptionDefaultsSection({
                   max="100"
                   value={settings.positionY}
                   onChange={(e) => onChange({ positionY: Number(e.target.value) })}
-                  className="w-full h-2 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-cine-accent"
+                  className="w-full h-2 bg-slate-200 dark:bg-slate-800 rounded-lg appearance-none cursor-pointer accent-cine-accent"
                   aria-label="Caption Vertical Position Y"
                 />
-                <div className="flex justify-between text-[10px] text-slate-500 font-mono">
+                <div className="flex justify-between text-[10px] text-cine-muted font-mono">
                   <span>0% (Top)</span>
                   <span>50% (Middle)</span>
                   <span>100% (Bottom)</span>
@@ -275,8 +275,8 @@ export function CaptionDefaultsSection({
             </div>
 
             {/* Interactive Phone Screen Preview */}
-            <div className="flex flex-col items-center justify-center p-3 rounded-xl bg-slate-950/60 border border-slate-800">
-              <span className="text-[11px] text-slate-400 font-mono mb-2">9:16 Canvas Simulation</span>
+            <div className="flex flex-col items-center justify-center p-3 rounded-xl bg-cine-card border border-cine-border">
+              <span className="text-[11px] text-cine-muted font-mono mb-2">9:16 Canvas Simulation</span>
               <div className="relative w-28 h-48 rounded-xl bg-slate-900 border-2 border-slate-700 overflow-hidden shadow-inner flex items-center justify-center">
                 {/* Safe Area Box */}
                 {settings.safeAreaGuide && (
@@ -294,7 +294,7 @@ export function CaptionDefaultsSection({
                   {currentTemplate.name}
                 </div>
               </div>
-              <span className="text-[10px] text-slate-500 font-mono mt-2">
+              <span className="text-[10px] text-cine-muted font-mono mt-2">
                 Safe Area: {settings.safeAreaGuide ? "Guided" : "Unbounded"}
               </span>
             </div>
@@ -323,13 +323,13 @@ export function CaptionDefaultsSection({
                     onClick={() => onChange({ fontSize: f.id })}
                     className={`p-2.5 rounded-lg border text-left text-xs transition-all ${
                       isSelected
-                        ? "border-cine-accent bg-cine-accent/10 text-white font-semibold"
-                        : "border-cine-border bg-cine-surface/60 text-slate-400 hover:text-white"
+                        ? "border-cine-accent bg-cine-accent/10 text-cine-text font-semibold"
+                        : "border-cine-border bg-cine-surface/60 text-cine-muted hover:text-cine-text"
                     }`}
                   >
                     <div className="flex justify-between items-center">
                       <span>{f.label}</span>
-                      <span className="font-mono text-[10px] text-slate-500">{f.px}</span>
+                      <span className="font-mono text-[10px] text-cine-muted">{f.px}</span>
                     </div>
                   </button>
                 );
@@ -348,8 +348,8 @@ export function CaptionDefaultsSection({
           </CardHeader>
           <CardContent className="space-y-3 pt-0">
             {/* Safe Area Guide Switch */}
-            <div className="flex items-center justify-between p-2 rounded-lg bg-slate-900/40 border border-cine-border">
-              <span className="text-xs text-white">Safe-Area Guide Overlay</span>
+            <div className="flex items-center justify-between p-2 rounded-lg bg-cine-card/60 border border-cine-border">
+              <span className="text-xs text-cine-text">Safe-Area Guide Overlay</span>
               <label className="relative inline-flex items-center cursor-pointer">
                 <input
                   type="checkbox"
@@ -358,7 +358,7 @@ export function CaptionDefaultsSection({
                   className="sr-only peer"
                   aria-label="Toggle safe area guide"
                 />
-                <div className="w-9 h-5 bg-slate-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-cine-accent"></div>
+                <div className="w-9 h-5 bg-slate-300 dark:bg-slate-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-cine-accent"></div>
               </label>
             </div>
 
@@ -373,8 +373,8 @@ export function CaptionDefaultsSection({
                     onClick={() => onChange({ animationIntensity: item.id })}
                     className={`flex-1 p-2 rounded-lg border text-center text-xs transition-all ${
                       isSelected
-                        ? "border-cine-accent bg-cine-accent/10 text-white font-medium"
-                        : "border-cine-border bg-cine-surface/60 text-slate-400"
+                        ? "border-cine-accent bg-cine-accent/10 text-cine-text font-medium"
+                        : "border-cine-border bg-cine-surface/60 text-cine-muted"
                     }`}
                   >
                     {item.label}

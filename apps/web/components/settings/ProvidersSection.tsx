@@ -43,21 +43,21 @@ export function ProvidersSection({
   return (
     <div className="space-y-6">
       {/* Security Guarantee Banner */}
-      <div className="flex items-start gap-3 p-4 rounded-xl bg-indigo-950/30 border border-indigo-500/30 text-indigo-300">
-        <ShieldCheck className="w-5 h-5 text-indigo-400 shrink-0 mt-0.5" />
+      <div className="flex items-start gap-3 p-4 rounded-xl bg-indigo-50 dark:bg-indigo-950/30 border border-indigo-200 dark:border-indigo-500/30 text-indigo-900 dark:text-indigo-300">
+        <ShieldCheck className="w-5 h-5 text-indigo-500 dark:text-indigo-400 shrink-0 mt-0.5" />
         <div className="text-xs leading-relaxed space-y-1">
-          <span className="font-semibold text-white block">
+          <span className="font-semibold text-cine-text block">
             Zero-Leak Security Architecture
           </span>
-          <p className="text-slate-300">
-            All AI credentials and model secrets remain strictly isolated in server-side environment variables (<code className="px-1.5 py-0.5 rounded bg-slate-900 font-mono text-[11px] text-indigo-300">apps/api/.env</code>). No raw tokens, keys, or bearer credentials are ever delivered to or stored inside the client browser.
+          <p className="text-cine-muted">
+            All AI credentials and model secrets remain strictly isolated in server-side environment variables (<code className="px-1.5 py-0.5 rounded bg-cine-card border border-cine-border font-mono text-[11px] text-cine-accent">apps/api/.env</code>). No raw tokens, keys, or bearer credentials are ever delivered to or stored inside the client browser.
           </p>
         </div>
       </div>
 
       {/* Provider Status Cards */}
       <div>
-        <h3 className="text-sm font-semibold text-white tracking-wide uppercase mb-3">
+        <h3 className="text-sm font-semibold text-cine-text tracking-wide uppercase mb-3">
           Configured AI Engines & Diagnostics
         </h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -70,8 +70,8 @@ export function ProvidersSection({
                     <Sparkles className="w-4 h-4" />
                   </div>
                   <div>
-                    <h4 className="text-sm font-semibold text-white">Google Gemini</h4>
-                    <span className="text-xs text-slate-400 font-mono">{geminiModel}</span>
+                    <h4 className="text-sm font-semibold text-cine-text">Google Gemini</h4>
+                    <span className="text-xs text-cine-muted font-mono">{geminiModel}</span>
                   </div>
                 </div>
                 <Badge
@@ -83,7 +83,7 @@ export function ProvidersSection({
               </div>
             </CardHeader>
             <CardContent className="space-y-3 pt-0">
-              <p className="text-xs text-slate-400 leading-relaxed">
+              <p className="text-xs text-cine-muted leading-relaxed">
                 Primary LLM intelligence engine powering viral hook synthesis, 2-column visual screenplays, retention drop-off analysis, and hybrid Telugu speech restoration.
               </p>
               <div className="flex flex-wrap gap-1.5 pt-1">
@@ -91,7 +91,7 @@ export function ProvidersSection({
                   (feature) => (
                     <span
                       key={feature}
-                      className="px-2 py-0.5 rounded-full text-[10px] font-mono bg-slate-800/80 text-slate-300 border border-slate-700/60"
+                      className="px-2 py-0.5 rounded-full text-[10px] font-mono bg-cine-card text-cine-muted border border-cine-border"
                     >
                       {feature}
                     </span>
@@ -110,8 +110,8 @@ export function ProvidersSection({
                     <HardDrive className="w-4 h-4" />
                   </div>
                   <div>
-                    <h4 className="text-sm font-semibold text-white">Local Whisper</h4>
-                    <span className="text-xs text-slate-400 font-mono">model: {localWhisperModel}</span>
+                    <h4 className="text-sm font-semibold text-cine-text">Local Whisper</h4>
+                    <span className="text-xs text-cine-muted font-mono">model: {localWhisperModel}</span>
                   </div>
                 </div>
                 <Badge
@@ -123,7 +123,7 @@ export function ProvidersSection({
               </div>
             </CardHeader>
             <CardContent className="space-y-3 pt-0">
-              <p className="text-xs text-slate-400 leading-relaxed">
+              <p className="text-xs text-cine-muted leading-relaxed">
                 High-performance offline neural speech transcription. Delivers genuine acoustic word-level timestamps without network egress or API billing.
               </p>
               <div className="flex flex-wrap gap-1.5 pt-1">
@@ -131,7 +131,7 @@ export function ProvidersSection({
                   (tag) => (
                     <span
                       key={tag}
-                      className="px-2 py-0.5 rounded-full text-[10px] font-mono bg-slate-800/80 text-slate-300 border border-slate-700/60"
+                      className="px-2 py-0.5 rounded-full text-[10px] font-mono bg-cine-card text-cine-muted border border-cine-border"
                     >
                       {tag}
                     </span>
@@ -150,8 +150,8 @@ export function ProvidersSection({
                     <Cloud className="w-4 h-4" />
                   </div>
                   <div>
-                    <h4 className="text-sm font-semibold text-white">OpenAI Whisper Cloud</h4>
-                    <span className="text-xs text-slate-400 font-mono">whisper-1</span>
+                    <h4 className="text-sm font-semibold text-cine-text">OpenAI Whisper Cloud</h4>
+                    <span className="text-xs text-cine-muted font-mono">whisper-1</span>
                   </div>
                 </div>
                 <Badge
@@ -163,7 +163,7 @@ export function ProvidersSection({
               </div>
             </CardHeader>
             <CardContent className="space-y-3 pt-0">
-              <p className="text-xs text-slate-400 leading-relaxed">
+              <p className="text-xs text-cine-muted leading-relaxed">
                 Cloud speech-to-text API fallback. Activated when configured in backend environment or when selected for high-concurrency cloud deployments.
               </p>
             </CardContent>
@@ -174,12 +174,12 @@ export function ProvidersSection({
             <CardHeader className="pb-3">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2.5">
-                  <div className="p-2 rounded-lg bg-slate-800 border border-slate-700 text-slate-400">
+                  <div className="p-2 rounded-lg bg-cine-card border border-cine-border text-cine-muted">
                     <Cpu className="w-4 h-4" />
                   </div>
                   <div>
-                    <h4 className="text-sm font-semibold text-white">Offline Mock Engine</h4>
-                    <span className="text-xs text-slate-400 font-mono">heuristic-rule-engine</span>
+                    <h4 className="text-sm font-semibold text-cine-text">Offline Mock Engine</h4>
+                    <span className="text-xs text-cine-muted font-mono">heuristic-rule-engine</span>
                   </div>
                 </div>
                 <Badge variant="neutral" size="sm">
@@ -188,7 +188,7 @@ export function ProvidersSection({
               </div>
             </CardHeader>
             <CardContent className="space-y-3 pt-0">
-              <p className="text-xs text-slate-400 leading-relaxed">
+              <p className="text-xs text-cine-muted leading-relaxed">
                 Deterministic mock provider used for automated testing, offline sandbox exploration, and CI/CD validation without requiring active external API keys.
               </p>
             </CardContent>
@@ -207,7 +207,7 @@ export function ProvidersSection({
         <CardContent className="space-y-6">
           {/* LLM Engine Selection */}
           <div className="space-y-2.5">
-            <label className="text-xs font-semibold text-slate-300 uppercase tracking-wider">
+            <label className="text-xs font-semibold text-cine-muted uppercase tracking-wider">
               Preferred LLM Provider
             </label>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -238,13 +238,13 @@ export function ProvidersSection({
                     }`}
                   >
                     <div className="flex items-center justify-between mb-1.5">
-                      <span className="text-sm font-medium text-white">{opt.label}</span>
+                      <span className="text-sm font-medium text-cine-text">{opt.label}</span>
                       <div className="flex items-center gap-1.5">
                         <Badge variant="accent" size="sm">{opt.badge}</Badge>
                         {isSelected && <Check className="w-4 h-4 text-cine-accent" />}
                       </div>
                     </div>
-                    <span className="text-xs text-slate-400 leading-relaxed">{opt.desc}</span>
+                    <span className="text-xs text-cine-muted leading-relaxed">{opt.desc}</span>
                   </button>
                 );
               })}
@@ -253,7 +253,7 @@ export function ProvidersSection({
 
           {/* Transcription Provider Selection */}
           <div className="space-y-2.5">
-            <label className="text-xs font-semibold text-slate-300 uppercase tracking-wider">
+            <label className="text-xs font-semibold text-cine-muted uppercase tracking-wider">
               Preferred Speech-to-Text Transcription Engine
             </label>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
@@ -290,10 +290,10 @@ export function ProvidersSection({
                     }`}
                   >
                     <div className="flex items-center justify-between mb-1.5">
-                      <span className="text-sm font-medium text-white">{opt.label}</span>
+                      <span className="text-sm font-medium text-cine-text">{opt.label}</span>
                       {isSelected && <Check className="w-4 h-4 text-cine-accent" />}
                     </div>
-                    <span className="text-xs text-slate-400 leading-relaxed">{opt.desc}</span>
+                    <span className="text-xs text-cine-muted leading-relaxed">{opt.desc}</span>
                   </button>
                 );
               })}
@@ -301,14 +301,14 @@ export function ProvidersSection({
           </div>
 
           {/* Hybrid Telugu Restoration Toggle */}
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 rounded-xl bg-slate-900/40 border border-cine-border">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 rounded-xl bg-cine-card/60 border border-cine-border">
             <div className="flex items-start gap-3">
-              <div className="p-2.5 rounded-lg bg-indigo-950/40 border border-indigo-500/20 text-indigo-400 shrink-0">
+              <div className="p-2.5 rounded-lg bg-indigo-50 dark:bg-indigo-950/40 border border-indigo-200 dark:border-indigo-500/20 text-indigo-600 dark:text-indigo-400 shrink-0">
                 <Zap className="w-5 h-5" />
               </div>
               <div>
-                <h4 className="text-sm font-medium text-white">Two-Stage Hybrid Telugu Restoration</h4>
-                <p className="text-xs text-slate-400 mt-0.5 max-w-xl leading-relaxed">
+                <h4 className="text-sm font-medium text-cine-text">Two-Stage Hybrid Telugu Restoration</h4>
+                <p className="text-xs text-cine-muted mt-0.5 max-w-xl leading-relaxed">
                   Automatically passes colloquial/code-switched Whisper Telugu transcripts through Gemini 3.5 Flash Lite to restore authentic Telugu words while preserving strict 1:1 segment timing.
                 </p>
               </div>
@@ -322,7 +322,7 @@ export function ProvidersSection({
                 className="sr-only peer"
                 aria-label="Toggle Hybrid Telugu Restoration"
               />
-              <div className="w-11 h-6 bg-slate-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-cine-accent"></div>
+              <div className="w-11 h-6 bg-slate-300 dark:bg-slate-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-cine-accent"></div>
             </label>
           </div>
         </CardContent>

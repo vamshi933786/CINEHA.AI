@@ -75,10 +75,10 @@ export function LanguageSection({ settings, onChange }: LanguageSectionProps) {
   return (
     <div className="space-y-6">
       {/* Scope Disclaimer */}
-      <div className="flex items-start gap-3 p-4 rounded-xl bg-slate-900/60 border border-cine-border text-slate-300">
-        <Info className="w-5 h-5 text-indigo-400 shrink-0 mt-0.5" />
-        <p className="text-xs leading-relaxed text-slate-300">
-          CINEHAI AI is purposefully engineered for <strong className="text-white">English</strong>, <strong className="text-white">తెలుగు (Telugu)</strong>, and <strong className="text-white">Tanglish</strong> short-form cinematic creators. All font engines, motion graphic presets, and speech restoration pipelines are calibrated specifically for these language profiles.
+      <div className="flex items-start gap-3 p-4 rounded-xl bg-cine-card/60 border border-cine-border text-cine-muted">
+        <Info className="w-5 h-5 text-indigo-500 dark:text-indigo-400 shrink-0 mt-0.5" />
+        <p className="text-xs leading-relaxed text-cine-muted">
+          CINEHAI AI is purposefully engineered for <strong className="text-cine-text">English</strong>, <strong className="text-cine-text">తెలుగు (Telugu)</strong>, and <strong className="text-cine-text">Tanglish</strong> short-form cinematic creators. All font engines, motion graphic presets, and speech restoration pipelines are calibrated specifically for these language profiles.
         </p>
       </div>
 
@@ -114,7 +114,7 @@ export function LanguageSection({ settings, onChange }: LanguageSectionProps) {
                   }`}
                 >
                   <div className="flex items-center justify-between w-full mb-1.5">
-                    <span className="font-semibold text-white text-sm">{lang.label}</span>
+                    <span className="font-semibold text-cine-text text-sm">{lang.label}</span>
                     {isSelected && (
                       <div className="w-5 h-5 rounded-full bg-cine-accent flex items-center justify-center text-white shrink-0">
                         <Check className="w-3.5 h-3.5" />
@@ -124,10 +124,10 @@ export function LanguageSection({ settings, onChange }: LanguageSectionProps) {
                   <Badge variant="neutral" size="sm" className="w-fit mb-2 text-[10px]">
                     {lang.script}
                   </Badge>
-                  <p className="text-xs text-slate-400 leading-relaxed mb-3 flex-1">
+                  <p className="text-xs text-cine-muted leading-relaxed mb-3 flex-1">
                     {lang.desc}
                   </p>
-                  <div className="mt-auto p-2 rounded-lg bg-slate-900/80 border border-slate-800 text-[11px] font-mono text-indigo-300 truncate">
+                  <div className="mt-auto p-2 rounded-lg bg-cine-card border border-cine-border text-[11px] font-mono text-cine-accent dark:text-indigo-300 truncate">
                     Preview: &quot;{lang.sample}&quot;
                   </div>
                 </button>
@@ -169,10 +169,10 @@ export function LanguageSection({ settings, onChange }: LanguageSectionProps) {
                   }`}
                 >
                   <div className="flex items-center justify-between w-full mb-1">
-                    <span className="font-medium text-white text-sm">{item.label}</span>
+                    <span className="font-medium text-cine-text text-sm">{item.label}</span>
                     {isSelected && <Check className="w-4 h-4 text-cine-accent" />}
                   </div>
-                  <span className="text-xs text-slate-400 leading-relaxed">{item.desc}</span>
+                  <span className="text-xs text-cine-muted leading-relaxed">{item.desc}</span>
                 </button>
               );
             })}
@@ -185,7 +185,7 @@ export function LanguageSection({ settings, onChange }: LanguageSectionProps) {
         <CardHeader>
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2.5">
-              <div className="p-2 rounded-lg bg-slate-800 border border-slate-700 text-slate-400">
+              <div className="p-2 rounded-lg bg-cine-card border border-cine-border text-cine-muted">
                 <Languages className="w-5 h-5" />
               </div>
               <CardTitle>Application Interface Language</CardTitle>
@@ -197,10 +197,10 @@ export function LanguageSection({ settings, onChange }: LanguageSectionProps) {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="flex items-center justify-between p-3.5 rounded-xl bg-slate-900/40 border border-cine-border max-w-md">
+          <div className="flex items-center justify-between p-3.5 rounded-xl bg-cine-card/60 border border-cine-border max-w-md">
             <div>
-              <span className="text-sm font-medium text-white block">English (US)</span>
-              <span className="text-xs text-slate-400">Primary studio interface</span>
+              <span className="text-sm font-medium text-cine-text block">English (US)</span>
+              <span className="text-xs text-cine-muted">Primary studio interface</span>
             </div>
             <Badge variant="emerald" size="sm">Active</Badge>
           </div>
