@@ -13,7 +13,7 @@ import {
   Award,
 } from "lucide-react";
 import type { ScriptAnalysisResponse, CategoryScore } from "@/types/analyzer";
-import { RETENTION_CATEGORIES } from "@/types/analyzer";
+import { RETENTION_CATEGORIES, LOCALIZED_CATEGORY_LABELS } from "@/types/analyzer";
 
 interface CategoryScoresGridProps {
   analysis: ScriptAnalysisResponse;
@@ -95,7 +95,9 @@ export function CategoryScoresGrid({ analysis }: CategoryScoresGridProps) {
                     <div>
                       <div className="flex items-center gap-1.5">
                         <span className="text-[10px] font-mono text-slate-500">0{idx + 1}</span>
-                        <h4 className="text-sm font-semibold text-slate-100">{cat.label}</h4>
+                        <h4 className="text-sm font-semibold text-slate-100">
+                          {LOCALIZED_CATEGORY_LABELS[analysis.language || "English"]?.[cat.key] || cat.label}
+                        </h4>
                       </div>
                       <p className="text-[11px] text-slate-400 line-clamp-1">{cat.description}</p>
                     </div>

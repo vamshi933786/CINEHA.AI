@@ -41,6 +41,7 @@ export interface ScriptAnalysisRequest {
 export interface ScriptAnalysisResponse {
   script_id?: string | null;
   title: string;
+  language?: string;
   overall_score: number;
   overall_rating: string;
   hook_clarity: CategoryScore;
@@ -134,3 +135,40 @@ export const RETENTION_CATEGORIES: RetentionCategoryMeta[] = [
     iconName: "Award",
   },
 ];
+
+export const LOCALIZED_CATEGORY_LABELS: Record<string, Record<string, string>> = {
+  English: {
+    hook_clarity: "Hook Clarity",
+    hook_strength: "Hook Strength",
+    pacing_progression: "Story & Pacing Progression",
+    information_density: "Information Density",
+    filler_repetition: "Filler & Repetition",
+    segment_timing: "Segment Timing",
+    curiosity_open_loops: "Curiosity & Open Loops",
+    cta_strength: "CTA Strength",
+    overall_retention_potential: "Retention Potential",
+  },
+  Telugu: {
+    hook_clarity: "హుక్ స్పష్టత (Hook Clarity)",
+    hook_strength: "హుక్ బలం (Hook Strength)",
+    pacing_progression: "కథ & పేసింగ్ వేగం (Story Pacing)",
+    information_density: "సమాచార సాంద్రత (Information Density)",
+    filler_repetition: "వృథా పదాలు & పునరావృతం (Filler Words)",
+    segment_timing: "సమయ సమతుల్యత (Segment Timing)",
+    curiosity_open_loops: "ఆసక్తి & ఓపెన్ లూప్స్ (Curiosity Loops)",
+    cta_strength: "కాల్ టు యాక్షన్ బలం (CTA Strength)",
+    overall_retention_potential: "మొత్తం రీటెన్షన్ సామర్థ్యం (Retention)",
+  },
+  Tanglish: {
+    hook_clarity: "Hook Clarity (స్పష్టత)",
+    hook_strength: "Hook Strength (పవర్)",
+    pacing_progression: "Story & Pacing Flow",
+    information_density: "Information Density",
+    filler_repetition: "Filler Words & Repetition",
+    segment_timing: "Segment Timing & Beats",
+    curiosity_open_loops: "Curiosity & Open Loops",
+    cta_strength: "CTA Strength (యాక్షన్)",
+    overall_retention_potential: "Overall Retention Potential",
+  },
+};
+

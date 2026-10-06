@@ -11,6 +11,7 @@ import {
   ArrowRight,
   History,
   Activity,
+  Globe,
 } from "lucide-react";
 import { api } from "../../lib/api";
 import type { Script, ScriptVersion } from "../../types/script";
@@ -70,6 +71,9 @@ export const OptimizerWorkspace: React.FC = () => {
     try {
       const script = await api.getScript(id);
       setCurrentScript(script);
+      if (script?.language) {
+        setCustomLanguage(script.language);
+      }
 
       // Load version history
       try {
@@ -198,13 +202,14 @@ export const OptimizerWorkspace: React.FC = () => {
     try {
       let response: ScriptOptimizationResponse;
 
+      const targetLanguage = customLanguage || currentScript.language || "English";
       if (currentScriptId === "custom") {
         response = await api.optimizeScript("custom", {
           goals: selectedGoals,
           instructions: instructions.trim() ? instructions : undefined,
           script_text: customScriptText || undefined,
           title: currentScript.title,
-          language: currentScript.language,
+          language: targetLanguage,
           duration_seconds: currentScript.duration_seconds,
           hook: currentScript.hook,
           segments: currentScript.segments,
@@ -214,6 +219,7 @@ export const OptimizerWorkspace: React.FC = () => {
         response = await api.optimizeScript(currentScriptId, {
           goals: selectedGoals,
           instructions: instructions.trim() ? instructions : undefined,
+          language: targetLanguage,
         });
       }
 
@@ -416,6 +422,45 @@ export const OptimizerWorkspace: React.FC = () => {
             />
           )}
 
+          {/* Script Language Selection Bar */}
+          <div className="flex flex-wrap items-center justify-between gap-3 p-3.5 bg-[#12131a] border border-[#232738] rounded-xl shadow-md">
+            <div className="flex items-center gap-2">
+              <Globe className="w-4 h-4 text-cyan-400 shrink-0" />
+              <span className="text-xs font-semibold text-slate-300">Script Language:</span>
+              <div className="flex items-center gap-1 bg-[#181a26] p-1 rounded-lg border border-[#262b3d]">
+                {(["English", "Telugu", "Tanglish"] as const).map((lang) => {
+                  const currentLang = customLanguage || currentScript.language || "English";
+                  const isActive = currentLang.toLowerCase() === lang.toLowerCase();
+                  return (
+                    <button
+                      key={lang}
+                      type="button"
+                      disabled={isOptimizing}
+                      onClick={() => {
+                        setCustomLanguage(lang);
+                        setCurrentScript((prev) => (prev ? { ...prev, language: lang } : null));
+                      }}
+                      className={`px-3 py-1 rounded-md text-xs font-bold transition-all ${
+                        isActive
+                          ? "bg-cyan-500 text-slate-950 shadow-sm shadow-cyan-500/20"
+                          : "text-slate-400 hover:text-white hover:bg-slate-800"
+                      }`}
+                    >
+                      {lang === "Telugu" ? "తెలుగు (Telugu)" : lang === "Tanglish" ? "Tanglish (te-Latn)" : "English"}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            <div className="text-xs text-slate-400 flex items-center gap-2">
+              <span>Optimization Output Language:</span>
+              <span className="font-mono font-bold text-cyan-300 bg-cyan-950/60 px-2.5 py-0.5 rounded-full border border-cyan-500/30">
+                {customLanguage || currentScript.language || "English"}
+              </span>
+            </div>
+          </div>
+
           {/* Target Retention Goals Selector */}
           <OptimizationGoalSelector
             selectedGoals={selectedGoals}
@@ -426,6 +471,7 @@ export const OptimizerWorkspace: React.FC = () => {
             instructions={instructions}
             onInstructionsChange={setInstructions}
             disabled={isOptimizing || isSaving}
+            language={customLanguage || currentScript.language || "English"}
           />
 
           {/* Trigger Optimization Action Bar (if not yet run) */}

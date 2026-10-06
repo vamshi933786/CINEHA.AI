@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import {
   SUPPORTED_OPTIMIZATION_GOALS,
+  LOCALIZED_GOAL_LABELS,
   type OptimizationGoalKey,
 } from "../../types/optimizer";
 
@@ -27,6 +28,7 @@ interface OptimizationGoalSelectorProps {
   instructions: string;
   onInstructionsChange: (val: string) => void;
   disabled?: boolean;
+  language?: string;
 }
 
 const ICON_MAP: Record<string, React.ElementType> = {
@@ -47,7 +49,9 @@ export const OptimizationGoalSelector: React.FC<OptimizationGoalSelectorProps> =
   instructions,
   onInstructionsChange,
   disabled = false,
+  language = "English",
 }) => {
+  const normLang = language || "English";
   return (
     <div className="bg-[#12131a] border border-[#232738] rounded-2xl p-5 shadow-xl transition-all">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-[#232738]">
@@ -57,10 +61,18 @@ export const OptimizationGoalSelector: React.FC<OptimizationGoalSelectorProps> =
           </div>
           <div>
             <h3 className="text-sm font-semibold text-white tracking-wide">
-              Target Retention Goals
+              {normLang === "Telugu"
+                ? "రీటెన్షన్ ఆప్టిమైజేషన్ లక్ష్యాలు"
+                : normLang === "Tanglish"
+                ? "Retention Goals (లక్ష్యాలు)"
+                : "Target Retention Goals"}
             </h3>
             <p className="text-xs text-slate-400">
-              Select one or more algorithmic retention vectors to optimize
+              {normLang === "Telugu"
+                ? "మీ స్క్రిప్ట్‌లో మెరుగుపరచాలనుకుంటున్న రీటెన్షన్ అంశాలను ఎంచుకోండి"
+                : normLang === "Tanglish"
+                ? "Optimize cheyalsina retention factors ni select cheskondi"
+                : "Select one or more algorithmic retention vectors to optimize"}
             </p>
           </div>
         </div>
@@ -96,6 +108,7 @@ export const OptimizationGoalSelector: React.FC<OptimizationGoalSelectorProps> =
           const isSelected = selectedGoals.includes(goal.key);
           const isRecommended = recommendedGoals.includes(goal.key);
           const Icon = ICON_MAP[goal.iconName] || Sparkles;
+          const localized = LOCALIZED_GOAL_LABELS[normLang]?.[goal.key] || goal;
 
           return (
             <button
@@ -131,7 +144,7 @@ export const OptimizationGoalSelector: React.FC<OptimizationGoalSelectorProps> =
                       isSelected ? "text-cyan-200" : "text-slate-200 group-hover:text-white"
                     }`}
                   >
-                    {goal.label}
+                    {localized.label}
                   </span>
                   {isRecommended && (
                     <span className="text-[10px] font-bold text-amber-300 bg-amber-500/15 px-1.5 py-0.2 rounded border border-amber-500/30">
@@ -150,7 +163,7 @@ export const OptimizationGoalSelector: React.FC<OptimizationGoalSelectorProps> =
               </div>
 
               <p className="text-[11px] leading-relaxed text-slate-400 group-hover:text-slate-300">
-                {goal.description}
+                {localized.description}
               </p>
             </button>
           );

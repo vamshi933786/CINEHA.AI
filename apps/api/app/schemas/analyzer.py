@@ -49,7 +49,7 @@ class ScriptAnalysisRequest(BaseModel):
     title: Optional[str] = Field(default=None, max_length=200, description="Script title if analyzing unsaved script")
     topic: Optional[str] = Field(default=None, max_length=500, description="Script topic/premise")
     platform: Optional[str] = Field(default="Instagram Reels", description="Target platform")
-    language: Optional[str] = Field(default="English", description="Script language")
+    language: Optional[str] = Field(default=None, description="Script language: English, Telugu, or Tanglish")
     duration_seconds: Optional[int] = Field(default=30, ge=5, le=180, description="Expected video duration")
     hook: Optional[str] = Field(default=None, description="Opening hook line")
     segments: Optional[List[ScriptSegmentSchema]] = Field(default=None, description="Array of time-coded beats")
@@ -63,6 +63,7 @@ class ScriptAnalysisResponse(BaseModel):
 
     script_id: Optional[str] = None
     title: str
+    language: str = Field(default="English", description="Active script language: English, Telugu, or Tanglish")
     overall_score: int = Field(..., ge=0, le=100, description="Overall retention potential score (0–100)")
     overall_rating: str = Field(..., description="Qualitative retention rating")
     hook_clarity: CategoryScoreSchema

@@ -19,6 +19,7 @@ from app.schemas.optimizer import (
 )
 from app.services.llm_provider import get_llm_provider, BaseLLMProvider, OfflineHeuristicMockProvider
 from app.services.script_parser import parse_script_text_to_segments
+from app.services.script_language_detector import resolve_script_language
 
 logger = logging.getLogger(__name__)
 
@@ -67,15 +68,24 @@ class ScriptOptimizerAgent:
         niche = creator_profile.niche if creator_profile else "Creator Content"
         target_audience = creator_profile.target_audience if creator_profile else "General short-form audience"
         creator_name = creator_profile.creator_name if creator_profile else None
+        creator_profile_lang = creator_profile.primary_language if creator_profile else None
 
         original_segments = db_script.segments if isinstance(db_script.segments, list) else []
+
+        # Resolve explicit language > creator profile preference > safe fallback detection
+        script_full_text = f"{db_script.hook} " + " ".join(s.get("voiceover", "") for s in original_segments)
+        resolved_language = resolve_script_language(
+            explicit_lang=request.language if request.language else db_script.language,
+            script_text=script_full_text,
+            creator_profile_lang=creator_profile_lang,
+        )
 
         # 3. Analyze BEFORE optimization
         analysis_before_dict = await self.provider.analyze_script_retention(
             title=db_script.title,
             topic=db_script.topic,
             platform=db_script.platform,
-            language=db_script.language,
+            language=resolved_language,
             duration_seconds=db_script.duration_seconds,
             hook=db_script.hook,
             segments=original_segments,
@@ -92,7 +102,7 @@ class ScriptOptimizerAgent:
                 title=db_script.title,
                 topic=db_script.topic,
                 platform=db_script.platform,
-                language=db_script.language,
+                language=resolved_language,
                 duration_seconds=db_script.duration_seconds,
                 tone=db_script.tone,
                 hook=db_script.hook,
@@ -112,7 +122,7 @@ class ScriptOptimizerAgent:
                 title=db_script.title,
                 topic=db_script.topic,
                 platform=db_script.platform,
-                language=db_script.language,
+                language=resolved_language,
                 duration_seconds=db_script.duration_seconds,
                 tone=db_script.tone,
                 hook=db_script.hook,
@@ -138,7 +148,7 @@ class ScriptOptimizerAgent:
             title=optimized_title,
             topic=db_script.topic,
             platform=db_script.platform,
-            language=db_script.language,
+            language=resolved_language,
             duration_seconds=db_script.duration_seconds,
             hook=optimized_hook,
             segments=optimized_segments,
@@ -157,7 +167,7 @@ class ScriptOptimizerAgent:
                 title=optimized_title,
                 topic=db_script.topic,
                 platform=db_script.platform,
-                language=db_script.language,
+                language=resolved_language,
                 duration_seconds=db_script.duration_seconds,
                 tone=db_script.tone,
                 hook=optimized_hook,
@@ -243,6 +253,8 @@ class ScriptOptimizerAgent:
         creator_name = None
         niche = "Creator Content"
         target_audience = "General short-form audience"
+        creator_profile = None
+        creator_profile_lang = None
         if db is not None:
             try:
                 profile_stmt = select(CreatorProfile).order_by(CreatorProfile.created_at.desc()).limit(1)
@@ -252,15 +264,24 @@ class ScriptOptimizerAgent:
                     niche = creator_profile.niche or niche
                     target_audience = creator_profile.target_audience or target_audience
                     creator_name = creator_profile.creator_name
+                    creator_profile_lang = creator_profile.primary_language
             except Exception:
                 pass
+
+        # Resolve explicit language > creator profile preference > safe fallback detection
+        script_full_text = request.script_text or f"{original_hook} " + " ".join(s.get("voiceover", "") for s in original_segments)
+        resolved_language = resolve_script_language(
+            explicit_lang=request.language,
+            script_text=script_full_text,
+            creator_profile_lang=creator_profile_lang,
+        )
 
         # 1. Analyze BEFORE optimization
         analysis_before_dict = await self.provider.analyze_script_retention(
             title=title,
             topic=topic,
             platform=platform,
-            language=language,
+            language=resolved_language,
             duration_seconds=duration_seconds,
             hook=original_hook,
             segments=original_segments,
@@ -277,7 +298,7 @@ class ScriptOptimizerAgent:
                 title=title,
                 topic=topic,
                 platform=platform,
-                language=language,
+                language=resolved_language,
                 duration_seconds=duration_seconds,
                 tone=tone,
                 hook=original_hook,
@@ -297,7 +318,7 @@ class ScriptOptimizerAgent:
                 title=title,
                 topic=topic,
                 platform=platform,
-                language=language,
+                language=resolved_language,
                 duration_seconds=duration_seconds,
                 tone=tone,
                 hook=original_hook,
@@ -323,7 +344,7 @@ class ScriptOptimizerAgent:
             title=optimized_title,
             topic=topic,
             platform=platform,
-            language=language,
+            language=resolved_language,
             duration_seconds=duration_seconds,
             hook=optimized_hook,
             segments=optimized_segments,
@@ -340,7 +361,7 @@ class ScriptOptimizerAgent:
             title=title,
             topic=topic,
             platform=platform,
-            language=language,
+            language=resolved_language,
             duration_seconds=duration_seconds,
             tone=tone,
             hook=original_hook,
@@ -360,7 +381,7 @@ class ScriptOptimizerAgent:
                 title=optimized_title,
                 topic=topic,
                 platform=platform,
-                language=language,
+                language=resolved_language,
                 duration_seconds=duration_seconds,
                 tone=tone,
                 hook=optimized_hook,

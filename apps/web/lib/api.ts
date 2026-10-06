@@ -402,8 +402,11 @@ export class ApiClient {
     return data as ScriptAnalysisResponse;
   }
 
-  async analyzeScriptById(scriptId: string): Promise<ScriptAnalysisResponse> {
-    const response = await fetch(`${this.baseUrl}/analyzer/script/${scriptId}`, {
+  async analyzeScriptById(scriptId: string, language?: string): Promise<ScriptAnalysisResponse> {
+    const url = language
+      ? `${this.baseUrl}/analyzer/script/${scriptId}?language=${encodeURIComponent(language)}`
+      : `${this.baseUrl}/analyzer/script/${scriptId}`;
+    const response = await fetch(url, {
       method: "GET",
       headers: {
         "Content-Type": "application/json",

@@ -16,13 +16,15 @@ import {
 import { api } from "@/lib/api";
 import type { Script } from "@/types/script";
 
+export type PresetKey = "viral" | "filler" | "cinematic" | "telugu_viral" | "tanglish_viral";
+
 export interface ScriptSelectorProps {
   currentScriptId: string | null;
   onSelectScriptId: (scriptId: string) => void;
-  onAnalyzeSample: (sampleKey: "viral" | "filler" | "cinematic") => void;
+  onAnalyzeSample: (sampleKey: PresetKey) => void;
   isLoading: boolean;
   activeScriptTitle?: string;
-  activePreset?: "viral" | "filler" | "cinematic" | null;
+  activePreset?: PresetKey | null;
 }
 
 export function ScriptSelector({
@@ -329,6 +331,36 @@ export function ScriptSelector({
         >
           <RefreshCw className="w-3 h-3 text-cyan-400" />
           <span>Cinematic</span>
+        </button>
+
+        <button
+          type="button"
+          disabled={isLoading}
+          onClick={() => onAnalyzeSample("telugu_viral")}
+          className={`flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-all active:scale-95 ${
+            activePreset === "telugu_viral"
+              ? "text-amber-200 bg-amber-500/25 border border-amber-400 shadow-sm shadow-amber-500/20"
+              : "text-amber-300 bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/20"
+          }`}
+          title="తెలుగు స్క్రిప్ట్ రీటెన్షన్ ఆడిట్ (Telugu Unicode sample)"
+        >
+          <Sparkles className="w-3 h-3 text-amber-400" />
+          <span>తెలుగు</span>
+        </button>
+
+        <button
+          type="button"
+          disabled={isLoading}
+          onClick={() => onAnalyzeSample("tanglish_viral")}
+          className={`flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-all active:scale-95 ${
+            activePreset === "tanglish_viral"
+              ? "text-purple-200 bg-purple-500/25 border border-purple-400 shadow-sm shadow-purple-500/20"
+              : "text-purple-300 bg-purple-500/10 hover:bg-purple-500/20 border border-purple-500/20"
+          }`}
+          title="Tanglish (te-Latn) screenplay sample"
+        >
+          <Sparkles className="w-3 h-3 text-purple-400" />
+          <span>Tanglish</span>
         </button>
       </div>
     </div>

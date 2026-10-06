@@ -11,12 +11,13 @@ import {
   ArrowRight,
   Sparkles,
   ListFilter,
+  Globe,
 } from "lucide-react";
 import { RetentionScoreGauge } from "./RetentionScoreGauge";
 import { CategoryScoresGrid } from "./CategoryScoresGrid";
 import { WeakPointsAndRecommendations } from "./WeakPointsAndRecommendations";
 import { SegmentTimelineAnalysis } from "./SegmentTimelineAnalysis";
-import { ScriptSelector } from "./ScriptSelector";
+import { ScriptSelector, type PresetKey } from "./ScriptSelector";
 import { UnifiedScriptInput } from "../scripts/UnifiedScriptInput";
 import { api } from "../../lib/api";
 import type { ScriptAnalysisResponse, ScriptAnalysisRequest } from "@/types/analyzer";
@@ -27,7 +28,7 @@ import {
   deriveRecommendedOptimizationGoals,
 } from "../../types/optimizer";
 
-export const SAMPLE_PRESETS: Record<"viral" | "filler" | "cinematic", ScriptAnalysisRequest> = {
+export const SAMPLE_PRESETS: Record<PresetKey, ScriptAnalysisRequest> = {
   viral: {
     title: "Why 24fps Feels Like Cinema",
     topic: "Cinematic Frame Rate",
@@ -171,6 +172,116 @@ export const SAMPLE_PRESETS: Record<"viral" | "filler" | "cinematic", ScriptAnal
       },
     ],
   },
+  telugu_viral: {
+    title: "ఫోన్ వీడియోను సినిమాగా మార్చే 1 ట్రిక్",
+    topic: "మొబైల్ సినిమాటోగ్రఫీ",
+    platform: "Instagram Reels",
+    language: "Telugu",
+    duration_seconds: 15,
+    hook: "మీ ఫోన్ వీడియోలు సినిమా లాగా రావాలంటే ఈ 24fps సీక్రెట్ తెలుసుకోండి!",
+    cta: "మరిన్ని సినిమా సీక్రెట్స్ కోసం ఇప్పుడే ఫాలో అవ్వండి!",
+    segments: [
+      {
+        id: "seg_1",
+        start_time: "0:00",
+        end_time: "0:03",
+        section: "HOOK",
+        voiceover: "మీ ఫోన్ వీడియోలు సినిమా లాగా రావాలంటే ఈ 24fps సీక్రెట్ తెలుసుకోండి!",
+        visual_direction: "ఫోన్ కెమెరా లెన్స్ క్లోజ్-అప్ షాట్",
+        b_roll: "సినిమాటిక్ మోషన్ బ్లర్ పోలిక",
+        on_screen_text: "24FPS సీక్రెట్ సెట్టింగ్ 🎬",
+        audio_direction: "సినిమాటిక్ బేస్ డ్రాప్ సౌండ్",
+      },
+      {
+        id: "seg_2",
+        start_time: "0:03",
+        end_time: "0:07",
+        section: "PROBLEM",
+        voiceover: "చాలా మంది 60fps లో రికార్డ్ చేసి నేచురల్ మోషన్ బ్లర్ కోల్పోతారు.",
+        visual_direction: "ఆర్టిఫిషియల్ వీడియో మోషన్ ప్రదర్శన",
+        b_roll: "స్లో-మోషన్ జిట్టర్",
+        on_screen_text: "60FPS తప్పులు ❌",
+        audio_direction: "రివర్స్ బజ్ సౌండ్",
+      },
+      {
+        id: "seg_3",
+        start_time: "0:07",
+        end_time: "0:12",
+        section: "SOLUTION",
+        voiceover: "కెమెరా సెట్టింగ్స్ లో 24fps మరియు 180 డిగ్రీల షట్టర్ రూల్ వాడండి.",
+        visual_direction: "కెమెరా సెట్టింగ్స్ స్క్రీన్ రికార్డింగ్",
+        b_roll: "180° షట్టర్ స్పీడ్ హైలైట్",
+        on_screen_text: "24FPS + 180° రూల్",
+        audio_direction: "బీట్ రిథమ్",
+      },
+      {
+        id: "seg_4",
+        start_time: "0:12",
+        end_time: "0:15",
+        section: "CTA",
+        voiceover: "మరిన్ని సినిమా సీక్రెట్స్ కోసం ఇప్పుడే ఫాలో అవ్వండి!",
+        visual_direction: "కెమెరా వైపు చూస్తూ సైన్ చేయడం",
+        b_roll: "ఫాలో బటన్ యానిమేషన్",
+        on_screen_text: "ఇప్పుడే ఫాలో అవ్వండి",
+        audio_direction: "క్లీన్ ఫినిష్ సౌండ్",
+      },
+    ],
+  },
+  tanglish_viral: {
+    title: "Phone Footage Cinema Laga Marchandi",
+    topic: "Mobile Filmmaking Secrets",
+    platform: "Instagram Reels",
+    language: "Tanglish",
+    duration_seconds: 15,
+    hook: "Chala mandi creators 60fps lo shoot chesi pedda mistake chestaru! Ee 1-second setting chudandi.",
+    cta: "Next shoot ki mundu ee video ni save cheskondi!",
+    segments: [
+      {
+        id: "seg_1",
+        start_time: "0:00",
+        end_time: "0:03",
+        section: "HOOK",
+        voiceover: "Chala mandi creators 60fps lo shoot chesi pedda mistake chestaru! Ee 1-second setting chudandi.",
+        visual_direction: "Macro close up rack focus into phone camera.",
+        b_roll: "Split screen cinema comparison",
+        on_screen_text: "24FPS CINEMA SECRET 🎬",
+        audio_direction: "Sub bass drop vinyl hit",
+      },
+      {
+        id: "seg_2",
+        start_time: "0:03",
+        end_time: "0:07",
+        section: "PROBLEM",
+        voiceover: "60fps lo shoot chesthe artificial look vachi natural motion blur totally potundi.",
+        visual_direction: "Direct side by side harsh motion pan.",
+        b_roll: "Soap opera jitter highlight",
+        on_screen_text: "SOAP OPERA MISTAKE ❌",
+        audio_direction: "Reverse swoosh",
+      },
+      {
+        id: "seg_3",
+        start_time: "0:07",
+        end_time: "0:12",
+        section: "SOLUTION",
+        voiceover: "Immediate ga 24fps ki switch ayyi 180 degree shutter angle lock cheyandi.",
+        visual_direction: "Phone settings tapping over the shoulder.",
+        b_roll: "180 degree menu highlight",
+        on_screen_text: "24FPS + 180° SHUTTER RULE",
+        audio_direction: "Rhythmic beat drop",
+      },
+      {
+        id: "seg_4",
+        start_time: "0:12",
+        end_time: "0:15",
+        section: "CTA",
+        voiceover: "Next shoot ki mundu ee video ni save cheskondi!",
+        visual_direction: "Pointing to bookmark icon with confidence.",
+        b_roll: "Save icon bounce animation",
+        on_screen_text: "SAVE FOR NEXT SHOOT",
+        audio_direction: "Clean chime finish",
+      },
+    ],
+  },
 };
 
 interface RetentionWorkspaceProps {
@@ -187,7 +298,7 @@ export function RetentionWorkspace({ initialScriptId = null }: RetentionWorkspac
   }
 
   const [currentScriptId, setCurrentScriptId] = useState<string | null>(initialScriptId);
-  const [activePreset, setActivePreset] = useState<"viral" | "filler" | "cinematic" | null>(
+  const [activePreset, setActivePreset] = useState<PresetKey | null>(
     initialScriptId ? null : "viral"
   );
   const [inputMode, setInputMode] = useState<"selector" | "unified">("selector");
@@ -204,7 +315,7 @@ export function RetentionWorkspace({ initialScriptId = null }: RetentionWorkspac
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
 
-  const runAnalysis = useCallback(async (scriptId: string) => {
+  const runAnalysis = useCallback(async (scriptId: string, langOverride?: string) => {
     setIsLoading(true);
     setError(null);
     setCurrentScriptId(scriptId);
@@ -216,7 +327,13 @@ export function RetentionWorkspace({ initialScriptId = null }: RetentionWorkspac
     setCustomSegments(null);
     setCustomCta(null);
     try {
-      const data = await api.analyzeScriptById(scriptId);
+      const targetLang = langOverride || (customLanguage && customLanguage !== "English" ? customLanguage : undefined);
+      const data = targetLang
+        ? await api.analyzeScriptById(scriptId, targetLang)
+        : await api.analyzeScriptById(scriptId);
+      if (data.language) {
+        setCustomLanguage(data.language);
+      }
       setAnalysis(data);
     } catch (err: any) {
       console.error("Failed to analyze script by id:", err);
@@ -224,16 +341,19 @@ export function RetentionWorkspace({ initialScriptId = null }: RetentionWorkspac
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [customLanguage]);
 
   const runSampleAnalysis = useCallback(
-    async (sampleKey: "viral" | "filler" | "cinematic") => {
+    async (sampleKey: PresetKey, langOverride?: string) => {
       setIsLoading(true);
       setError(null);
       setCurrentScriptId(null);
       setActivePreset(sampleKey);
       try {
-        const samplePayload = SAMPLE_PRESETS[sampleKey];
+        const samplePayload = { ...SAMPLE_PRESETS[sampleKey] };
+        if (langOverride) {
+          samplePayload.language = langOverride;
+        }
         setCustomScriptTitle(samplePayload.title || null);
         setCustomHook(samplePayload.hook || null);
         setCustomCta(samplePayload.cta || null);
@@ -431,31 +551,78 @@ export function RetentionWorkspace({ initialScriptId = null }: RetentionWorkspac
       </div>
 
       {/* Input Mode Tabs */}
-      <div className="flex items-center gap-2 p-1 rounded-xl bg-slate-900/60 border border-white/10 w-fit">
-        <button
-          type="button"
-          onClick={() => setInputMode("selector")}
-          className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all ${
-            inputMode === "selector"
-              ? "bg-cyan-500 text-slate-950 font-bold shadow-md shadow-cyan-500/20"
-              : "text-slate-400 hover:text-white"
-          }`}
-        >
-          <ListFilter className="w-3.5 h-3.5" />
-          <span>Saved Scripts & Presets</span>
-        </button>
-        <button
-          type="button"
-          onClick={() => setInputMode("unified")}
-          className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all ${
-            inputMode === "unified"
-              ? "bg-cyan-500 text-slate-950 font-bold shadow-md shadow-cyan-500/20"
-              : "text-slate-400 hover:text-white"
-          }`}
-        >
-          <Sparkles className="w-3.5 h-3.5" />
-          <span>Upload / Paste Script (OCR)</span>
-        </button>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex items-center gap-2 p-1 rounded-xl bg-slate-900/60 border border-white/10 w-fit">
+          <button
+            type="button"
+            onClick={() => setInputMode("selector")}
+            className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+              inputMode === "selector"
+                ? "bg-cyan-500 text-slate-950 font-bold shadow-md shadow-cyan-500/20"
+                : "text-slate-400 hover:text-white"
+            }`}
+          >
+            <ListFilter className="w-3.5 h-3.5" />
+            <span>Saved Scripts & Presets</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setInputMode("unified")}
+            className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+              inputMode === "unified"
+                ? "bg-cyan-500 text-slate-950 font-bold shadow-md shadow-cyan-500/20"
+                : "text-slate-400 hover:text-white"
+            }`}
+          >
+            <Sparkles className="w-3.5 h-3.5" />
+            <span>Upload / Paste Script (OCR)</span>
+          </button>
+        </div>
+
+        {/* Script Language Switcher Bar */}
+        <div className="flex items-center gap-2 bg-slate-900/80 border border-white/10 px-3 py-1.5 rounded-xl">
+          <Globe className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
+          <span className="text-xs font-medium text-slate-400 hidden sm:inline">Language:</span>
+          <div className="flex items-center gap-1">
+            {(["English", "Telugu", "Tanglish"] as const).map((lang) => {
+              const currentLang = customLanguage || analysis?.language || "English";
+              const isActive = currentLang.toLowerCase() === lang.toLowerCase();
+              return (
+                <button
+                  key={lang}
+                  type="button"
+                  onClick={() => {
+                    setCustomLanguage(lang);
+                    if (currentScriptId) {
+                      runAnalysis(currentScriptId, lang);
+                    } else if (activePreset) {
+                      runSampleAnalysis(activePreset, lang);
+                    } else if (customScriptText) {
+                      setIsLoading(true);
+                      api.analyzeScript({
+                        title: customScriptTitle || "Screenplay",
+                        script_text: customScriptText,
+                        language: lang,
+                        platform: "Instagram Reels",
+                        duration_seconds: customDuration || 30,
+                      })
+                        .then(setAnalysis)
+                        .catch((err: any) => setError(err?.message || "Failed to re-analyze"))
+                        .finally(() => setIsLoading(false));
+                    }
+                  }}
+                  className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-all ${
+                    isActive
+                      ? "bg-cyan-500 text-slate-950 font-bold shadow-sm shadow-cyan-500/20"
+                      : "text-slate-400 hover:text-white hover:bg-slate-800/80"
+                  }`}
+                >
+                  {lang === "Telugu" ? "తెలుగు" : lang === "Tanglish" ? "Tanglish" : "English"}
+                </button>
+              );
+            })}
+          </div>
+        </div>
       </div>
 
       {/* Script Source Mode Switch */}

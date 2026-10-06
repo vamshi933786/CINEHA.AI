@@ -7,6 +7,7 @@ from app.models.script import Script
 from app.models.creator_profile import CreatorProfile
 from app.schemas.analyzer import ScriptAnalysisRequest, ScriptAnalysisResponse
 from app.services.llm_provider import get_llm_provider, BaseLLMProvider, OfflineHeuristicMockProvider
+from app.services.script_language_detector import resolve_script_language, normalize_language_contract
 
 logger = logging.getLogger(__name__)
 
@@ -116,6 +117,15 @@ class RetentionAnalyzerAgent:
 
         niche = creator_profile.niche if creator_profile else "Creator Content"
         target_audience = creator_profile.target_audience if creator_profile else "General short-form viewers"
+        creator_profile_lang = creator_profile.primary_language if creator_profile else None
+
+        # Resolve explicit language > creator profile preference > safe fallback detection
+        script_full_text = request.script_text or f"{hook} " + " ".join(s.get("voiceover", "") for s in segments)
+        language = resolve_script_language(
+            explicit_lang=language if request.language or (resolved_script_id and language) else None,
+            script_text=script_full_text,
+            creator_profile_lang=creator_profile_lang,
+        )
 
         try:
             analysis_data = await self.provider.analyze_script_retention(
@@ -148,6 +158,7 @@ class RetentionAnalyzerAgent:
 
         analysis_data["script_id"] = resolved_script_id
         analysis_data["title"] = title
+        analysis_data["language"] = language
 
         return ScriptAnalysisResponse.model_validate(analysis_data)
 

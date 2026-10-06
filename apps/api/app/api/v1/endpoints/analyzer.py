@@ -1,4 +1,5 @@
-from fastapi import APIRouter, Depends, status
+from typing import Optional
+from fastapi import APIRouter, Depends, status, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.database import get_db
 from app.schemas.analyzer import ScriptAnalysisRequest, ScriptAnalysisResponse
@@ -31,10 +32,11 @@ async def analyze_script(
 )
 async def analyze_script_by_id(
     script_id: str,
+    language: Optional[str] = Query(default=None, description="Optional target language override (English, Telugu, Tanglish)"),
     db: AsyncSession = Depends(get_db),
     agent: RetentionAnalyzerAgent = Depends(get_retention_analyzer_agent),
 ) -> ScriptAnalysisResponse:
     return await agent.analyze(
-        request=ScriptAnalysisRequest(script_id=script_id),
+        request=ScriptAnalysisRequest(script_id=script_id, language=language),
         db=db,
     )
