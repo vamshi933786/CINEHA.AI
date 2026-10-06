@@ -161,6 +161,10 @@ def extract_from_pdf(
     )
 
 
+MAX_UNCOMPRESSED_ENTRY_BYTES = 25 * 1024 * 1024  # 25 MB max per entry
+MAX_TOTAL_UNCOMPRESSED_BYTES = 50 * 1024 * 1024  # 50 MB max cumulative uncompressed
+
+
 def extract_from_docx(
     docx_bytes: bytes,
     filename: str = "screenplay.docx",
@@ -171,12 +175,30 @@ def extract_from_docx(
 
     try:
         with zipfile.ZipFile(io.BytesIO(docx_bytes)) as docx_zip:
+            # 1. Zip bomb mitigation: check uncompressed entries against safe ceilings
+            total_uncompressed = 0
+            for info in docx_zip.infolist():
+                total_uncompressed += info.file_size
+                if info.file_size > MAX_UNCOMPRESSED_ENTRY_BYTES or total_uncompressed > MAX_TOTAL_UNCOMPRESSED_BYTES:
+                    raise HTTPException(
+                        status_code=status.HTTP_400_BAD_REQUEST,
+                        detail=f"File '{filename}' exceeds safe decompression thresholds (potential decompression bomb).",
+                    )
+
             if "word/document.xml" not in docx_zip.namelist():
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
                     detail=f"File '{filename}' is not a valid DOCX document (missing word/document.xml).",
                 )
             xml_content = docx_zip.read("word/document.xml")
+
+            # 2. XML Entity Injection / DTD Blowup protection
+            if b"<!DOCTYPE" in xml_content or b"<!ENTITY" in xml_content:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=f"File '{filename}' contains forbidden XML entity or DOCTYPE declarations.",
+                )
+
             tree = ET.fromstring(xml_content)
 
             ns = {"w": "http://schemas.openxmlformats.org/wordprocessingml/2006/main"}

@@ -133,12 +133,12 @@ class ContentItemUpdate(BaseModel):
     hook_id: Optional[str] = None
     video_analysis_id: Optional[str] = None
 
-    content_pillar: Optional[str] = None
-    content_goal: Optional[str] = None
+    content_pillar: Optional[str] = Field(None, max_length=100)
+    content_goal: Optional[str] = Field(None, max_length=100)
     priority: Optional[str] = None
     tags: Optional[List[str]] = None
-    notes: Optional[str] = None
-    cta: Optional[str] = None
+    notes: Optional[str] = Field(None, max_length=3000)
+    cta: Optional[str] = Field(None, max_length=255)
 
     @field_validator("scheduled_date")
     @classmethod

@@ -65,6 +65,31 @@ def inspect_video_magic_bytes(header: bytes) -> Tuple[bool, str]:
     return False, "unknown"
 
 
+import re
+
+
+def sanitize_video_filename(filename: Optional[str], default: str = "uploaded_video.mp4") -> str:
+    """
+    Sanitize untrusted user-supplied filenames to prevent path traversal, null byte injections,
+    control characters, and unexpected directory escapes across POSIX and Windows.
+    """
+    if not filename:
+        return default
+    # Replace backslashes with slashes to handle Windows paths across any OS
+    cleaned = filename.replace("\\", "/")
+    # Extract basename only
+    cleaned = os.path.basename(cleaned)
+    # Strip null bytes and control characters
+    cleaned = re.sub(r"[\x00-\x1f\x7f]", "", cleaned)
+    # Remove leading/trailing dots and whitespace
+    cleaned = cleaned.strip(". \t\r\n")
+    # Replace any character other than alphanumeric, dot, underscore, or hyphen
+    cleaned = re.sub(r"[^\w\.\-]", "_", cleaned)
+    if not cleaned or cleaned.startswith("."):
+        return default
+    return cleaned
+
+
 def validate_video_upload(
     file_bytes: bytes,
     filename: Optional[str] = None,
@@ -79,7 +104,7 @@ def validate_video_upload(
     3. Extension validation (.mp4, .mov, .webm)
     4. Binary magic-byte / container header signature inspection
     """
-    clean_filename = os.path.basename(filename or "uploaded_video.mp4")
+    clean_filename = sanitize_video_filename(filename)
 
     # 1. Non-empty check
     if not file_bytes or len(file_bytes) == 0:

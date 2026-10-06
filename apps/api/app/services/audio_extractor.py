@@ -87,7 +87,16 @@ async def detect_audio_stream(video_path: str, ffmpeg_bin: str) -> bool:
         stdout=asyncio.subprocess.PIPE,
         stderr=asyncio.subprocess.PIPE,
     )
-    _, stderr = await process.communicate()
+    try:
+        _, stderr = await asyncio.wait_for(process.communicate(), timeout=30.0)
+    except asyncio.TimeoutError:
+        try:
+            process.kill()
+            await process.communicate()
+        except Exception:
+            pass
+        logger.warning(f"FFmpeg audio stream detection timed out for {video_path}")
+        return False
     stderr_text = stderr.decode("utf-8", errors="replace")
 
     # Match audio stream indicator in FFmpeg metadata
@@ -166,7 +175,17 @@ async def extract_audio_from_video(
             stderr=asyncio.subprocess.PIPE,
         )
 
-        _, stderr = await process.communicate()
+        try:
+            _, stderr = await asyncio.wait_for(process.communicate(), timeout=90.0)
+        except asyncio.TimeoutError:
+            try:
+                process.kill()
+                await process.communicate()
+            except Exception:
+                pass
+            raise AudioExtractionError(
+                f"Audio extraction timed out after 90 seconds for video '{clean_filename}'."
+            )
         stderr_text = stderr.decode("utf-8", errors="replace")
 
         if process.returncode != 0:
@@ -247,7 +266,17 @@ async def convert_audio_to_pcm_array(
         stdout=asyncio.subprocess.PIPE,
         stderr=asyncio.subprocess.PIPE,
     )
-    stdout, stderr = await process.communicate(input=audio_bytes)
+    try:
+        stdout, stderr = await asyncio.wait_for(
+            process.communicate(input=audio_bytes), timeout=60.0
+        )
+    except asyncio.TimeoutError:
+        try:
+            process.kill()
+            await process.communicate()
+        except Exception:
+            pass
+        raise AudioExtractionError("Audio decoding to PCM array timed out after 60 seconds.")
     if process.returncode != 0:
         err_msg = stderr.decode("utf-8", errors="replace")[:300]
         logger.error(f"FFmpeg PCM conversion failed (code {process.returncode}): {err_msg}")

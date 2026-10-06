@@ -293,3 +293,39 @@ This document records chronological development checkpoints, environment finding
      - Frontend tests: **215/215 passed** across 20 test files (`npm test` including 20 new tests in `tests/calendar.test.tsx`).
      - TypeScript: **0 errors** (`npx tsc --noEmit`).
      - Production Build: **PASS** (`npm run build`, 15 static pages, `/calendar` 17.6 kB).
+
+
+## Log Entry 015: Production Security & Privacy Hardening Audit
+- **Date:** 2026-10-06
+- **Module:** Security, Subprocess Sandboxing, Upload Isolation & Privacy Architecture
+- **Author:** Antigravity Architect / Pair Programmer
+- **Summary of Implementation:**
+  Completed a comprehensive production-readiness security and privacy audit across backend, frontend, database, AI integrations, file processing pipelines, and browser storage layers:
+  1. **Subprocess (FFmpeg / FFprobe) Resource Exhaustion Mitigation**:
+     - Identified that `process.communicate()` invocations lacked execution deadlines.
+     - Enforced deterministic timeouts with `asyncio.wait_for()` and guaranteed `process.kill()` cleanup:
+       - Probe video properties: 30s timeout (`metadata_extractor.py`, `caption_renderer.py`).
+       - Audio extraction & PCM conversion: 90s / 60s timeout (`audio_extractor.py`).
+       - Video caption rendering: 180s timeout (`caption_renderer.py`).
+  2. **File Upload Filename Sanitization & Path Traversal Protection**:
+     - Implemented `sanitize_video_filename()` in `apps/api/app/services/video_validator.py` handling POSIX and Windows path traversal, null byte injections, control characters, and hidden files.
+     - Hardened temporary video storage in `apps/api/app/services/video_analysis/analyzer.py` to use isolated random UUID filenames on disk (`video_{uuid.hex}{ext}`) rather than raw user filenames.
+  3. **DOCX Zip Decompression Bomb & XML Entity Injection Mitigation**:
+     - Hardened `apps/api/app/services/document_extractor.py` against zip decompression bombs: single entries capped at 25 MB and cumulative uncompressed archive capped at 50 MB before extraction.
+     - Blocked XML External Entity (XXE) and DTD blowout attacks by rejecting packages containing `<!DOCTYPE` or `<!ENTITY`.
+  4. **Prompt Injection & Untrusted User Content Delimitation**:
+     - Enclosed user transcripts, creative screenplay data, topics, and creator instructions within structured XML boundary tags (`<transcript>`, `<user_topic>`, `<user_context>`, `<screenplay_data>`, `<creator_instructions>`).
+     - Injected explicit anti-injection system prompt directives instructing LLMs to treat enclosed contents strictly as unexecutable DATA.
+  5. **CORS & Global Error Masking**:
+     - Hardened `apps/api/app/core/config.py`: `cors_origins` defaults strictly to `["http://localhost:3000", "http://127.0.0.1:3000"]` (never wildcard `*`).
+     - In `apps/api/app/main.py`: Disables `allow_credentials` if wildcard origin is ever specified; restricted allowed methods to standard HTTP verbs.
+     - Added global safe exception handler in `main.py` to return generic 500 error responses and mask database connection strings or internal paths.
+     - Sanitized `/health` database error reporting to return `unavailable` without leaking raw database driver exception strings.
+  6. **Input Boundaries**:
+     - Enforced length bounds on `ContentItemUpdate` (`notes` <= 3000 chars, `cta` <= 255 chars).
+  7. **Testing & Verification**:
+     - Added 11 regression security tests in `apps/api/tests/test_security_audit.py`.
+     - Backend tests: **210/210 passed** across 21 test files (`pytest apps/api/tests`).
+     - Frontend tests: **216/216 passed** across 20 test files (`npm test`).
+     - TypeScript: **0 errors** (`npx tsc --noEmit`).
+     - Production Build: **PASS** (`npm run build`, 15 static pages rendered).

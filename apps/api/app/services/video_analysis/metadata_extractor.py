@@ -35,7 +35,16 @@ class VideoMetadataExtractor:
                 stdout=asyncio.subprocess.PIPE,
                 stderr=asyncio.subprocess.PIPE,
             )
-            _, stderr = await process.communicate()
+            try:
+                _, stderr = await asyncio.wait_for(process.communicate(), timeout=30.0)
+            except asyncio.TimeoutError:
+                try:
+                    process.kill()
+                    await process.communicate()
+                except Exception:
+                    pass
+                logger.warning(f"FFmpeg probe timed out for {video_path}")
+                stderr = b""
             stderr_text = stderr.decode("utf-8", errors="replace")
         except Exception as e:
             logger.error(f"Error running FFmpeg probe on {video_path}: {e}")

@@ -1,10 +1,27 @@
-# CINEHA AI — Production Deployment Guide
+# CINEHA AI — Production Deployment Guide & Operational Boundaries
 
-This guide details the dual-tier deployment topology separating the Next.js 14 frontend (Vercel) from the Python FastAPI backend (Render / Railway / AWS).
+This guide details the dual-tier deployment topology separating the Next.js 14 frontend from the Python FastAPI backend, and formalizes operational readiness boundaries.
 
 ---
 
-## 1. Architectural Topology
+## 1. Operational Deployment Boundaries
+
+| Deployment Target | Status | Requirements & Notes |
+| :--- | :--- | :--- |
+| **Local Workstation** | **SAFE & READY** | Default single-creator mode. Runs on `localhost:3000` with local SQLite, Local Whisper, and optional Gemini LLM. |
+| **Controlled Staging / Demo** | **SAFE & READY** | Single-tenant demo behind password-protected reverse proxy or VPN. |
+| **Public Multi-User Production** | **REQUIRES HARDENING** | **Requires Authentication & Tenant Isolation prior to public exposure.** |
+
+> [!WARNING]
+> **Prerequisites for Public Multi-User Deployment:**
+> 1. **Authentication Layer:** Implement user authentication (OAuth2 / OIDC / Supabase Auth / Clerk) to associate records with specific user IDs.
+> 2. **Tenant Isolation:** Add `user_id` foreign keys to `CreatorProfile`, `Script`, `ContentItem`, and `VideoAnalysis` tables to prevent cross-creator access.
+> 3. **Object Storage:** Replace local temporary render cache with S3/GCS signed URLs for rendered captioned MP4 downloads.
+> 4. **Edge Rate Limiting:** Enforce per-user token-bucket rate limits on expensive multimodal endpoints (`/video-analysis/analyze`, `/captions/render`).
+
+---
+
+## 2. Architectural Topology
 
 ```
 +--------------------------------------------------------+
@@ -34,7 +51,7 @@ This guide details the dual-tier deployment topology separating the Next.js 14 f
 
 ---
 
-## 2. Frontend Deployment (Vercel)
+## 3. Frontend Deployment (Vercel)
 
 ### Root Directory & Build Configuration
 - **Root Directory:** `apps/web`
@@ -46,13 +63,13 @@ This guide details the dual-tier deployment topology separating the Next.js 14 f
 ### Environment Variables on Vercel
 ```env
 NEXT_PUBLIC_API_URL=https://api.cineha.ai/api/v1
-NEXT_PUBLIC_APP_ENV=production
-NEXT_PUBLIC_SITE_URL=https://cineha.vercel.app
+NEXT_PUBLIC_ENVIRONMENT=production
+NEXT_PUBLIC_APP_NAME="CINEHA AI"
 ```
 
 ---
 
-## 3. Backend Deployment (Docker / Cloud Run / Railway / Render)
+## 4. Backend Deployment (Docker / Cloud Run / Railway / Render)
 
 ### Dockerfile (`apps/api/Dockerfile`)
 ```dockerfile
@@ -79,22 +96,27 @@ EXPOSE 8000
 CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
 ```
 
-### Backend Environment Variables
+### Backend Production Environment Variables
 ```env
 PORT=8000
+HOST=0.0.0.0
 ENVIRONMENT=production
 ALLOWED_ORIGINS=https://cineha.vercel.app,http://localhost:3000
 DATABASE_URL=postgresql+asyncpg://user:password@host:5432/cineha_prod
-GEMINI_API_KEY=your_gemini_api_key_here
-OPENAI_API_KEY=your_openai_api_key_here
 MAX_VIDEO_SIZE_MB=100
+AI_PROVIDER=gemini
+GEMINI_MODEL=gemini-3.5-flash-lite
+GEMINI_API_KEY=your_gemini_api_key_here
+TRANSCRIPTION_PROVIDER=local_whisper
+LOCAL_WHISPER_MODEL=base
+ENABLE_HYBRID_SPEECH_RESTORATION=true
 ```
 
 ---
 
-## 4. Pre-Flight Verification Checklist
+## 5. Pre-Flight Verification Checklist
 1. Verify `npm run build` exits with code 0 in `apps/web`.
-2. Verify all API routes return valid CORS headers for the Vercel domain.
-3. Verify database migrations run cleanly (`alembic upgrade head`).
-4. Test health check endpoint (`/api/v1/health`) in production container.
-5. Verify WebGL 2 rendering on mobile Safari (iOS) and Chrome (Android).
+2. Verify `pytest apps/api/tests` exits with code 0 (210/210 tests pass).
+3. Verify all API routes return valid CORS headers for the configured domain.
+4. Verify database connectivity and schema migrations initialize cleanly on startup.
+5. Verify FFmpeg 7.x+ binary is detected and operational for audio demuxing and caption rendering.

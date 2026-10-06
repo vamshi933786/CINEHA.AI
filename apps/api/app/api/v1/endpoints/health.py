@@ -23,7 +23,8 @@ async def check_health(db: AsyncSession = Depends(get_db)) -> HealthResponse:
         result = await db.execute(text("SELECT 1"))
         result.scalar()
     except Exception as e:
-        db_status = f"error: {str(e)}"
+        logger.warning(f"Database health check connection failure: {e}")
+        db_status = "unavailable"
 
     gemini_configured = bool(settings.GEMINI_API_KEY and settings.GEMINI_API_KEY.strip())
 

@@ -22,14 +22,28 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
+import logging
+
+logger = logging.getLogger(__name__)
+
 # CORS Middleware
+has_wildcard = "*" in settings.cors_origins
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.cors_origins,
-    allow_credentials=True,
-    allow_methods=["*"],
+    allow_credentials=not has_wildcard,
+    allow_methods=["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
     allow_headers=["*"],
 )
+
+# Global safe exception handler: prevents internal server path/trace leaks in production 500s
+@app.exception_handler(Exception)
+async def unhandled_exception_handler(request, exc):
+    logger.error(f"Unhandled exception processing {request.method} {request.url.path}: {exc}", exc_info=True)
+    return JSONResponse(
+        status_code=500,
+        content={"detail": "An internal server error occurred. Please contact support."},
+    )
 
 # Mount API Routers
 app.include_router(api_router, prefix="/api/v1")

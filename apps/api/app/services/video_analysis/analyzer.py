@@ -63,7 +63,7 @@ class VideoAnalysisService:
         session_id = uuid.uuid4().hex
         session_dir = os.path.join(tempfile.gettempdir(), f"cinehai_analysis_{session_id}")
         os.makedirs(session_dir, exist_ok=True)
-        video_temp_path = os.path.join(session_dir, f"temp_{validation.filename}")
+        video_temp_path = os.path.join(session_dir, f"video_{session_id}{validation.extension}")
 
         limitations: List[str] = []
         transcript_available = False

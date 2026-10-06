@@ -506,7 +506,16 @@ class FFmpegCaptionRenderer(BaseCaptionRenderer):
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE,
         )
-        _, stderr = await process.communicate()
+        try:
+            _, stderr = await asyncio.wait_for(process.communicate(), timeout=30.0)
+        except asyncio.TimeoutError:
+            try:
+                process.kill()
+                await process.communicate()
+            except Exception:
+                pass
+            logger.warning(f"FFmpeg video properties probe timed out for {video_path}")
+            stderr = b""
         stderr_text = stderr.decode("utf-8", errors="replace")
 
         # Probing dimensions (e.g. 1080x1920)
@@ -653,7 +662,15 @@ class FFmpegCaptionRenderer(BaseCaptionRenderer):
                 stdout=asyncio.subprocess.PIPE,
                 stderr=asyncio.subprocess.PIPE,
             )
-            stdout, stderr = await process.communicate()
+            try:
+                stdout, stderr = await asyncio.wait_for(process.communicate(), timeout=180.0)
+            except asyncio.TimeoutError:
+                try:
+                    process.kill()
+                    await process.communicate()
+                except Exception:
+                    pass
+                raise CaptionRenderError("FFmpeg caption rendering timed out after 180 seconds.")
             stderr_text = stderr.decode("utf-8", errors="replace")
 
             if process.returncode != 0:
