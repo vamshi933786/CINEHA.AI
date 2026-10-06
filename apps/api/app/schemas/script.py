@@ -155,6 +155,11 @@ class ScriptResponse(BaseModel):
     cta: str
     provider_used: str
     current_version: int
+    source_type: Optional[str] = "scratch"
+    source_url: Optional[str] = None
+    source_platform: Optional[str] = None
+    original_video_title: Optional[str] = None
+    extraction_method: Optional[str] = None
     created_at: datetime
     updated_at: datetime
     versions: Optional[List[ScriptVersionResponse]] = None

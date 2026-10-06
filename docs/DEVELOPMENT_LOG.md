@@ -329,3 +329,37 @@ This document records chronological development checkpoints, environment finding
      - Frontend tests: **216/216 passed** across 20 test files (`npm test`).
      - TypeScript: **0 errors** (`npx tsc --noEmit`).
      - Production Build: **PASS** (`npm run build`, 15 static pages rendered).
+
+## Log Entry 016: Video URL Script Extraction & Generation (YouTube & Instagram)
+- **Date:** 2026-10-06
+- **Module:** Script Studio (`/scripts`), Video URL Ingestion & AI Screenplay Generation
+- **Author:** Antigravity Architect / Pair Programmer
+- **Summary of Implementation:**
+  Built a comprehensive Video URL Ingestion, Extraction, and AI Screenplay Generation engine for public YouTube and Instagram videos:
+  1. **SSRF & URL Security Hardening**:
+     - Created `apps/api/app/services/video_url_validator.py` with DNS resolution defense (`is_ip_prohibited`) preventing private network, loopback, and cloud metadata access.
+     - Enforced platform whitelist (YouTube and Instagram only); explicitly rejecting unsupported platforms (including TikTok) with descriptive 400 error responses.
+  2. **Extraction Pipeline & Ephemeral Media Isolation**:
+     - Built `apps/api/app/services/video_url/` modular architecture:
+       - `YouTubeVideoURLProvider`: Extracts official captions via `youtube-transcript-api` first; falls back to `yt-dlp` audio extraction + `LocalWhisperTranscriptionProvider`.
+       - `InstagramVideoURLProvider`: Extracts audio via `yt-dlp` and transcribes using on-device `faster-whisper`.
+       - `VideoURLExtractionService`: Coordinates provider execution inside ephemeral `tempfile.TemporaryDirectory()`, wiping all downloaded audio/video immediately in `finally` blocks.
+  3. **Multilingual Speech Preservation**:
+     - English: Clean extracted dialogue.
+     - Telugu (తెలుగు Unicode): Preserves native script; uses hybrid restoration via Gemini to eliminate Whisper phonetic noise.
+     - Tanglish: Preserves transliterated Telugu in Latin script.
+     - Never translates spoken dialogue into English unless explicitly requested.
+  4. **AI Screenplay Generation & Persona Integration**:
+     - Implemented `generate_script_from_video_content` across `BaseLLMProvider`, `OfflineHeuristicMockProvider`, and `GeminiLLMProvider`.
+     - Supports 9 adaptation goals (`Rewrite`, `Improve Hook`, `Improve Retention`, `Shorter Version`, `Longer Version`, `New Angle`, `Educational Version`, `Storytelling Version`, `Creator-Style Rewrite`).
+     - Injects active Creator Profile persona into screenplay generation.
+     - Persists new scripts with source attribution (`source_type="video_url"`, `source_url`, `source_platform`, `original_video_title`, `extraction_method`).
+  5. **Frontend Workspace & Handoffs**:
+     - Added 3-way mode switcher `[ Write Script ] [ Upload File ] [ Video URL ]` in `ScriptWorkspace.tsx`.
+     - Created `VideoURLInputPanel.tsx` with dynamic platform badge detection, language picker, and 6-stage animated progress stepper.
+     - Created `ExtractedVideoScriptPanel.tsx` with editable dialogue, word/char counts, tabbed/side-by-side comparison, and 1-click handoffs to Retention Analyzer (`/analyzer`), Script Optimizer (`/optimizer`), and Content Calendar (`/calendar`).
+  6. **Testing & Verification**:
+     - Added 12 backend tests in `apps/api/tests/test_video_url_extraction.py` (Full backend suite: **232/232 passed**).
+     - Added 13 frontend tests in `apps/web/tests/videoUrlExtraction.test.tsx` (Full frontend suite: **251/251 passed**).
+     - TypeScript: **0 errors** (`npx tsc --noEmit`).
+     - Production Build: **PASS** (`npm run build`, 15 static pages rendered).

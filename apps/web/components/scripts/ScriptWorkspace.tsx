@@ -8,9 +8,14 @@ import type {
   ScriptSegment as ScriptSegmentType,
   ScriptGenerationPayload,
 } from "@/types/script";
+import { PenTool, Upload, Link2 } from "lucide-react";
 import { ScriptInput, ScriptFormData } from "./ScriptInput";
 import { ScriptPreview } from "./ScriptPreview";
 import { ScriptToolbar } from "./ScriptToolbar";
+import { UnifiedScriptInput } from "./UnifiedScriptInput";
+import { VideoURLInputPanel } from "./VideoURLInputPanel";
+import { ExtractedVideoScriptPanel } from "./ExtractedVideoScriptPanel";
+import type { VideoURLScriptExtraction, NormalizedScriptInput } from "@/types/scriptInput";
 
 interface ScriptWorkspaceProps {
   initialTopic?: string;
@@ -57,6 +62,10 @@ export function ScriptWorkspace({
   const [isSavingVersion, setIsSavingVersion] = useState<boolean>(false);
   const [hasCopied, setHasCopied] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Input Mode state: Write Script, Upload File, or Video URL
+  const [inputMode, setInputMode] = useState<"write" | "upload" | "video_url">("write");
+  const [extractedVideo, setExtractedVideo] = useState<VideoURLScriptExtraction | null>(null);
 
   // Sync initial query params if they change
   useEffect(() => {
@@ -352,59 +361,162 @@ export function ScriptWorkspace({
       }
     : null;
 
+  const handleImportFromUpload = async (normalized: NormalizedScriptInput, title?: string) => {
+    try {
+      setIsGenerating(true);
+      setGenerationStage("Importing script into studio...");
+      const saved = await api.saveImportedScript({
+        title: title || "Imported Script Draft",
+        text: normalized.text,
+        platform: formData.platform,
+        language: normalized.language || formData.language,
+        duration_seconds: formData.duration_seconds,
+        source_type: normalized.sourceType,
+      });
+      setActiveScript(saved);
+      setSelectedVersionNumber(saved.current_version);
+      setEditableTitle(saved.title);
+      setEditableHook(saved.hook);
+      setEditableCta(saved.cta);
+      setEditableSegments(saved.segments || []);
+      setInputMode("write");
+    } catch (err: any) {
+      setError(err?.message || "Failed to import uploaded script.");
+    } finally {
+      setIsGenerating(false);
+      setGenerationStage("");
+    }
+  };
+
+  const handleVideoExtracted = (result: VideoURLScriptExtraction) => {
+    setExtractedVideo(result);
+  };
+
+  const handleVideoScriptSaved = (script: Script) => {
+    setActiveScript(script);
+    setSelectedVersionNumber(script.current_version);
+    setEditableTitle(script.title);
+    setEditableHook(script.hook);
+    setEditableCta(script.cta);
+    setEditableSegments(script.segments || []);
+  };
+
   return (
     <div className="space-y-6">
-      {/* Responsive Two-Column Grid: Left: Input Form, Right: Screenplay Preview */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-        {/* Left Column: Script Architect Input */}
-        <div className="lg:col-span-5 xl:col-span-4">
-          <ScriptInput
-            formData={formData}
-            onChange={handleFormChange}
-            onSubmit={handleGenerate}
-            isGenerating={isGenerating}
-            generationStage={generationStage}
-            error={error}
-          />
-        </div>
+      {/* Top Input Mode Switcher: [ Write Script ] [ Upload File ] [ Video URL ] */}
+      <div className="flex items-center gap-2 p-1.5 rounded-xl bg-slate-900/80 border border-white/10 w-fit backdrop-blur-md">
+        <button
+          type="button"
+          onClick={() => setInputMode("write")}
+          className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-semibold transition ${
+            inputMode === "write"
+              ? "bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 shadow-sm"
+              : "text-slate-400 hover:text-slate-200"
+          }`}
+        >
+          <PenTool className="w-3.5 h-3.5" />
+          Write Script
+        </button>
 
-        {/* Right Column: Screenplay Preview & Toolbar */}
-        <div className="lg:col-span-7 xl:col-span-8 space-y-4">
-          {activeScript && (
-            <ScriptToolbar
-              script={activeScript}
-              isEditing={isEditing}
-              isSavingVersion={isSavingVersion}
-              onToggleEdit={handleToggleEdit}
-              onSaveVersion={handleSaveVersion}
-              onCancelEdit={handleCancelEdit}
-              onRegenerate={() => handleGenerate()}
-              onCopy={handleCopy}
-              onExport={handleExport}
-              hasCopied={hasCopied}
-              versions={versions}
-              selectedVersionNumber={selectedVersionNumber}
-              onSelectVersion={handleSelectVersion}
-            />
-          )}
+        <button
+          type="button"
+          onClick={() => setInputMode("upload")}
+          className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-semibold transition ${
+            inputMode === "upload"
+              ? "bg-indigo-500/20 text-indigo-300 border border-indigo-500/40 shadow-sm"
+              : "text-slate-400 hover:text-slate-200"
+          }`}
+        >
+          <Upload className="w-3.5 h-3.5" />
+          Upload File
+        </button>
 
-          <ScriptPreview
-            script={currentDisplayedScript}
-            activeSegments={
-              editableSegments.length > 0
-                ? editableSegments
-                : activeScript?.segments || []
-            }
-            isEditing={isEditing}
-            onSegmentChange={handleSegmentChange}
-            onTitleChange={setEditableTitle}
-            onHookChange={setEditableHook}
-            onCtaChange={setEditableCta}
-            isGenerating={isGenerating}
-            error={error}
-          />
-        </div>
+        <button
+          type="button"
+          onClick={() => setInputMode("video_url")}
+          className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-semibold transition ${
+            inputMode === "video_url"
+              ? "bg-red-500/20 text-red-300 border border-red-500/40 shadow-sm"
+              : "text-slate-400 hover:text-slate-200"
+          }`}
+        >
+          <Link2 className="w-3.5 h-3.5" />
+          Video URL
+        </button>
       </div>
+
+      {inputMode === "video_url" && extractedVideo ? (
+        <ExtractedVideoScriptPanel
+          extraction={extractedVideo}
+          onScriptSaved={handleVideoScriptSaved}
+          onReset={() => setExtractedVideo(null)}
+        />
+      ) : (
+        /* Responsive Two-Column Grid: Left: Input Form, Right: Screenplay Preview */
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+          {/* Left Column: Script Architect / Upload / Video URL Input */}
+          <div className="lg:col-span-5 xl:col-span-4">
+            {inputMode === "write" && (
+              <ScriptInput
+                formData={formData}
+                onChange={handleFormChange}
+                onSubmit={handleGenerate}
+                isGenerating={isGenerating}
+                generationStage={generationStage}
+                error={error}
+              />
+            )}
+
+            {inputMode === "upload" && (
+              <UnifiedScriptInput
+                onAnalyzeScript={handleImportFromUpload}
+                isAnalyzing={isGenerating}
+              />
+            )}
+
+            {inputMode === "video_url" && (
+              <VideoURLInputPanel onExtracted={handleVideoExtracted} />
+            )}
+          </div>
+
+          {/* Right Column: Screenplay Preview & Toolbar */}
+          <div className="lg:col-span-7 xl:col-span-8 space-y-4">
+            {activeScript && (
+              <ScriptToolbar
+                script={activeScript}
+                isEditing={isEditing}
+                isSavingVersion={isSavingVersion}
+                onToggleEdit={handleToggleEdit}
+                onSaveVersion={handleSaveVersion}
+                onCancelEdit={handleCancelEdit}
+                onRegenerate={() => handleGenerate()}
+                onCopy={handleCopy}
+                onExport={handleExport}
+                hasCopied={hasCopied}
+                versions={versions}
+                selectedVersionNumber={selectedVersionNumber}
+                onSelectVersion={handleSelectVersion}
+              />
+            )}
+
+            <ScriptPreview
+              script={currentDisplayedScript}
+              activeSegments={
+                editableSegments.length > 0
+                  ? editableSegments
+                  : activeScript?.segments || []
+              }
+              isEditing={isEditing}
+              onSegmentChange={handleSegmentChange}
+              onTitleChange={setEditableTitle}
+              onHookChange={setEditableHook}
+              onCtaChange={setEditableCta}
+              isGenerating={isGenerating}
+              error={error}
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -5,7 +5,14 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from sqlalchemy.orm import selectinload
 from app.core.database import get_db
-from app.schemas.extraction import NormalizedScriptResponse, SaveImportedScriptRequest
+from app.schemas.extraction import (
+    NormalizedScriptResponse,
+    SaveImportedScriptRequest,
+    VideoURLExtractionRequest,
+    VideoURLScriptExtraction,
+    GenerateScriptFromURLRequest,
+)
+from app.services.video_url.extraction_service import get_video_url_extraction_service
 from app.services.document_extractor import (
     extract_from_text,
     extract_from_pdf,
@@ -422,6 +429,9 @@ async def save_imported_script(
         else "Cinematic"
     )
 
+    source_type = payload.source_type or "text"
+    provider_used = "video_url_import" if source_type == "video_url" else "unified_input_import"
+
     script = Script(
         id=script_id,
         profile_id=db_profile.id if db_profile else None,
@@ -434,7 +444,12 @@ async def save_imported_script(
         hook=parsed_hook or payload.title.strip(),
         segments=segments,
         cta=parsed_cta or "Follow for more",
-        provider_used="unified_input_import",
+        provider_used=provider_used,
+        source_type=source_type,
+        source_url=payload.source_url,
+        source_platform=payload.source_platform,
+        original_video_title=payload.original_video_title,
+        extraction_method=payload.extraction_method,
         current_version=1,
     )
     db.add(script)
@@ -447,8 +462,118 @@ async def save_imported_script(
         segments=segments,
         hook=parsed_hook or payload.title.strip(),
         cta=parsed_cta or "Follow for more",
-        change_summary="Imported via Unified Script Input",
-        provider_used="unified_input_import",
+        change_summary="Imported via Video URL" if source_type == "video_url" else "Imported via Unified Script Input",
+        provider_used=provider_used,
+    )
+    db.add(script_version)
+
+    await db.commit()
+
+    stmt = (
+        select(Script)
+        .options(selectinload(Script.versions))
+        .where(Script.id == script_id)
+    )
+    res = await db.execute(stmt)
+    saved = res.scalar_one()
+
+    return ScriptResponse.model_validate(saved)
+
+
+@router.post(
+    "/scripts/extract-from-url",
+    response_model=VideoURLScriptExtraction,
+    status_code=status.HTTP_200_OK,
+    summary="Extract Script from YouTube or Instagram URL",
+    description="Validates URL, prevents SSRF, retrieves public captions or transcribes audio using local Whisper, and returns editable script text.",
+)
+async def extract_script_from_url_endpoint(
+    payload: VideoURLExtractionRequest,
+) -> VideoURLScriptExtraction:
+    service = get_video_url_extraction_service()
+    result = await service.extract_from_url(
+        url=payload.url,
+        language=payload.language,
+    )
+    return result
+
+
+@router.post(
+    "/scripts/generate-from-url",
+    response_model=ScriptResponse,
+    status_code=status.HTTP_201_CREATED,
+    summary="Generate Screenplay from Extracted Video Script",
+    description="Adapts an extracted video script into a brand-new time-coded screenplay based on the user's selected adaptation goal and creator profile.",
+)
+async def generate_script_from_url_endpoint(
+    payload: GenerateScriptFromURLRequest,
+    db: AsyncSession = Depends(get_db),
+    agent: ScriptAgent = Depends(get_script_agent),
+) -> ScriptResponse:
+    # Resolve creator profile
+    db_profile: Optional[CreatorProfile] = None
+    if payload.profile_id:
+        result = await db.execute(
+            select(CreatorProfile).where(CreatorProfile.id == payload.profile_id)
+        )
+        db_profile = result.scalar_one_or_none()
+
+    if db_profile is None:
+        result = await db.execute(
+            select(CreatorProfile).order_by(CreatorProfile.created_at.desc()).limit(1)
+        )
+        db_profile = result.scalar_one_or_none()
+
+    # Generate adapted screenplay via ScriptAgent
+    generated = await agent.generate_from_extracted_video(request=payload, db_profile=db_profile)
+
+    script_id = str(uuid.uuid4())
+    version_id = str(uuid.uuid4())
+
+    resolved_tone = (
+        db_profile.content_tones[0]
+        if (db_profile and db_profile.content_tones)
+        else "Cinematic, High-Retention"
+    )
+
+    detected_platform = (
+        "YouTube"
+        if ("youtube" in payload.url.lower() or "youtu.be" in payload.url.lower())
+        else "Instagram"
+    )
+
+    script = Script(
+        id=script_id,
+        profile_id=db_profile.id if db_profile else None,
+        title=generated["title"],
+        topic=payload.original_video_title or generated.get("topic") or "Video Adaptation",
+        platform=payload.platform or "Instagram Reels",
+        language=payload.language or "English",
+        duration_seconds=payload.duration_seconds or 30,
+        tone=resolved_tone,
+        hook=generated["hook"],
+        segments=generated["segments"],
+        cta=generated["cta"],
+        provider_used=generated.get("provider_used", "video_url_adaptation"),
+        source_type="video_url",
+        source_url=payload.url,
+        source_platform=detected_platform,
+        original_video_title=payload.original_video_title,
+        extraction_method=f"ai_adaptation_{payload.goal.lower().replace(' ', '_')}",
+        current_version=1,
+    )
+    db.add(script)
+
+    script_version = ScriptVersion(
+        id=version_id,
+        script_id=script_id,
+        version_number=1,
+        title=generated["title"],
+        segments=generated["segments"],
+        hook=generated["hook"],
+        cta=generated["cta"],
+        change_summary=f"Adapted from {detected_platform} video via goal: {payload.goal}",
+        provider_used=generated.get("provider_used", "video_url_adaptation"),
     )
     db.add(script_version)
 

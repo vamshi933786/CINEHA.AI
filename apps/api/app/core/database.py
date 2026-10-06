@@ -89,6 +89,19 @@ def sync_sqlite_schema(sync_conn) -> None:
             if col_name not in existing_ci_cols:
                 sync_conn.execute(text(f"ALTER TABLE content_items ADD COLUMN {col_name} {col_type}"))
 
+    if "scripts" in inspector.get_table_names():
+        existing_script_cols = {col["name"] for col in inspector.get_columns("scripts")}
+        new_script_cols = [
+            ("source_type", "VARCHAR(50) DEFAULT 'scratch'"),
+            ("source_url", "VARCHAR(500)"),
+            ("source_platform", "VARCHAR(50)"),
+            ("original_video_title", "VARCHAR(255)"),
+            ("extraction_method", "VARCHAR(50)"),
+        ]
+        for col_name, col_type in new_script_cols:
+            if col_name not in existing_script_cols:
+                sync_conn.execute(text(f"ALTER TABLE scripts ADD COLUMN {col_name} {col_type}"))
+
 async def init_db() -> None:
     """Initialize database tables and synchronize column additions."""
     import app.models  # noqa: F401

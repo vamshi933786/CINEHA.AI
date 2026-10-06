@@ -29,6 +29,9 @@ import type {
   NormalizedScriptResponse,
   SaveImportedScriptRequest,
   ScriptSourceType,
+  VideoURLScriptExtraction,
+  VideoURLExtractionRequest,
+  GenerateScriptFromURLRequest,
 } from "../types/scriptInput";
 import type {
   TranscriptionResponse,
@@ -568,6 +571,70 @@ export class ApiClient {
 
     if (!response.ok) {
       let errorMessage = `Failed to save imported script (status: ${response.status})`;
+      try {
+        const errorJson = await response.json();
+        if (errorJson.detail) {
+          if (Array.isArray(errorJson.detail)) {
+            errorMessage = errorJson.detail
+              .map((d: any) => d.msg || JSON.stringify(d))
+              .join(", ");
+          } else {
+            errorMessage = errorJson.detail;
+          }
+        }
+      } catch (_) {}
+      throw new Error(errorMessage);
+    }
+
+    const data = await response.json();
+    return data as Script;
+  }
+
+  async extractScriptFromUrl(
+    payload: VideoURLExtractionRequest
+  ): Promise<VideoURLScriptExtraction> {
+    const response = await fetch(`${this.baseUrl}/scripts/extract-from-url`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(payload),
+    });
+
+    if (!response.ok) {
+      let errorMessage = `Failed to extract script from video URL (status: ${response.status})`;
+      try {
+        const errorJson = await response.json();
+        if (errorJson.detail) {
+          if (Array.isArray(errorJson.detail)) {
+            errorMessage = errorJson.detail
+              .map((d: any) => d.msg || JSON.stringify(d))
+              .join(", ");
+          } else {
+            errorMessage = errorJson.detail;
+          }
+        }
+      } catch (_) {}
+      throw new Error(errorMessage);
+    }
+
+    const data = await response.json();
+    return data as VideoURLScriptExtraction;
+  }
+
+  async generateScriptFromUrl(
+    payload: GenerateScriptFromURLRequest
+  ): Promise<Script> {
+    const response = await fetch(`${this.baseUrl}/scripts/generate-from-url`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(payload),
+    });
+
+    if (!response.ok) {
+      let errorMessage = `Failed to generate screenplay from video URL (status: ${response.status})`;
       try {
         const errorJson = await response.json();
         if (errorJson.detail) {

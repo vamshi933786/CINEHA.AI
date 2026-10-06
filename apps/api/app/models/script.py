@@ -23,6 +23,13 @@ class Script(BaseModel):
     provider_used = Column(String(50), nullable=False, default="heuristic_mock")
     current_version = Column(Integer, nullable=False, default=1)
 
+    # Source & extraction metadata
+    source_type = Column(String(50), nullable=True, default="scratch")
+    source_url = Column(String(500), nullable=True)
+    source_platform = Column(String(50), nullable=True)
+    original_video_title = Column(String(255), nullable=True)
+    extraction_method = Column(String(50), nullable=True)
+
     versions = relationship(
         "ScriptVersion",
         back_populates="script",

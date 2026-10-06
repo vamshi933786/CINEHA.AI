@@ -17,7 +17,7 @@
 1. **AI Content Idea Generator:** Uncover high-performing angles, content formats, and audience value propositions.
 2. **Trend & Pattern Research Assistant:** In-depth thematic research distinguishing verified citations from inferred social patterns.
 3. **9-Taxonomy Hook Generator:** Engineering high-retention 0–3 second opening hooks with visual choreography directions.
-4. **Bilingual Script Studio:** Two-column screenplay generation (Voiceover + Visual/B-Roll) supporting English, Telugu, and Tenglish.
+4. **Multilingual Script Studio & Video URL Ingestion:** Two-column screenplay generation (Voiceover + Visual/B-Roll) supporting English, Telugu, and Tanglish, with direct video URL extraction for YouTube & Instagram into editable scripts and AI screenplays.
 5. **Script Retention Analyzer:** Heuristic retention, pacing, and story structure evaluation with transparent scoring.
 6. **Script Optimizer & Diff Studio:** Side-by-side visual diff comparisons, version history, and single-click reversion.
 7. **Multimodal Video Audit:** Metadata and frame inspection offering actionable editing recommendations.

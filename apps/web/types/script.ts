@@ -38,6 +38,11 @@ export interface Script {
   cta: string;
   provider_used: string;
   current_version: number;
+  source_type?: string | null;
+  source_url?: string | null;
+  source_platform?: string | null;
+  original_video_title?: string | null;
+  extraction_method?: string | null;
   created_at: string;
   updated_at: string;
   versions?: ScriptVersion[];
