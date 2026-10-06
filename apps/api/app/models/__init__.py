@@ -3,6 +3,7 @@ from app.models.creator_profile import CreatorProfile
 from app.models.script import Script, ScriptVersion
 from app.models.video_analysis import VideoAnalysis
 from app.models.content_item import ContentItem
+from app.models.trend_research import TrendResearchSession
 
 __all__ = [
     "BaseModel",
@@ -11,6 +12,7 @@ __all__ = [
     "ScriptVersion",
     "VideoAnalysis",
     "ContentItem",
+    "TrendResearchSession",
 ]
 
 

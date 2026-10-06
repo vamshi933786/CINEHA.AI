@@ -6,6 +6,7 @@ import httpx
 from typing import List, Optional, Dict, Any
 from app.core.config import settings
 from app.schemas.hook import HookItem, VALID_TAXONOMIES
+from app.schemas.trend_research import calculate_overall_score
 from app.services.script_language_detector import normalize_language_contract, detect_script_language, TELUGU_UNICODE_PATTERN
 
 class BaseLLMProvider:
@@ -74,6 +75,21 @@ class BaseLLMProvider:
         audience: Optional[str] = None,
     ) -> Dict[str, Any]:
         raise NotImplementedError
+
+    async def generate_trend_research(
+        self,
+        topic: Optional[str],
+        niche: str,
+        target_audience: str,
+        platform: str,
+        language: str,
+        research_depth: str,
+        time_horizon: str,
+        count: int,
+        creator_persona: Optional[Dict[str, Any]] = None,
+    ) -> Dict[str, Any]:
+        raise NotImplementedError
+
 
 
 
@@ -1567,6 +1583,866 @@ class OfflineHeuristicMockProvider(BaseLLMProvider):
             "provider_used": "heuristic_mock",
         }
 
+    async def generate_trend_research(
+        self,
+        topic: Optional[str],
+        niche: str,
+        target_audience: str,
+        platform: str,
+        language: str,
+        research_depth: str,
+        time_horizon: str,
+        count: int,
+        creator_persona: Optional[Dict[str, Any]] = None,
+    ) -> Dict[str, Any]:
+        """
+        Generates domain-grounded, multilingual short-form trend opportunities
+        personalized to the creator's persona, niche, pillars, and audience.
+        """
+        persona = creator_persona or {}
+        norm_lang = normalize_language_contract(language)
+        active_niche = niche or persona.get("primary_niche") or "Cinematography"
+        active_audience = target_audience or persona.get("target_audience") or "Short-form creators and aspiring visual storytellers"
+        pillars = persona.get("content_pillars") or ["Lighting Breakdowns", "Camera Angles", "Visual Rhythm"]
+        pain_points = persona.get("audience_pain_points") or ["Flat lighting", "Shaky footage", "Low engagement"]
+        creator_name = persona.get("creator_name") or "Creator"
+
+        # Determine target count (bounded by requested count, 1-10)
+        target_count = max(1, min(count or 5, 10))
+
+        # Check if horizon gives urgency/momentum boost
+        is_current_momentum = "Current" in (time_horizon or "") or "7" in (time_horizon or "")
+        is_deep = "Deep" in (research_depth or "") or "Comprehensive" in (research_depth or "")
+
+        raw_opportunities: List[Dict[str, Any]] = []
+
+        if topic and topic.strip():
+            seed = topic.strip()
+            # Topic-driven opportunities exploring diverse angles
+            if norm_lang == "Telugu":
+                templates = [
+                    {
+                        "topic": f"{seed}: బిగినర్స్ చేసే అతిపెద్ద తప్పు & సరైన మార్గం",
+                        "pillar": pillars[0] if pillars else "ప్రాక్టికల్ గైడ్",
+                        "why_it_matters": f"{seed} విషయంలో చాలామంది తప్పుడు పద్ధతులు వాడుతూ నిరాశ చెందుతున్నారు. వాస్తవ కారణాన్ని వివరిస్తే అత్యధిక సేవ్స్ వస్తాయి.",
+                        "angles": [
+                            f"{seed} పై 90% మంది నమ్మే అపోహలు vs నిజాలు",
+                            "తక్కువ ఖర్చుతో ప్రొఫెషనల్ ఫలితాలు సాధించే మార్గం",
+                            "మొబైల్ ఫోన్ తోనే ఈ ఫలితాన్ని ఎలా సాధించాలి",
+                        ],
+                        "hooks": [
+                            f"మీరు {seed} విషయంలో ఈ ఒక్క తప్పు చేస్తున్నారా? అయితే మీ వీడియోలు ముందుకు వెళ్ళవు!",
+                            f"రూ. లక్షల ఖర్చు లేకుండా {seed} ని సులభంగా ఎలా చేయాలో చూపిస్తాను.",
+                            f"చాలామంది క్రియేటర్స్ {seed} గురించి ఈ రహస్యం దాస్తారు—ఇక్కడ వినండి.",
+                        ],
+                        "talking_points": [
+                            "1. సాధారణంగా చేసే పొరపాటును ప్రత్యక్షంగా చూపించడం",
+                            "2. స్టెప్-బై-స్టెప్ సరైన పద్ధతిని స్క్రీన్ పై వివరించడం",
+                            "3. వెంటనే అప్లై చేయగల సింగిల్ యాక్షన్ పాయింట్ ఇవ్వడం",
+                        ],
+                        "format": "విజువల్ డెమో + బ్రేక్‌డౌన్",
+                        "duration": "30–45 సెకన్లు",
+                        "cta": "ఈ టిప్స్ మర్చిపోకుండా ఇప్పుడే సేవ్ చేసుకోండి!",
+                        "m_base": 91, "a_base": 93, "c_base": 95, "o_base": 88, "u_base": 89,
+                    },
+                    {
+                        "topic": f"{seed}: 3-స్టెప్ ప్రాక్టికల్ బ్లూప్రింట్",
+                        "pillar": pillars[1] if len(pillars) > 1 else "స్టెప్ బై స్టెప్",
+                        "why_it_matters": f"వీక్షకులకు సులభమైన 3 దశల ఫ్రేమ్‌వర్క్ ఇస్తే రీటెన్షన్ చివరి వరకు కొనసాగుతుంది.",
+                        "angles": [
+                            "బిగినర్స్ కోసం సరళమైన 3 దశల పద్ధతి",
+                            "టైమ్ సేవ్ చేసే ఫాస్ట్ వర్క్‌ఫ్లో",
+                            "ఎటువంటి ప్రీమియం సాఫ్ట్‌వేర్ లేకుండా చేసే విధానం",
+                        ],
+                        "hooks": [
+                            f"{seed} నేర్చుకోవడానికి గంటలు పట్టదు—ఈ 3 స్టెప్స్ చాలు!",
+                            f"నేను రోజూ వాడే {seed} వర్క్‌ఫ్లో ఇది—మీరూ ట్రై చేయండి.",
+                            f"ఈ 3 నిమిషాల గైడ్ తో మీ {seed} నైపుణ్యం రెట్టింపు అవుతుంది.",
+                        ],
+                        "talking_points": [
+                            "1. మొదటి స్టెప్: పునాది సెటప్",
+                            "2. రెండవ స్టెప్: స్పీడ్ మరియు క్వాలిటీ టెక్నిక్",
+                            "3. మూడవ స్టెప్: ఫైనల్ ఫినిషింగ్ టచ్",
+                        ],
+                        "format": "స్టెప్-బై-స్టెప్ ట్యుటోరియల్",
+                        "duration": "45–60 సెకన్లు",
+                        "cta": "మీ స్నేహితులతో ఈ రీల్ ని షేర్ చేయండి!",
+                        "m_base": 87, "a_base": 91, "c_base": 92, "o_base": 86, "u_base": 84,
+                    },
+                    {
+                        "topic": f"{seed}: ప్రో క్రియేటర్స్ వాడే సీక్రెట్ సెట్టింగ్స్",
+                        "pillar": pillars[2] if len(pillars) > 2 else "ఇన్‌సైడర్ టిప్స్",
+                        "why_it_matters": f"హై-లెవల్ ప్రొఫెషనల్స్ వాడే రహస్యాలను వెల్లడించడం వల్ల మీ అథారిటీ పెరుగుతుంది.",
+                        "angles": [
+                            "దాగి ఉన్న ప్రొఫెషనల్ సెట్టింగ్",
+                            "తక్కువ సమయం లో ఎక్కువ క్వాలిటీ తెచ్చే ట్రిక్",
+                            "సాధారణ గేర్ తో సినిమా లుక్",
+                        ],
+                        "hooks": [
+                            f"{seed} లో ఈ సీక్రెట్ ట్రిక్ తెలియకపోతే మీరు చాలా సమయం వృధా చేస్తున్నారు!",
+                            f"టాప్ క్రియేటర్స్ వాడే {seed} సెట్టింగ్ ఇదే.",
+                            f"మీరు అనుకున్న దానికంటే {seed} చాలా సులభం—ఇది చూడండి.",
+                        ],
+                        "talking_points": [
+                            "1. సీక్రెట్ ని రివీల్ చేస్తూ మొదటి 3 సెకన్లు మొదలుపెట్టడం",
+                            "2. బిఫోర్ vs ఆఫ్టర్ పోలికను స్క్రీన్ పై చూపించడం",
+                            "3. ప్రేక్షకులు వెంటనే అమలు చేయడానికి అవసరమైన సూచనలు",
+                        ],
+                        "format": "బిఫోర్ vs ఆఫ్టర్ + ఇన్సైడర్ టిప్",
+                        "duration": "30–45 సెకన్లు",
+                        "cta": "మరిన్ని సినిమాటోగ్రఫీ టిప్స్ కోసం ఫాలో అవ్వండి!",
+                        "m_base": 89, "a_base": 88, "c_base": 94, "o_base": 90, "u_base": 86,
+                    },
+                    {
+                        "topic": f"{seed}: బడ్జెట్ vs ఖరీదైన సెటప్ పోలిక",
+                        "pillar": pillars[0] if pillars else "గేర్ బ్రేక్‌డౌన్",
+                        "why_it_matters": "ఖరీదైన పరికరాలు లేకపోయినా మంచి ఫలితం సాధించవచ్చని రుజువు చేస్తే వీక్షకులు కనెక్ట్ అవుతారు.",
+                        "angles": [
+                            "₹1,000 వర్సెస్ ₹50,000 సెటప్ రియల్ టెస్ట్",
+                            "ఎక్విప్‌మెంట్ కంటే టెక్నిక్ ఎందుకు ముఖ్యం",
+                            "మీరు కొనకూడని వేస్ట్ గేర్ లిస్ట్",
+                        ],
+                        "hooks": [
+                            f"ఖరీదైన గేర్ కొనకండి! {seed} కోసం ఈ బడ్జెట్ ట్రిక్ సరిపోతుంది.",
+                            f"₹500 బడ్జెట్ తో {seed} ప్రొఫెషనల్ గా ఎలా చేయాలో చూడండి.",
+                            f"మీరు {seed} పై డబ్బులు దండగ చేయకండి—ఇది గమనించండి.",
+                        ],
+                        "talking_points": [
+                            "1. బడ్జెట్ మరియు ఖరీదైన సెటప్ ఫలితాలను పక్కపక్కనే చూపించడం",
+                            "2. తేడా ఎక్కడ ఉందో క్లియర్ గా ఎక్స్‌ప్లేన్ చేయడం",
+                            "3. ప్రతి ఒక్కరూ పాటించగల చిట్కా ఇవ్వడం",
+                        ],
+                        "format": "సైడ్-బై-సైడ్ A/B టెస్ట్",
+                        "duration": "30–40 సెకన్లు",
+                        "cta": "మీ తదుపరి వీడియో షూట్ కోసం సేవ్ చేసుకోండి!",
+                        "m_base": 86, "a_base": 94, "c_base": 91, "o_base": 85, "u_base": 82,
+                    },
+                    {
+                        "topic": f"{seed}: హై-రీటెన్షన్ 3-సెకన్ల హుక్ ఫార్ములా",
+                        "pillar": "రీటెన్షన్ ఆర్కిటెక్చర్",
+                        "why_it_matters": "వీడియో ప్రారంభంలో వీక్షకుడిని నిలబెట్టే విజువల్ హుక్స్ రీల్స్ రీచ్ ను విస్తరిస్తాయి.",
+                        "angles": [
+                            "మొదటి 3 సెకన్లలో వీక్షకుడిని బంధించే విజువల్స్",
+                            "స్క్రోల్ ఆపే సైకాలజికల్ ఓపెనింగ్",
+                            "సౌండ్ డిజైన్ తో విజువల్ ప్యాటర్న్ ఇంటరప్ట్",
+                        ],
+                        "hooks": [
+                            f"{seed} తో వీడియోలు చేసేటప్పుడు మొదటి 3 సెకన్లు ఇలా ప్లాన్ చేయండి!",
+                            f"మీ రీల్స్ వ్యూస్ పెరగాలంటే {seed} కి ఈ హుక్ వాడండి.",
+                            f"స్క్రోల్ ఆపే సీక్రెట్ హుక్: {seed} ఎడిషన్.",
+                        ],
+                        "talking_points": [
+                            "1. ప్యాటర్న్ ఇంటరప్ట్ సౌండ్ మరియు విజువల్ కట్",
+                            "2. ప్రశ్న లేదా కాంట్రవర్షియల్ స్టేట్‌మెంట్ చెప్పడం",
+                            "3. సమాధానం కోసం వీడియో చివర వరకు వేచి ఉండేలా చేయడం",
+                        ],
+                        "format": "రిటెన్షన్ బ్రేక్‌డౌన్",
+                        "duration": "25–35 సెకన్లు",
+                        "cta": "ఇలాంటి మరిన్ని హుక్స్ కోసం ప్రొఫైల్ చూడండి!",
+                        "m_base": 93, "a_base": 90, "c_base": 93, "o_base": 89, "u_base": 91,
+                    },
+                ]
+            elif norm_lang == "Tanglish":
+                templates = [
+                    {
+                        "topic": f"{seed}: 99% Creators Chese Mistake & Simple Fix",
+                        "pillar": pillars[0] if pillars else "Practical Breakdown",
+                        "why_it_matters": f"{seed} lo beginners chese common mistake ni highlight chesi practical fix chupisthe high retention and shares vastayi.",
+                        "angles": [
+                            f"{seed} lo 90% creators namme myth vs reality",
+                            "Zero budget tho professional results techhe hack",
+                            "Mobile phone tho idi ela execute cheyalo direct proof",
+                        ],
+                        "hooks": [
+                            f"Meeru {seed} chestunnappudu ee single mistake definitely chestunnaru—ventane aapeyandi!",
+                            f"Expensive gear lekunda {seed} simple ga ela cheyocho chudandi.",
+                            f"Chaala mandi creators {seed} gurinchi ee secret share cheyyaru—idi vindandi.",
+                        ],
+                        "talking_points": [
+                            "1. Common mistake ni directly camera mundu chupinchandi",
+                            "2. Correct method ni 2 steps lo explain cheyandi",
+                            "3. Immediate ga implement chese actionable tip ivvandi",
+                        ],
+                        "format": "Visual Teardown + Real Setup Proof",
+                        "duration": "30–45 sec",
+                        "cta": "Mee next shoot kosam ee reel ni ventane save chesukondi!",
+                        "m_base": 92, "a_base": 94, "c_base": 95, "o_base": 89, "u_base": 90,
+                    },
+                    {
+                        "topic": f"{seed}: 3-Step Practical Blueprint",
+                        "pillar": pillars[1] if len(pillars) > 1 else "Step-by-Step",
+                        "why_it_matters": "Audience ki crystal clear 3 steps isthe execution friction tagguthundi mariyu save rate peruguthundi.",
+                        "angles": [
+                            "Beginners kosam crystal clear 3 steps",
+                            "Time-saving fast workflow",
+                            "Third-party apps lekunda phone tho cheyadam",
+                        ],
+                        "hooks": [
+                            f"{seed} cheyadam antha hard kaadu—ee 3 simple steps follow avvandi!",
+                            f"Nenu regular ga use chese {seed} workflow idi—chala time save avtundi.",
+                            f"Ee 30 seconds lo {seed} master cheyochu, complete breakdown chudandi.",
+                        ],
+                        "talking_points": [
+                            "1. First step: Base setup and alignment",
+                            "2. Second step: Speed and precision execution",
+                            "3. Third step: High-impact finishing polish",
+                        ],
+                        "format": "Step-by-Step Tutorial",
+                        "duration": "40–50 sec",
+                        "cta": "Mee creator friends ki ee reel ni share cheyandi!",
+                        "m_base": 88, "a_base": 92, "c_base": 91, "o_base": 87, "u_base": 85,
+                    },
+                    {
+                        "topic": f"{seed}: Pro Creators Hidden Setting",
+                        "pillar": pillars[2] if len(pillars) > 2 else "Insider Tips",
+                        "why_it_matters": "Top creators use chese unwritten techniques reveal chesthe audience authority ga chustaru.",
+                        "angles": [
+                            "Hidden setting in camera / tool",
+                            "Minutes lo dramatic visual improvement",
+                            "Budget equipment tho cinema feel",
+                        ],
+                        "hooks": [
+                            f"{seed} lo ee secret setting telusukokapothe mee videos flat ga untayi!",
+                            f"Industry pros {seed} kosam ee setting matrame use chestaru.",
+                            f"Meeru anukuntunnaru {seed} costly ani—kaani reality idi chudandi.",
+                        ],
+                        "talking_points": [
+                            "1. First 3 seconds lo secret reveal teaser ivvandi",
+                            "2. Before vs After comparison screen meeda chupinchandi",
+                            "3. Mobile lo precise settings ela change cheyalo chupinchandi",
+                        ],
+                        "format": "Before vs After + Secret Breakdown",
+                        "duration": "30–40 sec",
+                        "cta": "Inka ilanti tips kosam follow cheyandi!",
+                        "m_base": 90, "a_base": 89, "c_base": 94, "o_base": 91, "u_base": 87,
+                    },
+                    {
+                        "topic": f"{seed}: Budget vs Expensive Setup",
+                        "pillar": pillars[0] if pillars else "Gear Breakdown",
+                        "why_it_matters": "Costly gear avasaram ledani proof chupisthe massive relatable reach vasthundi.",
+                        "angles": [
+                            "₹500 setup vs ₹50,000 camera setup comparison",
+                            "Gear kante lighting & angle enduku important",
+                            "Beginners waste chese expensive equipment list",
+                        ],
+                        "hooks": [
+                            f"Stop buying expensive equipment! {seed} kosam ee simple hack chalu.",
+                            f"₹500 budget lights tho {seed} cinematic ga ela teeyalo chudandi.",
+                            f"Ee expensive item lekundane {seed} pro quality lo cheyochu.",
+                        ],
+                        "talking_points": [
+                            "1. Both setups results side-by-side display cheyandi",
+                            "2. Real difference lighting/angle lone undani explain cheyandi",
+                            "3. Pocket-friendly alternatives list cheyandi",
+                        ],
+                        "format": "Side-by-Side A/B Test",
+                        "duration": "35–45 sec",
+                        "cta": "Mee next project kosam ee guide ni save chesukondi!",
+                        "m_base": 87, "a_base": 95, "c_base": 92, "o_base": 86, "u_base": 83,
+                    },
+                    {
+                        "topic": f"{seed}: High-Retention 3-Second Opening",
+                        "pillar": "Retention Architecture",
+                        "why_it_matters": "Opening 3 seconds retention capture cheyagane algorithm organic reach push chesthundi.",
+                        "angles": [
+                            "Opening frame lo visual motion & whip pan",
+                            "Scroll-stopping contrarian question",
+                            "Audio sound design tho curiosity opening",
+                        ],
+                        "hooks": [
+                            f"{seed} videos lo first 3 seconds ila shoot chesthe audience drop-off zero untundi!",
+                            f"Reels lo audience ni hypnotize chese {seed} hook formula idi.",
+                            f"Stop scrolling! {seed} gurinchi ee truth meeku telusa?",
+                        ],
+                        "talking_points": [
+                            "1. Pattern interrupt sound cue and rapid visual whip",
+                            "2. High-curiosity question create cheyadam",
+                            "3. Value delivery fast ga start cheyadam",
+                        ],
+                        "format": "Retention Hook Teardown",
+                        "duration": "25–35 sec",
+                        "cta": "Next reel script ready cheyataniki save chesukondi!",
+                        "m_base": 94, "a_base": 91, "c_base": 93, "o_base": 90, "u_base": 92,
+                    },
+                ]
+            else:
+                # English templates for user-supplied topic
+                templates = [
+                    {
+                        "topic": f"{seed}: The Costly Mistake 90% of Creators Make",
+                        "pillar": pillars[0] if pillars else "Technique Breakdown",
+                        "why_it_matters": f"Addressing the most common failure point in {seed} creates instant relatability and commands high save-to-reach ratios.",
+                        "angles": [
+                            f"The common myth around {seed} vs the practical reality",
+                            "How to achieve pro-level results without expensive add-ons",
+                            "Direct smartphone demonstration proving the fix works",
+                        ],
+                        "hooks": [
+                            f"If you are doing {seed}, stop making this 1 rookie mistake immediately.",
+                            f"Here is why your {seed} looks amateur—and the ₹0 fix that changes everything.",
+                            f"Top creators never talk about this {seed} mistake because it gives away their edge.",
+                        ],
+                        "talking_points": [
+                            "1. Show the faulty technique directly in the first 2 seconds",
+                            "2. Contrast it with the corrected method side-by-side",
+                            "3. Deliver one crisp, immediately executable action item",
+                        ],
+                        "format": "Visual Teardown + Real Setup Proof",
+                        "duration": "30–45s",
+                        "cta": "Save this guide before you record your next video.",
+                        "m_base": 92, "a_base": 94, "c_base": 95, "o_base": 89, "u_base": 90,
+                    },
+                    {
+                        "topic": f"{seed}: The 3-Step Execution Blueprint",
+                        "pillar": pillars[1] if len(pillars) > 1 else "Step-by-Step",
+                        "why_it_matters": "A concrete 3-step sequence lowers execution cognitive friction, driving maximum viewer completion and bookmarking.",
+                        "angles": [
+                            "The frictionless 3-step beginner framework",
+                            "Speed-oriented workflow saving hours in production",
+                            "Achieving studio quality natively without extra plugins",
+                        ],
+                        "hooks": [
+                            f"Mastering {seed} doesn't take months. You just need these 3 exact steps.",
+                            f"Steal my personal 3-step {seed} framework that 10x'd my production speed.",
+                            f"The fastest way to get cinematic results with {seed} in under 45 seconds.",
+                        ],
+                        "talking_points": [
+                            "1. Foundation step: Setup and initial calibration",
+                            "2. Execution step: Rapid execution and precision control",
+                            "3. Polish step: The final nuance that separates amateurs from pros",
+                        ],
+                        "format": "Step-by-Step Tutorial",
+                        "duration": "40–50s",
+                        "cta": "Share this with a creator friend who needs to streamline their workflow.",
+                        "m_base": 88, "a_base": 92, "c_base": 91, "o_base": 87, "u_base": 85,
+                    },
+                    {
+                        "topic": f"{seed}: The Hidden Setting Industry Pros Rely On",
+                        "pillar": pillars[2] if len(pillars) > 2 else "Insider Secrets",
+                        "why_it_matters": "Revealing non-obvious, production-tested techniques establishes high perceived authority and algorithmic watch time.",
+                        "angles": [
+                            "The hidden toggle that transforms footage quality",
+                            "How minor adjustments yield massive visual depth",
+                            "Bridging the mobile vs cinema camera divide",
+                        ],
+                        "hooks": [
+                            f"Almost nobody knows about this hidden setting for {seed}—and it makes all the difference.",
+                            f"If your {seed} feels flat, you probably have this default toggle turned off.",
+                            f"The secret setting professional cinematographers use when shooting {seed}.",
+                        ],
+                        "talking_points": [
+                            "1. Reveal the hidden setting within the first 3 seconds",
+                            "2. Demonstrate live Before vs After on camera",
+                            "3. Provide exact step-by-step navigation to replicate it",
+                        ],
+                        "format": "Before vs After + Secret Breakdown",
+                        "duration": "30–40s",
+                        "cta": "Follow for more tactical short-form production teardowns.",
+                        "m_base": 90, "a_base": 89, "c_base": 94, "o_base": 91, "u_base": 87,
+                    },
+                    {
+                        "topic": f"{seed}: Budget vs $2,000 Setup Comparison",
+                        "pillar": pillars[0] if pillars else "Gear Teardown",
+                        "why_it_matters": "Proving that deliberate technique outperforms expensive gear generates huge organic engagement, debate, and shares.",
+                        "angles": [
+                            "Side-by-side shootout: $20 home setup vs $2,000 pro rig",
+                            "Why lighting and placement always beat sensor size",
+                            "Gear that you should never waste your money on as a beginner",
+                        ],
+                        "hooks": [
+                            f"Stop wasting thousands on gear! This $25 {seed} setup looks just as good.",
+                            f"Can you tell which shot was made with a $20 budget setup? Watch this.",
+                            f"Why buying expensive rigs for {seed} is actually holding back your content.",
+                        ],
+                        "talking_points": [
+                            "1. Show both setups side-by-side without revealing which is which",
+                            "2. Break down why angle and lighting placement create 90% of the value",
+                            "3. List exact accessible alternatives viewers can buy or build today",
+                        ],
+                        "format": "Side-by-Side A/B Shootout",
+                        "duration": "35–45s",
+                        "cta": "Save this comparison before making your next gear purchase.",
+                        "m_base": 87, "a_base": 95, "c_base": 92, "o_base": 86, "u_base": 83,
+                    },
+                    {
+                        "topic": f"{seed}: The 3-Second Scroll-Stopping Retention Hook",
+                        "pillar": "Retention Architecture",
+                        "why_it_matters": "Opening-frame retention is the primary driver of organic distribution across Reels, TikTok, and Shorts.",
+                        "angles": [
+                            "Kinetic camera movement paired with instant proof",
+                            "High-tension contrarian question opening",
+                            "Sound design layering that interrupts the scroll reflex",
+                        ],
+                        "hooks": [
+                            f"Here is how to hook viewers in the first 3 seconds when creating content about {seed}.",
+                            f"The exact retention formula that stops viewers from swiping past your {seed} videos.",
+                            f"Stop scrolling! This 3-second hook structure doubled my average watch time.",
+                        ],
+                        "talking_points": [
+                            "1. Pattern interrupt sound cue combined with rapid visual whip",
+                            "2. Pose a compelling, high-stakes information gap",
+                            "3. Transition seamlessly into practical content delivery without fluff",
+                        ],
+                        "format": "Retention Hook Teardown",
+                        "duration": "25–35s",
+                        "cta": "Save this hook template for your next script brainstorm.",
+                        "m_base": 94, "a_base": 91, "c_base": 93, "o_base": 90, "u_base": 92,
+                    },
+                ]
+            raw_opportunities = templates
+        else:
+            # Curate based on active niche & creator persona
+            if norm_lang == "Telugu":
+                raw_opportunities = [
+                    {
+                        "topic": "సింగిల్ లైట్ తో సినిమాటిక్ రీల్స్ లైటింగ్ సెటప్",
+                        "pillar": "లైటింగ్ బ్రేక్‌డౌన్స్",
+                        "why_it_matters": "ఎక్కువ మంది క్రియేటర్స్ బడ్జెట్ లైట్స్ తోనే ప్రొఫెషనల్ వీడియోస్ ఎలా తీయాలో వెతుకుతున్నారు. దీనివల్ల సేవ్స్ మరియు షేర్స్ పెరుగుతాయి.",
+                        "angles": [
+                            "రూ. 500 బడ్జెట్ బల్బ్ తో డ్రామాటిక్ షాడోస్ సాధించడం",
+                            "ఫోన్ కెమెరా ఎక్స్‌పోజర్ లాక్ చేసి సినిమా డెప్త్ తీసుకురావడం",
+                            "రూమ్ లో ఉండే గోడలను రిఫ్లెక్టర్‌గా వాడే ప్రాక్టికల్ టెక్నిక్",
+                        ],
+                        "hooks": [
+                            "మీరు మొబైల్ లో వీడియోస్ తీస్తున్నప్పుడు ఈ ఒక్క లైటింగ్ తప్పు చేయకండి!",
+                            "రూ. 500 బల్బ్ తో సినిమాటిక్ సినిమా లుక్ ఎలా తేవచ్చో తెలుసా?",
+                            "చాలా మంది క్రియేటర్స్ కెమెరా సెట్టింగ్స్ లో ఈ పెద్ద తప్పు చేస్తారు.",
+                        ],
+                        "talking_points": [
+                            "1. లైట్ ని సబ్జెక్ట్ కి 45 డిగ్రీల వద్ద పెట్టండి",
+                            "2. బ్యాక్‌గ్రౌండ్ డెప్త్ కోసం సబ్జెక్ట్ ని గోడకి దూరంగా ఉంచండి",
+                            "3. మొబైల్ లో ఎక్స్‌పోజర్ లాక్ చేసి షాడోస్ ని కంట్రోల్ చేయండి",
+                        ],
+                        "format": "ప్రాక్టికల్ లైటింగ్ డెమో + విజువల్ ప్రూఫ్",
+                        "duration": "30–45 సెకన్లు",
+                        "cta": "మీ నెక్స్ట్ షూట్ కోసం ఈ రీల్ ని ఇప్పుడే సేవ్ చేసుకోండి!",
+                        "m_base": 93, "a_base": 95, "c_base": 96, "o_base": 91, "u_base": 88,
+                    },
+                    {
+                        "topic": "మొబైల్ ఫోన్ తో 3 సినిమాటిక్ కెమెరా మూమెంట్స్",
+                        "pillar": "కెమెరా యాంగిల్స్",
+                        "why_it_matters": "ఖరీదైన జింబల్ లేకుండా చేతితోనే స్మూత్ పారలాక్స్ షాట్స్ ఎలా తీయాలో చూపిస్తే వీక్షకులకు తక్షణ విలువ అందుతుంది.",
+                        "angles": [
+                            "చేతులతో తీసే స్మూత్ పుష్-ఇన్ మరియు ఆర్క్ షాట్",
+                            "ఫోర్‌గ్రౌండ్ ఆబ్జెక్ట్స్ వాడి 3D డెప్త్ క్రియేట్ చేయడం",
+                            "ట్రాన్సిషన్ కోసం సహజమైన విప్-ప్యాన్ కదలికలు",
+                        ],
+                        "hooks": [
+                            "జింబల్ కొనకండి! మీ ఫోన్ తోనే ఈ 3 సినిమాటిక్ షాట్స్ తీయవచ్చు.",
+                            "హాలీవుడ్ లెవెల్ కెమెరా మూమెంట్స్ కేవలం మీ చేతులతో ఎలా తీయాలో చూడండి.",
+                            "మీ వీడియోలు ఫ్లాట్ గా అనిపిస్తే ఈ కెమెరా యాంగిల్ వెంటనే మార్చండి.",
+                        ],
+                        "talking_points": [
+                            "1. చేతులను బాడీకి దగ్గరగా ఉంచి నిలకడగా నడవడం",
+                            "2. ఫోర్‌గ్రౌండ్ లో ఏదైనా వస్తువు ఉంచి కెమెరాను కదల్చడం",
+                            "3. మూమెంట్ ప్రారంభం మరియు ముగింపులో స్పీడ్ రాంప్ ప్లాన్ చేయడం",
+                        ],
+                        "format": "విజువల్ ట్యుటోరియల్ + హ్యాండ్‌హెల్డ్ ప్రూఫ్",
+                        "duration": "35–45 సెకన్లు",
+                        "cta": "ఈ కెమెరా మూమెంట్స్ ప్రాక్టీస్ చేయడానికి సేవ్ చేయండి!",
+                        "m_base": 89, "a_base": 92, "c_base": 94, "o_base": 88, "u_base": 85,
+                    },
+                    {
+                        "topic": "రీల్స్ లో మొదటి 3 సెకన్ల విజువల్ హుక్ సీక్రెట్",
+                        "pillar": "విజువల్ రిథమ్",
+                        "why_it_matters": "మొదటి 3 సెకన్లలో వీక్షకుడిని ఆపలేకపోతే రీల్స్ రీచ్ ఆగిపోతుంది. హై-రీటెన్షన్ విజువల్స్ పై ఆడియన్స్ కి విపరీతమైన ఆసక్తి ఉంది.",
+                        "angles": [
+                            "మొదటి ఫ్రేమ్ లోనే ఆసక్తి రేకెత్తించే విజువల్ యాక్షన్",
+                            "ఆడియో డ్రాప్ తో ప్యాటర్న్ ఇంటరప్ట్ సృష్టించడం",
+                            "బోరింగ్ ఇంట్రో లేకుండా నేరుగా పాయింట్ కి రావడం",
+                        ],
+                        "hooks": [
+                            "హాయ్ ఫ్రెండ్స్ అని రీల్స్ మొదలుపెడితే ఎవరూ చూడరు—ఇలా ట్రై చేయండి!",
+                            "మీ రీల్స్ ఆగిపోవడానికి కారణం ఈ మొదటి 3 సెకన్ల తప్పే.",
+                            "స్క్రోల్ ఆపే విజువల్ హుక్ ఎలా ప్లాన్ చేయాలో ఈ 30 సెకన్లలో నేర్చుకోండి.",
+                        ],
+                        "talking_points": [
+                            "1. మాట్లాడటానికి ముందే స్క్రీన్ పై చలనంతో కూడిన షాట్ చూపించడం",
+                            "2. టెక్స్ట్ హుక్ ని 1-2 పదాలలో మాత్రమే ఉంచడం",
+                            "3. 2.5 సెకన్ల వద్ద ఫస్ట్ కట్ వేయడం",
+                        ],
+                        "format": "రీటెన్షన్ బ్రేక్‌డౌన్ + సైకాలజీ",
+                        "duration": "25–35 సెకన్లు",
+                        "cta": "మీ తర్వాతి రీల్ కోసం ఈ హుక్ ఫార్ములాని సేవ్ చేసుకోండి!",
+                        "m_base": 94, "a_base": 91, "c_base": 93, "o_base": 92, "u_base": 93,
+                    },
+                    {
+                        "topic": "స్మార్ట్‌ఫోన్ లో పర్ఫెక్ట్ కలర్ గ్రేడింగ్ & LUTs ట్రిక్",
+                        "pillar": "కలర్ గ్రేడింగ్",
+                        "why_it_matters": "సినిమాటిక్ కలర్స్ మొబైల్ వీడియోలను ఉన్నతంగా మారుస్తాయి. సరైన వైట్ బ్యాలెన్స్ మరియు కాంట్రాస్ట్ టిప్స్ వైరల్ అవుతాయి.",
+                        "angles": [
+                            "మొబైల్ ఫోన్ లో ఫ్లాట్ ప్రొఫైల్ ఎక్స్‌పోజ్ చేసే విధానం",
+                            "ఉచిత యాప్స్ తో గోల్డెన్ అవర్ కలర్ లుక్ తీసుకురావడం",
+                            "స్కిన్ టోన్స్ ని సహజంగా ఉంచుతూ బ్యాక్‌గ్రౌండ్ మూడ్ మార్చడం",
+                        ],
+                        "hooks": [
+                            "మీ ఫోన్ వీడియోస్ లో కలర్స్ డల్ గా ఉన్నాయా? ఈ ఒక్క సెట్టింగ్ మార్చండి.",
+                            "రూ. లక్షల కెమెరా లుక్ ని మీ ఫోన్ కలర్ సెట్టింగ్స్ లో ఎలా తేవచ్చో చూడండి.",
+                            "ప్రో ఎడిటర్స్ వాడే మొబైల్ కలర్ గ్రేడింగ్ సీక్రెట్ ఇదే.",
+                        ],
+                        "talking_points": [
+                            "1. షూట్ చేసేప్పుడే వైట్ బ్యాలెన్స్ లాక్ చేయడం",
+                            "2. షాడోస్ ని ఓవర్-ఎక్స్‌పోజ్ చేయకుండా కాంట్రాస్ట్ పెంచడం",
+                            "3. వార్మ్ స్కిన్ టోన్స్ ని కాపాడుకోవడం",
+                        ],
+                        "format": "కలర్ గ్రేడింగ్ స్క్రీన్‌కాస్ట్ + డెమో",
+                        "duration": "40–50 సెకన్లు",
+                        "cta": "ఇలాంటి మరిన్ని ఎడిటింగ్ టిప్స్ కోసం ఫాలో అవ్వండి!",
+                        "m_base": 86, "a_base": 90, "c_base": 91, "o_base": 85, "u_base": 82,
+                    },
+                    {
+                        "topic": "బ్యాక్‌గ్రౌండ్ సెపరేషన్: చిన్న రూమ్ లో సినిమాటిక్ డెప్త్",
+                        "pillar": "ఫ్రేమింగ్ & కాంపోజిషన్",
+                        "why_it_matters": "చాలామంది క్రియేటర్స్ చిన్న రూమ్స్ లోనే షూట్ చేస్తారు. పరిమిత స్థలంలో డెప్త్ సాధించడం అత్యంత ప్రాక్టికల్ అవసరం.",
+                        "angles": [
+                            "గోడలకి దూరంగా సబ్జెక్ట్ ని ఉంచి డెప్త్ క్రియేట్ చేయడం",
+                            "బ్యాక్‌గ్రౌండ్ లో చిన్న ప్రాక్టికల్ లైట్ పెట్టే టెక్నిక్",
+                            "వైడ్ యాంగిల్ లెన్స్ ఎప్పుడు వాడాలి ఎప్పుడు వాడకూడదు",
+                        ],
+                        "hooks": [
+                            "మీ రూమ్ చిన్నగా ఉందని బాధపడుతున్నారా? ఈ ఫ్రేమింగ్ ట్రిక్ చూడండి.",
+                            "రూమ్ ఎంత చిన్నదైనా సినిమాటిక్ డెప్త్ సాధించే 1 సింపుల్ రూల్.",
+                            "గోడకి ఆనుకుని వీడియోస్ తీయడం ఆపండి—ఎందుకో చూడండి.",
+                        ],
+                        "talking_points": [
+                            "1. సబ్జెక్ట్ మరియు బ్యాక్‌గ్రౌండ్ మధ్య కనీసం 3 అడుగుల దూరం ఉంచడం",
+                            "2. మూలలో ఉన్న ల్యాంప్ ని బ్యాక్‌గ్రౌండ్ ఎలిమెంట్‌గా వాడటం",
+                            "3. 2x లేదా 3x లెన్స్ వాడి ఫీల్డ్ ఆఫ్ వ్యూ ని కంప్రెస్ చేయడం",
+                        ],
+                        "format": "రూమ్ సెటప్ వాక్‌త్రూ + బిఫోర్/ఆఫ్టర్",
+                        "duration": "30–45 సెకన్లు",
+                        "cta": "మీ రూమ్ సెటప్ మార్చుకోవడానికి ఇప్పుడే సేవ్ చేసుకోండి!",
+                        "m_base": 88, "a_base": 93, "c_base": 95, "o_base": 87, "u_base": 84,
+                    },
+                ]
+            elif norm_lang == "Tanglish":
+                raw_opportunities = [
+                    {
+                        "topic": "1-Light Budget Cinematic Lighting Setup",
+                        "pillar": "Lighting Breakdowns",
+                        "why_it_matters": "Expensive studio setup lekunda phone thone cinematic visual depth ela create cheyalo audience ki practical ga chupisthe high retention vastundi.",
+                        "angles": [
+                            "₹500 bedside lamp thone dramatic mood lighting",
+                            "Phone auto-exposure lock chesi shadows control cheyadam",
+                            "Wall reflection tho soft fill light hack",
+                        ],
+                        "hooks": [
+                            "Meeru phone tho video shoot chesetappudu ee lighting mistake definitely chestunnaru!",
+                            "Expensive studio lights lekunda phone thone cinematic look ela cheyalo chudandi.",
+                            "Chaala mandi creators camera set chesetappudu ee lighting rule ignore chestaru.",
+                        ],
+                        "talking_points": [
+                            "1. Light ni subject ki 45 degrees angle lo set cheyandi",
+                            "2. Background nundi subject ni separate chese rim light use cheyandi",
+                            "3. Mobile auto-exposure lock chesi shadows maintain cheyandi",
+                        ],
+                        "format": "Side-by-side A/B Test + Visual Breakdown",
+                        "duration": "30–45 sec",
+                        "cta": "Mee next video shoot kosam ee reel ni ventane save chesukondi!",
+                        "m_base": 93, "a_base": 95, "c_base": 96, "o_base": 91, "u_base": 88,
+                    },
+                    {
+                        "topic": "3 Cinematic Camera Moves Using Just Your Phone",
+                        "pillar": "Camera Angles",
+                        "why_it_matters": "Costly gimbal lekundane handheld mobile tho smooth parallax shots ela teeyalo step-by-step chupisthe audience save and share chestaru.",
+                        "angles": [
+                            "Ninja walk technique for gimbal-like stability",
+                            "Foreground passing arc shot for rich 3D depth",
+                            "Organic whip-pan speed ramp for seamless cuts",
+                        ],
+                        "hooks": [
+                            "Gimbal konadam aapeyandi! Mee phone thone ee 3 cinematic moves teeyochu.",
+                            "Hollywood level camera movements phone tho ela teeyalo chudandi.",
+                            "Mee videos amateur ga anipisthe ee camera angles ventane try cheyandi.",
+                        ],
+                        "talking_points": [
+                            "1. Phone ni rendu chetulatho hold chesi body movement tho pan cheyandi",
+                            "2. Foreground lo plants leda wall use chesi parallax create cheyandi",
+                            "3. Shot end lo fast movement tho seamless transition create cheyandi",
+                        ],
+                        "format": "Visual Tutorial + Handheld Demonstration",
+                        "duration": "35–45 sec",
+                        "cta": "Next shoot lo try cheyataniki ee reel ni save chesukondi!",
+                        "m_base": 89, "a_base": 92, "c_base": 94, "o_base": 88, "u_base": 85,
+                    },
+                    {
+                        "topic": "3-Second Visual Hook Rule for Short-Form Reels",
+                        "pillar": "Visual Rhythm",
+                        "why_it_matters": "Opening 3 seconds lone audience drop-off aipothe reel reach complete ga aagipotundi. High-retention hooks creators ki top priority.",
+                        "angles": [
+                            "Opening frame lo visual motion create cheyadam",
+                            "Sub-bass drop tho audio pattern interrupt",
+                            "Boring greetings skip chesi direct value deliver cheyadam",
+                        ],
+                        "hooks": [
+                            "Hi friends ani reels start chesthe evaru chudaru—idi try cheyandi!",
+                            "Mee reels reach aagipovadaniki main reason ee first 3 seconds mistake.",
+                            "Scroll aape visual hook formula: 30 seconds lo complete breakdown.",
+                        ],
+                        "talking_points": [
+                            "1. Speaking start chese mundu moving visual shot chupinchandi",
+                            "2. On-screen text 3 words kante ekkuva pettakandi",
+                            "3. First 2.5 seconds lo dynamic cut icchi retention hold cheyandi",
+                        ],
+                        "format": "Retention Breakdown + Psychological Analysis",
+                        "duration": "25–35 sec",
+                        "cta": "Mee next reel script ready cheyataniki save chesukondi!",
+                        "m_base": 94, "a_base": 91, "c_base": 93, "o_base": 92, "u_base": 93,
+                    },
+                    {
+                        "topic": "Mobile Color Grading & Exposure Lock Secret",
+                        "pillar": "Color Grading",
+                        "why_it_matters": "Cinematic colors phone videos ni studio grade lo elevate chestayi. Right exposure and contrast rules creators ki high value istayi.",
+                        "angles": [
+                            "Phone camera lo highlight blowout lekunda expose cheyadam",
+                            "Free mobile apps tho golden hour color grade",
+                            "Skin tones natural ga unchutu rich background contrast",
+                        ],
+                        "hooks": [
+                            "Mee phone videos lo colors washed out ga untunnaya? Ee single setting marchandi.",
+                            "Expensive cinema camera colors mee phone videos ki ela teesukuralo chudandi.",
+                            "Top reel creators use chese mobile color grading secret idi.",
+                        ],
+                        "talking_points": [
+                            "1. Shoot chesetappude exposure manually lock cheyandi",
+                            "2. Shadows lo noise raakunda contrast subtle ga add cheyandi",
+                            "3. Warm skin tones preserve chesi cinematic mood create cheyandi",
+                        ],
+                        "format": "Color Grading Screencast + Before/After",
+                        "duration": "40–50 sec",
+                        "cta": "Inka ilanti editing hacks kosam follow avvandi!",
+                        "m_base": 86, "a_base": 90, "c_base": 91, "o_base": 85, "u_base": 82,
+                    },
+                    {
+                        "topic": "Small Room Cinematography: Creating Deep Backgrounds",
+                        "pillar": "Framing & Composition",
+                        "why_it_matters": "Most creators bedroom leda small studio lene shoot chestaru. Limited space lo depth create cheyadam practical necessity.",
+                        "angles": [
+                            "Walls nundi subject ni separate chesi depth techhe position",
+                            "Background corner lo practical warm light use cheyadam",
+                            "2x telephoto lens use chesi perspective compression",
+                        ],
+                        "hooks": [
+                            "Mee room small ga undani feel avvadam aapeyandi—ee framing rule chudandi.",
+                            "Small bedroom lo kuda cinematic deep background create cheyadam ela?",
+                            "Wall ki anukuni videos shoot cheyoddu—enduko chudandi.",
+                        ],
+                        "talking_points": [
+                            "1. Subject ki wall ki madhya minimum 3 feet gap maintain cheyandi",
+                            "2. Corner lamp ni background layer ga turn on cheyandi",
+                            "3. 2x camera zoom use chesi background clutter hide cheyandi",
+                        ],
+                        "format": "Studio Setup Walkthrough + Before/After",
+                        "duration": "30–45 sec",
+                        "cta": "Mee room setup upgrade cheyataniki ventane save chesukondi!",
+                        "m_base": 88, "a_base": 93, "c_base": 95, "o_base": 87, "u_base": 84,
+                    },
+                ]
+            else:
+                raw_opportunities = [
+                    {
+                        "topic": "1-Light Budget Cinematic Lighting Setup",
+                        "pillar": "Lighting Breakdowns",
+                        "why_it_matters": "Solves the #1 beginner creator frustration (flat, muddy video) with an accessible, high-proof setup that drives massive bookmarking.",
+                        "angles": [
+                            "The 45-degree Key Light Rule that makes any room cinematic",
+                            "Why your $1,500 camera looks worse than a well-lit phone",
+                            "Using a $15 bedside lamp as a rich separation rim light",
+                        ],
+                        "hooks": [
+                            "Stop upgrading your camera. Your lighting is the real reason your videos look flat.",
+                            "Here is the exact 1-light setup top creators use that costs under $25.",
+                            "If your reels feel amateur, you are almost certainly making this single lighting mistake.",
+                        ],
+                        "talking_points": [
+                            "1. Demonstrate flat overhead room light vs deliberate 45-degree key light",
+                            "2. Lock manual smartphone exposure to preserve moody contrast",
+                            "3. Visual proof: Before vs After side-by-side shot",
+                        ],
+                        "format": "Visual Teardown + Real Setup Proof",
+                        "duration": "30–45s",
+                        "cta": "Save this setup before your next shoot.",
+                        "m_base": 93, "a_base": 95, "c_base": 96, "o_base": 91, "u_base": 88,
+                    },
+                    {
+                        "topic": "3 Cinematic Camera Moves Using Only Your Smartphone",
+                        "pillar": "Camera Angles",
+                        "why_it_matters": "Proves high production value is about kinetic choreography rather than expensive gimbals or specialized rigs.",
+                        "angles": [
+                            "The ninja walk technique for handheld organic stability",
+                            "Foreground reveal arc shot that adds tangible 3D depth",
+                            "Natural whip-pan speed ramp for seamless cut points",
+                        ],
+                        "hooks": [
+                            "You don't need a $400 gimbal. These 3 phone camera moves look like Hollywood.",
+                            "Stop shooting static talking heads. Add these 3 camera moves to your next reel.",
+                            "The exact camera movement technique top creators use to triple their retention.",
+                        ],
+                        "talking_points": [
+                            "1. Lock elbows to torso for smooth organic stabilization",
+                            "2. Pass behind a physical object to create natural parallax depth",
+                            "3. Whip camera at end of phrase to create an invisible jump-cut",
+                        ],
+                        "format": "Visual Tutorial + Handheld Proof",
+                        "duration": "35–45s",
+                        "cta": "Practice these moves on your next video and save for reference.",
+                        "m_base": 89, "a_base": 92, "c_base": 94, "o_base": 88, "u_base": 85,
+                    },
+                    {
+                        "topic": "The 3-Second Visual Hook Rule for Short-Form Creators",
+                        "pillar": "Visual Rhythm",
+                        "why_it_matters": "Initial 3-second viewer retention dictates algorithm distribution velocity on Reels, TikTok, and Shorts.",
+                        "angles": [
+                            "Leading with motion before speaking a single word",
+                            "Pattern-interrupt audio cue combined with dynamic framing",
+                            "Eliminating throat-clearing greetings to cut drop-off by 50%",
+                        ],
+                        "hooks": [
+                            "Never start your videos with 'Hey guys'. Here is what you should do instead.",
+                            "This 3-second visual hook formula took my reels from 2,000 views to 200,000.",
+                            "Stop losing 70% of your audience in the first 3 seconds with this single fix.",
+                        ],
+                        "talking_points": [
+                            "1. Open with kinetic motion in frame before voiceover begins",
+                            "2. Keep on-screen hook title under 4 words for instantaneous readability",
+                            "3. Execute the first visual cut at exactly 2.5 seconds to reset attention",
+                        ],
+                        "format": "Retention Breakdown + Psychological Analysis",
+                        "duration": "25–35s",
+                        "cta": "Save this template for your next script brainstorm.",
+                        "m_base": 94, "a_base": 91, "c_base": 93, "o_base": 92, "u_base": 93,
+                    },
+                    {
+                        "topic": "Smartphone Log Exposure: The 1 Secret to Clean Shadows",
+                        "pillar": "Color Grading",
+                        "why_it_matters": "Creators shooting flat smartphone profiles often ruin shadows with noisy over-compression. Demystifying exposure builds authority.",
+                        "angles": [
+                            "Why underexposing phone Log footage destroys your color grade",
+                            "Using false color or histogram on mobile camera apps",
+                            "Applying one clean natural Rec.709 conversion LUT",
+                        ],
+                        "hooks": [
+                            "If your mobile Log footage looks noisy and muddy, you are exposing it wrong.",
+                            "The secret to cinema-grade colors from an iPhone or Samsung.",
+                            "Stop using random viral filters. Here is how professional color grading actually works.",
+                        ],
+                        "talking_points": [
+                            "1. Demonstrate noisy crushed shadows vs properly exposed highlights",
+                            "2. Show mobile exposure compensation lock (+0.7 EV on Log profiles)",
+                            "3. Apply clean conversion LUT to demonstrate instant studio grade",
+                        ],
+                        "format": "Screencast Breakdown + Before/After Proof",
+                        "duration": "40–50s",
+                        "cta": "Follow for more tactical cinematography breakdowns.",
+                        "m_base": 86, "a_base": 90, "c_base": 91, "o_base": 85, "u_base": 82,
+                    },
+                    {
+                        "topic": "Creating Cinematic Background Depth in a Tiny Bedroom",
+                        "pillar": "Framing & Composition",
+                        "why_it_matters": "Most creators record in confined spaces. Demonstrating how to transform a cramped room into a moody studio is universally applicable.",
+                        "angles": [
+                            "Physical separation rules: why sitting against a wall kills depth",
+                            "Using an inexpensive background practical light to layer the frame",
+                            "Perspective compression using the 2x or 3x mobile lens",
+                        ],
+                        "hooks": [
+                            "You don't need a huge studio. Here is how to make a 10x10 bedroom look cinematic.",
+                            "Stop sitting directly against your wall! This 1 framing rule changes everything.",
+                            "How to fake a $10,000 studio look in a tiny space with two simple tweaks.",
+                        ],
+                        "talking_points": [
+                            "1. Pull desk/chair at least 4 feet away from the rear wall",
+                            "2. Turn on a warm practical lamp in the background corner",
+                            "3. Step back and switch to 2x camera lens to compress the background",
+                        ],
+                        "format": "Studio Walkthrough + Room Before/After",
+                        "duration": "30–45s",
+                        "cta": "Save this setup before redesigning your recording space.",
+                        "m_base": 88, "a_base": 93, "c_base": 95, "o_base": 87, "u_base": 84,
+                    },
+                ]
+
+        # Assemble items up to target_count
+        items: List[Dict[str, Any]] = []
+        selected_raw = raw_opportunities[:target_count]
+
+        for idx, raw in enumerate(selected_raw):
+            m = raw.get("m_base", 88)
+            a = raw.get("a_base", 90)
+            c = raw.get("c_base", 92)
+            o = raw.get("o_base", 86)
+            u = raw.get("u_base", 85)
+
+            # Adjust slightly based on horizon
+            if is_current_momentum:
+                m = min(100, m + 3)
+                u = min(100, u + 4)
+            if is_deep:
+                a = min(100, a + 2)
+                c = min(100, c + 2)
+
+            overall = calculate_overall_score(m, a, c, o, u)
+
+            source_type = "creator_profile_analysis" if creator_persona else "heuristic_opportunity"
+            item_id = f"trend_opp_{uuid.uuid4().hex[:10]}"
+
+            items.append({
+                "id": item_id,
+                "topic": raw["topic"],
+                "primary_niche": active_niche,
+                "target_audience": active_audience,
+                "platform": platform or "Instagram Reels",
+                "language": norm_lang,
+                "content_pillar": raw.get("pillar"),
+                "recommended_format": raw.get("format", "Visual Breakdown"),
+                "recommended_duration": raw.get("duration", "30–45s"),
+                "recommended_cta": raw.get("cta", "Save this video for later."),
+                "scores": {
+                    "momentum": m,
+                    "audience_fit": a,
+                    "creator_fit": c,
+                    "content_opportunity": o,
+                    "urgency": u,
+                    "overall_score": overall,
+                },
+                "why_it_matters": raw["why_it_matters"],
+                "angle_ideas": raw.get("angles", []),
+                "recommended_hooks": raw.get("hooks", []),
+                "talking_points": raw.get("talking_points", []),
+                "source": {
+                    "type": source_type,
+                    "label": "Creator Persona & Opportunity Engine",
+                    "verified": False,
+                    "citation": "Synthesized from Creator Persona, Content Pillars & Short-Form Pattern Engine",
+                },
+            })
+
+        # Summary text
+        if norm_lang == "Telugu":
+            summary = (
+                f"మీ క్రియేటర్ ప్రొఫైల్, {active_niche} విభాగం, మరియు {platform} కోసం "
+                f"{len(items)} ఉన్నత కంటెంట్ అవకాశాలను విశ్లేషించాము. "
+                f"ఈ అంశాలు మీ ఆడియన్స్ ఆసక్తులు మరియు హై-రీటెన్షన్ విజువల్ పద్ధతులకు అనుగుణంగా రూపొందించబడ్డాయి."
+            )
+        elif norm_lang == "Tanglish":
+            summary = (
+                f"{creator_name} persona kosam {active_niche} niche lo {platform} platform meeda "
+                f"{len(items)} high-opportunity content topics ni curate chesamu. "
+                f"Audience pain points solve cheyataniki mariyu first 3 seconds retention capture cheyataniki idi optimized."
+            )
+        else:
+            summary = (
+                f"Synthesized {len(items)} personalized, high-retention content opportunities for {active_niche} "
+                f"on {platform}. Grounded in your creator persona, content pillars, and target audience pain points."
+            )
+
+        return {
+            "summary": summary,
+            "opportunities": items,
+            "provider_used": "heuristic_mock",
+        }
+
+
 class GeminiLLMProvider(BaseLLMProvider):
     """
     Google Gemini AI Provider integration.
@@ -1990,6 +2866,157 @@ class GeminiLLMProvider(BaseLLMProvider):
             title, topic, platform, norm_lang, duration_seconds, tone, hook, segments, cta,
             goals, instructions, target_retention_areas, creator_name, niche, audience
         )
+
+    async def generate_trend_research(
+        self,
+        topic: Optional[str],
+        niche: str,
+        target_audience: str,
+        platform: str,
+        language: str,
+        research_depth: str,
+        time_horizon: str,
+        count: int,
+        creator_persona: Optional[Dict[str, Any]] = None,
+    ) -> Dict[str, Any]:
+        norm_lang = normalize_language_contract(language)
+        persona = creator_persona or {}
+        creator_name = persona.get("creator_name", "Creator")
+        pillars = persona.get("content_pillars", [])
+        pain_points = persona.get("audience_pain_points", [])
+        interests = persona.get("audience_interests", [])
+        target_count = max(1, min(count or 5, 10))
+
+        try:
+            url = f"https://generativelanguage.googleapis.com/v1beta/models/{self.model}:generateContent?key={self.api_key}"
+            prompt = f"""You are the CINEHAI AI Trend Research Assistant specializing in short-form video strategy (Instagram Reels, YouTube Shorts, TikTok).
+Your mission is to uncover personalized, high-retention content opportunities tailored to this specific creator persona.
+
+CREATOR PERSONA:
+- Creator Name: {creator_name}
+- Primary Niche: {niche}
+- Content Pillars: {', '.join(pillars) if pillars else 'General ' + niche}
+- Target Audience: {target_audience}
+- Audience Pain Points: {', '.join(pain_points) if pain_points else 'Flat lighting, low engagement, slow growth'}
+- Audience Interests: {', '.join(interests) if interests else 'Practical breakdowns, cinematography tips'}
+
+RESEARCH PARAMETERS:
+- Seed Topic / Query: {topic if topic else 'Identify top content opportunities for creator niche & pillars'}
+- Target Platform: {platform}
+- Target Language: {norm_lang}
+- Research Depth: {research_depth}
+- Time Horizon: {time_horizon}
+- Number of Opportunities: {target_count}
+
+CRITICAL LANGUAGE INSTRUCTIONS:
+- You MUST provide the output in '{norm_lang}'.
+- If language is 'Telugu': You MUST write all topics, why_it_matters, angle_ideas, recommended_hooks, talking_points, recommended_format, and recommended_cta in authentic Telugu Unicode script (తెలుగు).
+- If language is 'Tanglish': You MUST write them in authentic conversational Tanglish (Telugu written in Latin script / te-Latn with natural Telugu vocabulary like meeru, cheyandi, chudandi, undi, gurinchi, etc.).
+- If language is 'English': Write in punchy, modern English.
+- STRICTLY DO NOT output Hindi.
+- STRICTLY DO NOT invent fake viral numbers (no fake view counts, fake follower numbers, or fake '#1 on TikTok' ranks).
+
+SCORING RULES (0-100 integers):
+- momentum: Interest velocity and current cultural traction (20% weight)
+- audience_fit: Alignment with target audience pain points and interests (25% weight)
+- creator_fit: Alignment with creator niche, skills, voice, brand (25% weight)
+- content_opportunity: High engagement potential vs saturation (20% weight)
+- urgency: Timeliness and immediate relevance for this time horizon (10% weight)
+
+Return ONLY valid JSON matching this exact structure:
+{{
+  "summary": "Strategic overview of why these opportunities fit this creator right now in {norm_lang}",
+  "opportunities": [
+    {{
+      "id": "trend_opp_1",
+      "topic": "Concise concept title in {norm_lang}",
+      "primary_niche": "{niche}",
+      "target_audience": "{target_audience}",
+      "platform": "{platform}",
+      "language": "{norm_lang}",
+      "content_pillar": "One of the creator pillars or related domain",
+      "recommended_format": "e.g. Visual Teardown / A/B Test / Step-by-Step",
+      "recommended_duration": "30–45s",
+      "recommended_cta": "Actionable CTA in {norm_lang}",
+      "why_it_matters": "Strategic reasoning explaining audience appeal and retention potential in {norm_lang}",
+      "angle_ideas": ["Angle 1", "Angle 2", "Angle 3"],
+      "recommended_hooks": ["Opening hook 1 in {norm_lang}", "Opening hook 2 in {norm_lang}", "Opening hook 3 in {norm_lang}"],
+      "talking_points": ["Point 1", "Point 2", "Point 3"],
+      "scores": {{
+        "momentum": 88,
+        "audience_fit": 92,
+        "creator_fit": 95,
+        "content_opportunity": 87,
+        "urgency": 85
+      }},
+      "source": {{
+        "type": "ai_opportunity_research",
+        "label": "AI Opportunity Analysis",
+        "verified": false,
+        "citation": "Synthesized from Creator Persona, Content Pillars & Short-Form Pattern Engine"
+      }}
+    }}
+  ]
+}}
+"""
+            async with httpx.AsyncClient(timeout=30.0) as client:
+                res = await client.post(
+                    url,
+                    json={"contents": [{"parts": [{"text": prompt}]}]},
+                    headers={"Content-Type": "application/json"}
+                )
+                if res.status_code == 200:
+                    data = res.json()
+                    raw_text = data["candidates"][0]["content"]["parts"][0]["text"]
+                    start = raw_text.find("{")
+                    end = raw_text.rfind("}") + 1
+                    if start != -1 and end != -1:
+                        parsed = json.loads(raw_text[start:end])
+                        if "opportunities" in parsed and isinstance(parsed["opportunities"], list):
+                            sample_text = ""
+                            if parsed["opportunities"]:
+                                first_opp = parsed["opportunities"][0]
+                                sample_text = f"{first_opp.get('topic', '')} {' '.join(first_opp.get('recommended_hooks', []))} {first_opp.get('why_it_matters', '')}"
+
+                            # Validate language adherence
+                            if norm_lang == "Telugu":
+                                if not TELUGU_UNICODE_PATTERN.search(sample_text):
+                                    return await self.mock_fallback.generate_trend_research(
+                                        topic, niche, target_audience, platform, norm_lang,
+                                        research_depth, time_horizon, count, creator_persona
+                                    )
+                            elif norm_lang == "Tanglish":
+                                detected = detect_script_language(sample_text)
+                                if detected == "Telugu" or (detected == "English" and not any(w in sample_text.lower() for w in ["chala", "cheyandi", "undi", "lone", "kante", "gurinchi", "ela", "kani", "chestaru", "video", "pedda"])):
+                                    return await self.mock_fallback.generate_trend_research(
+                                        topic, niche, target_audience, platform, norm_lang,
+                                        research_depth, time_horizon, count, creator_persona
+                                    )
+
+                            # Guarantee deterministic score formula across all opportunities
+                            for opp in parsed["opportunities"]:
+                                sc = opp.get("scores", {})
+                                m = int(sc.get("momentum", 85))
+                                a = int(sc.get("audience_fit", 88))
+                                c = int(sc.get("creator_fit", 90))
+                                o = int(sc.get("content_opportunity", 85))
+                                u = int(sc.get("urgency", 82))
+                                sc["overall_score"] = calculate_overall_score(m, a, c, o, u)
+                                opp["scores"] = sc
+                                opp["language"] = norm_lang
+                                if not opp.get("id"):
+                                    opp["id"] = f"trend_opp_{uuid.uuid4().hex[:10]}"
+
+                            parsed["provider_used"] = "gemini"
+                            return parsed
+        except Exception:
+            pass
+
+        return await self.mock_fallback.generate_trend_research(
+            topic, niche, target_audience, platform, norm_lang,
+            research_depth, time_horizon, count, creator_persona
+        )
+
 
 def get_llm_provider() -> BaseLLMProvider:
     if settings.AI_PROVIDER == "gemini" and settings.GEMINI_API_KEY:

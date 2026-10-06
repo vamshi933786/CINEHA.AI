@@ -40,13 +40,29 @@ export default function HookGeneratorPage() {
     ...HOOK_TAXONOMIES,
   ]);
 
-  // Synchronize language and platform with creator profile once loaded
+  // Synchronize with URL search parameters (handoff from Trend Research or other modules)
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const urlParams = new URLSearchParams(window.location.search);
+      const qTopic = urlParams.get("topic");
+      const qContext = urlParams.get("context");
+      const qPlatform = urlParams.get("platform");
+      const qLanguage = urlParams.get("language");
+      if (qTopic) setTopic(qTopic);
+      if (qContext) setContext(qContext);
+      if (qPlatform) setPlatform(qPlatform);
+      if (qLanguage) setLanguage(qLanguage);
+    }
+  }, []);
+
+  // Synchronize language and platform with creator profile once loaded (unless overridden via URL query)
   useEffect(() => {
     if (profile) {
-      if (profile.primary_language) {
+      const urlParams = typeof window !== "undefined" ? new URLSearchParams(window.location.search) : null;
+      if (!urlParams?.get("language") && profile.primary_language) {
         setLanguage(profile.primary_language);
       }
-      if (profile.platforms && profile.platforms.length > 0) {
+      if (!urlParams?.get("platform") && profile.platforms && profile.platforms.length > 0) {
         setPlatform(profile.platforms[0]);
       }
     }

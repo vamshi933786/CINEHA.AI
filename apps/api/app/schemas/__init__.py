@@ -57,6 +57,16 @@ from app.schemas.content_item import (
     GenerateContentPlanResponse,
     CalendarDashboardStats,
 )
+from app.schemas.trend_research import (
+    calculate_overall_score,
+    TrendScoreBreakdown,
+    TrendSourceInfo,
+    TrendOpportunityItem,
+    TrendResearchRequest,
+    TrendResearchSessionResponse,
+    TrendResearchHistoryItem,
+    TrendResearchHistoryResponse,
+)
 
 __all__ = [
     "HealthResponse",
@@ -103,6 +113,14 @@ __all__ = [
     "GenerateContentPlanRequest",
     "GenerateContentPlanResponse",
     "CalendarDashboardStats",
+    "calculate_overall_score",
+    "TrendScoreBreakdown",
+    "TrendSourceInfo",
+    "TrendOpportunityItem",
+    "TrendResearchRequest",
+    "TrendResearchSessionResponse",
+    "TrendResearchHistoryItem",
+    "TrendResearchHistoryResponse",
 ]
 
 

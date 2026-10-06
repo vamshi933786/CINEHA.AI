@@ -53,6 +53,11 @@ import type {
   GenerateContentPlanResponse,
   CalendarDashboardStats,
 } from "../types/calendar";
+import type {
+  TrendResearchRequest,
+  TrendResearchSessionResponse,
+  TrendResearchHistoryResponse,
+} from "../types/trendResearch";
 
 export class ApiClient {
   private baseUrl: string;
@@ -1084,6 +1089,107 @@ export class ApiClient {
     }
 
     return (await response.json()) as CalendarDashboardStats;
+  }
+
+  async createTrendResearch(
+    payload: TrendResearchRequest
+  ): Promise<TrendResearchSessionResponse> {
+    const response = await fetch(`${this.baseUrl}/trend-research`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+
+    if (!response.ok) {
+      let errorMessage = `Failed to generate trend research (${response.status})`;
+      try {
+        const errorJson = await response.json();
+        if (errorJson.detail) errorMessage = String(errorJson.detail);
+      } catch (_) {}
+      throw new Error(errorMessage);
+    }
+
+    return (await response.json()) as TrendResearchSessionResponse;
+  }
+
+  async getTrendResearchHistory(
+    limit: number = 20
+  ): Promise<TrendResearchHistoryResponse> {
+    const response = await fetch(
+      `${this.baseUrl}/trend-research?limit=${limit}`,
+      {
+        method: "GET",
+        headers: { "Content-Type": "application/json" },
+        cache: "no-store",
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error(
+        `Failed to fetch trend research history (${response.status})`
+      );
+    }
+
+    return (await response.json()) as TrendResearchHistoryResponse;
+  }
+
+  async getTrendResearchSession(
+    sessionId: string
+  ): Promise<TrendResearchSessionResponse> {
+    const response = await fetch(
+      `${this.baseUrl}/trend-research/${sessionId}`,
+      {
+        method: "GET",
+        headers: { "Content-Type": "application/json" },
+        cache: "no-store",
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error(
+        `Failed to fetch trend research session (${response.status})`
+      );
+    }
+
+    return (await response.json()) as TrendResearchSessionResponse;
+  }
+
+  async refreshTrendResearchSession(
+    sessionId: string
+  ): Promise<TrendResearchSessionResponse> {
+    const response = await fetch(
+      `${this.baseUrl}/trend-research/${sessionId}/refresh`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+      }
+    );
+
+    if (!response.ok) {
+      let errorMessage = `Failed to refresh trend research (${response.status})`;
+      try {
+        const errorJson = await response.json();
+        if (errorJson.detail) errorMessage = String(errorJson.detail);
+      } catch (_) {}
+      throw new Error(errorMessage);
+    }
+
+    return (await response.json()) as TrendResearchSessionResponse;
+  }
+
+  async deleteTrendResearchSession(sessionId: string): Promise<void> {
+    const response = await fetch(
+      `${this.baseUrl}/trend-research/${sessionId}`,
+      {
+        method: "DELETE",
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error(
+        `Failed to delete trend research session (${response.status})`
+      );
+    }
   }
 }
 

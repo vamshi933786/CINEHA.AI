@@ -9,6 +9,7 @@ from app.api.v1.endpoints import (
     captions,
     video_analysis,
     calendar,
+    trend_research,
 )
 
 api_router = APIRouter()
@@ -22,4 +23,6 @@ api_router.include_router(optimizer.router, tags=["Script Optimizer"])
 api_router.include_router(captions.router, tags=["Caption Studio"])
 api_router.include_router(video_analysis.router, tags=["Video Analysis"])
 api_router.include_router(calendar.router, tags=["Content Calendar"])
+api_router.include_router(trend_research.router, tags=["Trend Research"])
+
 
