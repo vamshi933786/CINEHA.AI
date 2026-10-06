@@ -1,0 +1,12 @@
+{
+  "name": "cineha-ai",
+  "version": "1.0.0",
+  "private": true,
+  "description": "CINEHA AI — Intelligent Content Creation Platform",
+  "scripts": {
+    "start": "./start.sh",
+    "start:dev": "./start.sh",
+    "stop": "./stop.sh",
+    "status": "./status.sh"
+  }
+}

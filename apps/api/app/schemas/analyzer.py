@@ -1,11 +1,11 @@
 from datetime import datetime, timezone
-from typing import List, Optional
-from pydantic import BaseModel, Field, ConfigDict
+from typing import Any, List, Optional
+from pydantic import BaseModel, Field, ConfigDict, model_validator
 from app.schemas.script import ScriptSegmentSchema
 
 
 class CategoryScoreSchema(BaseModel):
-    model_config = ConfigDict(extra="forbid")
+    model_config = ConfigDict(extra="ignore")
 
     score: int = Field(..., ge=0, le=100, description="Score from 0 to 100")
     rating: str = Field(..., description="Rating label, e.g. Excellent, Good, Fair, Poor")
@@ -13,14 +13,22 @@ class CategoryScoreSchema(BaseModel):
 
 
 class SegmentObservationSchema(BaseModel):
-    model_config = ConfigDict(extra="forbid")
+    model_config = ConfigDict(extra="ignore")
 
     segment_id: str = Field(..., description="ID of the screenplay segment")
     time_range: str = Field(..., description="Timestamp interval e.g. 0:00–0:03")
     section: str = Field(..., description="Section label e.g. HOOK, PROBLEM, SOLUTION")
-    observation: str = Field(..., description="Specific observation on pacing, wording, or viewer engagement")
-    retention_risk: str = Field(..., description="Risk level: low, medium, high")
+    observation: str = Field(default="", description="Specific observation on pacing, wording, or viewer engagement")
+    retention_risk: str = Field(default="low", description="Risk level: low, medium, high")
     suggestion: Optional[str] = Field(default=None, description="Actionable tweak to reduce drop-off")
+
+    @model_validator(mode="before")
+    @classmethod
+    def normalize_observation(cls, data: Any) -> Any:
+        if isinstance(data, dict):
+            if not data.get("observation") and data.get("explanation"):
+                data["observation"] = data["explanation"]
+        return data
 
 
 class ScriptAnalysisMetrics(BaseModel):

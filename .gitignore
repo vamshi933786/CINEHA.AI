@@ -48,3 +48,9 @@ temp/
 *.mp4
 *.mov
 *.avi
+
+# Runtime files and process logs
+.cinehai/
+logs/
+*.pid
+

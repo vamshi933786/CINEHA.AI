@@ -40,7 +40,48 @@
 
 ---
 
-## 🛠️ Quick Start & Localhost Development
+## 🛠️ Running CINEHAI Locally (Standalone)
+
+You can launch, monitor, and stop both the frontend and backend with a single command from the root folder. **Antigravity does not need to remain open** once services are launched.
+
+### 1. Start Both Services
+```bash
+./start.sh
+# or
+npm run start:dev
+```
+- Starts the FastAPI backend on **`http://localhost:8000`**
+- Starts the Next.js frontend on **`http://localhost:3000`**
+- Verifies health checks automatically
+- Runs detached in the background
+- Includes duplicate-start protection
+
+### 2. Check Service Status
+```bash
+./status.sh
+# or
+npm run status
+```
+Displays running status, PIDs, listening ports, and health check results.
+
+### 3. Graceful Shutdown
+```bash
+./stop.sh
+# or
+npm run stop
+```
+Safely terminates only the CINEHAI AI processes using tracked PIDs.
+
+### 4. Live Logs
+Output from both servers is streamed to the `logs/` directory:
+```bash
+tail -f logs/backend.log
+tail -f logs/frontend.log
+```
+
+---
+
+## 🔧 Manual / Individual Setup
 
 ### Prerequisites
 - Node.js `v18+` (detected `v20.18.0`)
@@ -65,6 +106,7 @@ uvicorn app.main:app --reload --port 8000
 ```
 Accessible at: **`http://localhost:8000`**  
 Interactive API Docs (Swagger): **`http://localhost:8000/docs`**
+
 
 ---
 
