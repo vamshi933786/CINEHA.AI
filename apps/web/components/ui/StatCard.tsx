@@ -28,7 +28,7 @@ export function StatCard({
       </div>
 
       <div className="mt-4 flex items-baseline justify-between gap-2">
-        <span className="text-2xl sm:text-3xl font-extrabold tracking-tight text-white font-mono">
+        <span className="text-2xl sm:text-3xl font-extrabold tracking-tight text-cine-text font-mono">
           {value}
         </span>
         {change && (

@@ -8,6 +8,7 @@ import {
   CaptionAppearanceSettings,
   CaptionTemplate,
 } from "@/types/caption";
+import { useSettings } from "@/providers/SettingsProvider";
 
 interface MotionCaptionOverlayProps {
   cue: CaptionCue;
@@ -35,6 +36,7 @@ export function MotionCaptionOverlay({
   onPointerUp,
 }: MotionCaptionOverlayProps) {
   // Detect system reduced motion preference
+  const { resolvedReducedMotion } = useSettings();
   const [systemReducedMotion, setSystemReducedMotion] = useState(false);
 
   useEffect(() => {
@@ -56,9 +58,9 @@ export function MotionCaptionOverlay({
   }, []);
 
   const isReducedMotion = useMemo(() => {
-    if (forceReducedMotion) return true;
+    if (forceReducedMotion || resolvedReducedMotion) return true;
     return motionSettings.respect_reduced_motion && systemReducedMotion;
-  }, [forceReducedMotion, motionSettings.respect_reduced_motion, systemReducedMotion]);
+  }, [forceReducedMotion, resolvedReducedMotion, motionSettings.respect_reduced_motion, systemReducedMotion]);
 
   // Timing progress within cue
   const cueProgress = Math.max(0, currentTime - cue.start_time);

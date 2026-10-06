@@ -9,8 +9,10 @@ import {
   DEFAULT_WORKFLOW_NODES,
   DEFAULT_WORKFLOW_CONNECTIONS,
 } from "../types/workflow";
+import { useSettings } from "@/providers/SettingsProvider";
 
 export function useWorkflowState() {
+  const { resolvedReducedMotion } = useSettings();
   const [nodes, setNodes] = useState(() => {
     const initial = {} as Record<WorkflowNodeId, WorkflowNodeData>;
     (Object.keys(DEFAULT_WORKFLOW_NODES) as WorkflowNodeId[]).forEach((key) => {
@@ -153,7 +155,7 @@ export function useWorkflowState() {
     activePreset,
     viewMode,
     webglSupported,
-    prefersReducedMotion,
+    prefersReducedMotion: resolvedReducedMotion || prefersReducedMotion,
     setSelectedNodeId,
     setViewMode,
     applyPreset,

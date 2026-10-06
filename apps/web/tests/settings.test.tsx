@@ -14,6 +14,7 @@ import {
   SETTINGS_STORAGE_KEY,
 } from "../types/settings";
 import { CAPTION_TEMPLATES } from "../components/captions/captionTemplates";
+import { SettingsProvider, useSettings } from "../providers/SettingsProvider";
 import { api } from "../lib/api";
 
 // Mock the API client
@@ -361,4 +362,83 @@ describe("Settings Module — CINEHAI AI", () => {
       expect(screen.getByText("FastAPI + AsyncIO")).toBeInTheDocument();
     });
   });
+
+  describe("SettingsProvider & Global DOM Synchronization", () => {
+    function TestConsumer() {
+      const {
+        settings,
+        resolvedTheme,
+        resolvedReducedMotion,
+        resolvedDensity,
+        updateSetting,
+        resetSettings,
+      } = useSettings();
+
+      return (
+        <div>
+          <span data-testid="resolved-theme">{resolvedTheme}</span>
+          <span data-testid="resolved-motion">{String(resolvedReducedMotion)}</span>
+          <span data-testid="resolved-density">{resolvedDensity}</span>
+          <button
+            data-testid="set-light"
+            onClick={() => updateSetting("appearance", { theme: "light" })}
+          >
+            Set Light
+          </button>
+          <button
+            data-testid="set-motion"
+            onClick={() => updateSetting("appearance", { reducedMotion: true })}
+          >
+            Set Motion
+          </button>
+          <button
+            data-testid="set-compact"
+            onClick={() => updateSetting("appearance", { density: "compact" })}
+          >
+            Set Compact
+          </button>
+          <button data-testid="reset-all" onClick={() => resetSettings()}>
+            Reset
+          </button>
+        </div>
+      );
+    }
+
+    it("synchronizes documentElement data-theme, data-reduced-motion, and data-density", async () => {
+      render(
+        <SettingsProvider>
+          <TestConsumer />
+        </SettingsProvider>
+      );
+
+      expect(document.documentElement.getAttribute("data-theme")).toBe("dark");
+      expect(document.documentElement.classList.contains("dark")).toBe(true);
+
+      fireEvent.click(screen.getByTestId("set-light"));
+      await waitFor(() => {
+        expect(screen.getByTestId("resolved-theme")).toHaveTextContent("light");
+        expect(document.documentElement.getAttribute("data-theme")).toBe("light");
+        expect(document.documentElement.classList.contains("light")).toBe(true);
+      });
+
+      fireEvent.click(screen.getByTestId("set-motion"));
+      await waitFor(() => {
+        expect(screen.getByTestId("resolved-motion")).toHaveTextContent("true");
+        expect(document.documentElement.getAttribute("data-reduced-motion")).toBe("true");
+      });
+
+      fireEvent.click(screen.getByTestId("set-compact"));
+      await waitFor(() => {
+        expect(screen.getByTestId("resolved-density")).toHaveTextContent("compact");
+        expect(document.documentElement.getAttribute("data-density")).toBe("compact");
+      });
+
+      fireEvent.click(screen.getByTestId("reset-all"));
+      await waitFor(() => {
+        expect(screen.getByTestId("resolved-theme")).toHaveTextContent("dark");
+        expect(document.documentElement.getAttribute("data-theme")).toBe("dark");
+      });
+    });
+  });
 });
+

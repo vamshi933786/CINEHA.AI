@@ -60,22 +60,27 @@ export function AppearanceSection({ settings, onChange }: AppearanceSectionProps
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div
+            className="grid grid-cols-1 sm:grid-cols-3 gap-4"
+            aria-label="Studio Theme Selection"
+          >
             {themes.map((theme) => {
               const isSelected = settings.theme === theme.id;
               return (
                 <button
                   key={theme.id}
                   type="button"
+                  aria-pressed={isSelected}
+                  data-testid={`theme-option-${theme.id}`}
                   onClick={() => onChange({ theme: theme.id })}
-                  className={`flex flex-col text-left p-4 rounded-xl border transition-all duration-200 relative ${
+                  className={`flex flex-col text-left p-4 rounded-xl border transition-all duration-200 relative focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cine-accent ${
                     isSelected
                       ? "border-cine-accent bg-cine-accent/10 shadow-sm shadow-cine-accent/10"
-                      : "border-cine-border bg-cine-surface/60 hover:bg-cine-surface hover:border-slate-700"
+                      : "border-cine-border bg-cine-surface/60 hover:bg-cine-surface hover:border-slate-500"
                   }`}
                 >
                   <div className="flex items-center justify-between w-full mb-2">
-                    <div className="p-2 rounded-lg bg-slate-900/60 border border-cine-border/40">
+                    <div className="p-2 rounded-lg bg-cine-card border border-cine-border/60">
                       {theme.icon}
                     </div>
                     {isSelected && (
@@ -84,8 +89,8 @@ export function AppearanceSection({ settings, onChange }: AppearanceSectionProps
                       </div>
                     )}
                   </div>
-                  <span className="font-medium text-white text-sm">{theme.label}</span>
-                  <span className="text-xs text-slate-400 mt-1 leading-relaxed">
+                  <span className="font-semibold text-cine-text text-sm">{theme.label}</span>
+                  <span className="text-xs text-cine-muted mt-1 leading-relaxed">
                     {theme.desc}
                   </span>
                 </button>
@@ -99,24 +104,25 @@ export function AppearanceSection({ settings, onChange }: AppearanceSectionProps
       <Card>
         <CardHeader>
           <div className="flex items-center justify-between">
-            <CardTitle>Accessibility & Motion</CardTitle>
-            <Badge variant={settings.reducedMotion ? "amber" : "neutral"} size="sm">
-              {settings.reducedMotion ? "Motion Dampened" : "Full Graphics"}
-            </Badge>
+            <div className="flex items-center gap-2.5">
+              <div className="p-2 rounded-lg bg-indigo-500/10 border border-indigo-500/20 text-indigo-400">
+                <Zap className="w-5 h-5" />
+              </div>
+              <CardTitle>Reduced Motion</CardTitle>
+            </div>
+            <Badge variant="neutral" size="sm">Accessibility</Badge>
           </div>
           <CardDescription>
-            Configure animations, motion caption cues, and 3D visual transitions.
+            Reduces interface animations, 3D workflow rotations, and kinetic caption transitions.
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 rounded-xl bg-slate-900/40 border border-cine-border">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 rounded-xl bg-cine-card/60 border border-cine-border">
             <div className="flex items-start gap-3">
-              <div className="p-2.5 rounded-lg bg-indigo-950/40 border border-indigo-500/20 text-indigo-400 shrink-0">
-                <Zap className="w-5 h-5" />
-              </div>
+              <Sliders className="w-5 h-5 text-indigo-400 shrink-0 mt-0.5" />
               <div>
-                <h4 className="text-sm font-medium text-white">Reduced Motion Mode</h4>
-                <p className="text-xs text-slate-400 mt-0.5 max-w-xl leading-relaxed">
+                <h4 className="text-sm font-medium text-cine-text">Minimize UI & Canvas Animations</h4>
+                <p className="text-xs text-cine-muted mt-0.5 max-w-xl leading-relaxed">
                   Suppresses rapid kinetic caption pops, heavy spring animations, and smooths 3D workflow canvas rendering for motion sensitivity.
                 </p>
               </div>
@@ -130,7 +136,7 @@ export function AppearanceSection({ settings, onChange }: AppearanceSectionProps
                 className="sr-only peer"
                 aria-label="Toggle reduced motion"
               />
-              <div className="w-11 h-6 bg-slate-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-cine-accent"></div>
+              <div className="w-11 h-6 bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-cine-accent"></div>
             </label>
           </div>
         </CardContent>
@@ -148,29 +154,34 @@ export function AppearanceSection({ settings, onChange }: AppearanceSectionProps
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div
+            className="grid grid-cols-1 sm:grid-cols-2 gap-4"
+            aria-label="Interface Density Selection"
+          >
             {densities.map((item) => {
               const isSelected = settings.density === item.id;
               return (
                 <button
                   key={item.id}
                   type="button"
+                  aria-pressed={isSelected}
+                  data-testid={`density-option-${item.id}`}
                   onClick={() => onChange({ density: item.id })}
-                  className={`flex flex-col text-left p-4 rounded-xl border transition-all duration-200 relative ${
+                  className={`flex flex-col text-left p-4 rounded-xl border transition-all duration-200 relative focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cine-accent ${
                     isSelected
                       ? "border-cine-accent bg-cine-accent/10"
-                      : "border-cine-border bg-cine-surface/60 hover:bg-cine-surface"
+                      : "border-cine-border bg-cine-surface/60 hover:bg-cine-surface hover:border-slate-500"
                   }`}
                 >
                   <div className="flex items-center justify-between w-full mb-1">
-                    <span className="font-medium text-white text-sm">{item.label}</span>
+                    <span className="font-semibold text-cine-text text-sm">{item.label}</span>
                     {isSelected && (
                       <div className="w-5 h-5 rounded-full bg-cine-accent flex items-center justify-center text-white">
                         <Check className="w-3.5 h-3.5" />
                       </div>
                     )}
                   </div>
-                  <span className="text-xs text-slate-400 mt-1 leading-relaxed">
+                  <span className="text-xs text-cine-muted mt-1 leading-relaxed">
                     {item.desc}
                   </span>
                 </button>

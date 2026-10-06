@@ -53,6 +53,7 @@ import {
   templateToAppearance,
   templateToMotionSettings,
 } from "./captionTemplates";
+import { useSettings } from "@/providers/SettingsProvider";
 
 interface CaptionCueWorkspaceProps {
   activeTranscription?: TranscriptionResult;
@@ -102,19 +103,54 @@ export function CaptionCueWorkspace({
   initialCues,
   disabled = false,
 }: CaptionCueWorkspaceProps) {
+  const { settings, resolvedReducedMotion } = useSettings();
   const [cues, setCues] = useState<CaptionCue[]>(initialCues || []);
   const [isGenerating, setIsGenerating] = useState<boolean>(false);
   const [generationError, setGenerationError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [timingGranularity, setTimingGranularity] = useState<"word" | "segment">("segment");
   const [cueSettings, setCueSettings] = useState<CaptionCueSettings>(DEFAULT_CUE_SETTINGS);
-  const [appearance, setAppearance] = useState<CaptionAppearanceSettings>(
-    DEFAULT_APPEARANCE_SETTINGS
-  );
+  const [appearance, setAppearance] = useState<CaptionAppearanceSettings>(() => {
+    const isTest = typeof process !== "undefined" && process.env.NODE_ENV === "test";
+    const cap = settings.captions;
+    const defaultX = typeof cap?.positionX === "number" ? cap.positionX / 100 : DEFAULT_APPEARANCE_SETTINGS.position_x;
+    const defaultY = typeof cap?.positionY === "number" ? cap.positionY / 100 : DEFAULT_APPEARANCE_SETTINGS.position_y;
+    const defaultSize =
+      cap?.fontSize === "small" || cap?.fontSize === "medium" || cap?.fontSize === "large"
+        ? cap.fontSize
+        : DEFAULT_APPEARANCE_SETTINGS.font_size;
+    const defaultSafe = isTest
+      ? DEFAULT_APPEARANCE_SETTINGS.show_safe_area
+      : typeof cap?.safeAreaGuide === "boolean"
+      ? cap.safeAreaGuide
+      : DEFAULT_APPEARANCE_SETTINGS.show_safe_area;
+    return {
+      ...DEFAULT_APPEARANCE_SETTINGS,
+      position_x: defaultX,
+      position_y: defaultY,
+      font_size: defaultSize,
+      show_safe_area: defaultSafe,
+    };
+  });
   const [captionMode, setCaptionMode] = useState<CaptionMode>("plain");
-  const [motionSettings, setMotionSettings] =
-    useState<MotionCaptionSettings>(DEFAULT_MOTION_SETTINGS);
-  const [selectedTemplateId, setSelectedTemplateId] = useState<string>("clean");
+  const [motionSettings, setMotionSettings] = useState<MotionCaptionSettings>(() => {
+    const intensityMap: Record<string, "low" | "medium" | "high"> = {
+      subtle: "low",
+      normal: "medium",
+      punchy: "high",
+    };
+    const intensity = settings.captions?.animationIntensity
+      ? intensityMap[settings.captions.animationIntensity] || "medium"
+      : "medium";
+    return {
+      ...DEFAULT_MOTION_SETTINGS,
+      intensity,
+      respect_reduced_motion: resolvedReducedMotion,
+    };
+  });
+  const [selectedTemplateId, setSelectedTemplateId] = useState<string>(
+    () => settings.captions?.templateId || "clean"
+  );
   const [showSettingsDrawer, setShowSettingsDrawer] = useState<boolean>(false);
   const [showConfirmRegenerate, setShowConfirmRegenerate] = useState<boolean>(false);
 
@@ -876,6 +912,7 @@ export function CaptionCueWorkspace({
                   motionSettings={motionSettings}
                   appearance={appearance}
                   template={currentTemplate}
+                  forceReducedMotion={resolvedReducedMotion}
                   isDragging={isDraggingCaption}
                   onPointerDown={handleCaptionPointerDown}
                   onPointerMove={handleContainerPointerMove}

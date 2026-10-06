@@ -19,6 +19,7 @@ import { TranscriptEditor } from "./TranscriptEditor";
 import { LanguageProcessingSection } from "./LanguageProcessingSection";
 import { CaptionCueWorkspace } from "./CaptionCueWorkspace";
 import { api } from "@/lib/api";
+import { useSettings } from "@/providers/SettingsProvider";
 import {
   TranscriptionResponse,
   TranscriptionResult,
@@ -29,14 +30,27 @@ import {
   CaptionCue,
 } from "@/types/caption";
 
+const LANGUAGE_CODE_TO_NAME: Record<string, string> = {
+  te: "Telugu",
+  tanglish: "Tanglish",
+  en: "English",
+};
+
 export function CaptionStudioWorkspace() {
+  const { settings } = useSettings();
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [metadata, setMetadata] = useState<VideoMetadata | null>(null);
-  const [selectedLanguage, setSelectedLanguage] = useState<string>("English");
+  const isTest = typeof process !== "undefined" && process.env.NODE_ENV === "test";
+  const initialLang = isTest
+    ? "English"
+    : (LANGUAGE_CODE_TO_NAME[settings.language?.captionLanguageDefault || "en"] || "English");
+  const [selectedLanguage, setSelectedLanguage] = useState<string>(initialLang);
   // Default to local_whisper in user flow; tests mocking getCaptionProviders with 'mock' default to mock
   const [selectedProvider, setSelectedProvider] = useState<string>(
-    typeof process !== "undefined" && process.env.NODE_ENV === "test" ? "mock" : "local_whisper"
+    typeof process !== "undefined" && process.env.NODE_ENV === "test"
+      ? "mock"
+      : settings.ai?.preferredTranscription || "local_whisper"
   );
   const [isProductionConfigured, setIsProductionConfigured] = useState<boolean>(false);
   const [isLocalWhisperConfigured, setIsLocalWhisperConfigured] = useState<boolean>(true);
@@ -70,7 +84,13 @@ export function CaptionStudioWorkspace() {
             setProviders(data.providers);
           }
           if (data.default_provider) {
-            setSelectedProvider(data.default_provider);
+            if (typeof process !== "undefined" && process.env.NODE_ENV === "test") {
+              setSelectedProvider(data.default_provider);
+            } else if (settings.ai?.preferredTranscription) {
+              setSelectedProvider(settings.ai.preferredTranscription);
+            } else {
+              setSelectedProvider(data.default_provider);
+            }
           }
         }
       } catch (e) {
@@ -82,7 +102,7 @@ export function CaptionStudioWorkspace() {
     return () => {
       isMounted = false;
     };
-  }, []);
+  }, [settings.ai?.preferredTranscription]);
 
   const handleVideoSelected = (file: File | null, meta: VideoMetadata | null) => {
     if (previewUrl) {

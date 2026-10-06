@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useContext } from "react";
 import {
   Palette,
   Cpu,
@@ -32,6 +32,8 @@ import {
 } from "@/lib/settingsStorage";
 import { api } from "@/lib/api";
 
+import { useSettings, SettingsContext } from "@/providers/SettingsProvider";
+
 import { AppearanceSection } from "./AppearanceSection";
 import { ProvidersSection } from "./ProvidersSection";
 import { LanguageSection } from "./LanguageSection";
@@ -50,26 +52,29 @@ interface NavTabItem {
 }
 
 export function SettingsWorkspace() {
-  const [settings, setSettings] = useState<AppSettings>(DEFAULT_APP_SETTINGS);
-  const [activeSection, setActiveSection] = useState<SettingsSectionId>("appearance");
-  const [saveFeedback, setSaveFeedback] = useState<string | null>(null);
-  const [isDiagnosticsLoading, setIsDiagnosticsLoading] = useState(false);
-  const [diagnosticsReport, setDiagnosticsReport] = useState<SystemDiagnosticsReport | null>(null);
-  const [providersDiagnostic, setProvidersDiagnostic] = useState<HealthProvidersResponse | null>(null);
+  const context = useContext(SettingsContext);
+  const [localSettings, setLocalSettings] = useState<AppSettings>(() => loadAppSettings());
 
-  // Load settings on client mount and subscribe to changes
   useEffect(() => {
+    if (context) return;
     const loaded = loadAppSettings();
-    setSettings(loaded);
+    setLocalSettings(loaded);
 
     const unsubscribe = subscribeToSettingsChange((updated) => {
-      setSettings(updated);
+      setLocalSettings(updated);
     });
 
     return () => {
       unsubscribe();
     };
-  }, []);
+  }, [context]);
+
+  const settings = context ? context.settings : localSettings;
+  const [activeSection, setActiveSection] = useState<SettingsSectionId>("appearance");
+  const [saveFeedback, setSaveFeedback] = useState<string | null>(null);
+  const [isDiagnosticsLoading, setIsDiagnosticsLoading] = useState(false);
+  const [diagnosticsReport, setDiagnosticsReport] = useState<SystemDiagnosticsReport | null>(null);
+  const [providersDiagnostic, setProvidersDiagnostic] = useState<HealthProvidersResponse | null>(null);
 
   // Fetch live system diagnostics
   const fetchDiagnostics = useCallback(async () => {
@@ -132,32 +137,51 @@ export function SettingsWorkspace() {
   };
 
   const handleUpdate = (updates: Partial<AppSettings>) => {
-    const updated = saveAppSettings((prev) => ({
-      ...prev,
-      ...updates,
-    }));
-    setSettings(updated);
+    if (context) {
+      context.updateSettings(updates);
+    } else {
+      const updated = saveAppSettings((prev) => ({
+        ...prev,
+        ...updates,
+      }));
+      setLocalSettings(updated);
+    }
     triggerSaveFeedback("Saved");
   };
 
   const handleResetAll = () => {
-    const fresh = resetAppSettings();
-    setSettings(fresh);
+    if (context) {
+      context.resetSettings();
+    } else {
+      const fresh = resetAppSettings();
+      setLocalSettings(fresh);
+    }
     triggerSaveFeedback("Reset to default settings");
   };
 
   const handleClearPreferences = () => {
-    const fresh = clearLocalPreferences();
-    setSettings(fresh);
+    if (context) {
+      context.clearPreferences();
+    } else {
+      const fresh = clearLocalPreferences();
+      setLocalSettings(fresh);
+    }
     triggerSaveFeedback("Preferences cleared");
   };
+
+  const themeBadge =
+    settings.appearance.theme === "dark"
+      ? "Dark"
+      : settings.appearance.theme === "light"
+      ? "Light"
+      : "System";
 
   const navTabs: NavTabItem[] = [
     {
       id: "appearance",
       label: "Appearance",
       icon: <Palette className="w-4 h-4" />,
-      badge: settings.appearance.theme === "dark" ? "Dark" : settings.appearance.theme,
+      badge: themeBadge,
       badgeVariant: "neutral",
     },
     {

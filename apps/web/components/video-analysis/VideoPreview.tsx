@@ -1,7 +1,8 @@
 "use client";
 
-import React, { useRef, useState, useEffect, forwardRef, useImperativeHandle } from "react";
+import React, { useRef, useState, useEffect, forwardRef, useImperativeHandle, useMemo } from "react";
 import { Play, Pause, Volume2, VolumeX, Maximize, RotateCcw } from "lucide-react";
+import { useSettings } from "@/providers/SettingsProvider";
 
 export interface VideoPreviewHandle {
   seekTo: (seconds: number) => void;
@@ -25,6 +26,7 @@ function formatTime(seconds: number): string {
 
 export const VideoPreview = forwardRef<VideoPreviewHandle, VideoPreviewProps>(
   ({ videoFile, videoUrl, currentTime: externalTime, onTimeUpdate }, ref) => {
+    const { settings } = useSettings();
     const videoRef = useRef<HTMLVideoElement>(null);
     const containerRef = useRef<HTMLDivElement>(null);
 
@@ -33,6 +35,13 @@ export const VideoPreview = forwardRef<VideoPreviewHandle, VideoPreviewProps>(
     const [currentTime, setCurrentTime] = useState(0);
     const [duration, setDuration] = useState(0);
     const [isMuted, setIsMuted] = useState(false);
+
+    const aspectRatioClass = useMemo(() => {
+      const ratio = settings.video?.defaultAspectRatio;
+      if (ratio === "1:1") return "aspect-square";
+      if (ratio === "16:9") return "aspect-video";
+      return "aspect-[9/16]";
+    }, [settings.video?.defaultAspectRatio]);
 
     // Create / revoke blob URL
     useEffect(() => {
@@ -134,7 +143,7 @@ export const VideoPreview = forwardRef<VideoPreviewHandle, VideoPreviewProps>(
 
     if (!objectUrl) {
       return (
-        <div className="w-full aspect-[9/16] max-h-[520px] rounded-2xl bg-slate-950 border border-slate-800 flex items-center justify-center text-slate-500 text-sm">
+        <div className={`w-full ${aspectRatioClass} max-h-[520px] rounded-2xl bg-slate-950 border border-slate-800 flex items-center justify-center text-slate-500 text-sm`}>
           No video selected
         </div>
       );
@@ -143,7 +152,7 @@ export const VideoPreview = forwardRef<VideoPreviewHandle, VideoPreviewProps>(
     return (
       <div
         ref={containerRef}
-        className="relative group w-full aspect-[9/16] max-h-[520px] mx-auto rounded-2xl overflow-hidden bg-black border border-slate-800 shadow-2xl flex flex-col justify-end"
+        className={`relative group w-full ${aspectRatioClass} max-h-[520px] mx-auto rounded-2xl overflow-hidden bg-black border border-slate-800 shadow-2xl flex flex-col justify-end`}
       >
         <video
           ref={videoRef}

@@ -1,25 +1,27 @@
 import type { Config } from "tailwindcss";
 
 const config: Config = {
+  darkMode: ["class", '[data-theme="dark"]'],
   content: [
     "./app/**/*.{js,ts,jsx,tsx,mdx}",
     "./components/**/*.{js,ts,jsx,tsx,mdx}",
     "./lib/**/*.{js,ts,jsx,tsx,mdx}",
+    "./providers/**/*.{js,ts,jsx,tsx,mdx}",
   ],
   theme: {
     extend: {
       colors: {
         cine: {
-          bg: "#080B11",
-          surface: "#0F1523",
-          card: "#161F33",
-          border: "#232F4D",
-          accent: "#6366F1",
+          bg: "rgb(var(--cine-bg-rgb) / <alpha-value>)",
+          surface: "rgb(var(--cine-surface-rgb) / <alpha-value>)",
+          card: "rgb(var(--cine-card-rgb) / <alpha-value>)",
+          border: "rgb(var(--cine-border-rgb) / <alpha-value>)",
+          accent: "rgb(var(--cine-accent-rgb) / <alpha-value>)",
           rose: "#EC4899",
           emerald: "#10B981",
           amber: "#F59E0B",
-          text: "#F8FAFC",
-          muted: "#94A3B8",
+          text: "rgb(var(--cine-text-rgb) / <alpha-value>)",
+          muted: "rgb(var(--cine-muted-rgb) / <alpha-value>)",
         },
       },
       fontFamily: {

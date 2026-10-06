@@ -2,9 +2,43 @@
 @tailwind components;
 @tailwind utilities;
 
-:root {
-  --background: #080b11;
-  --foreground: #f8fafc;
+/* ==========================================================================
+   CINEHAI AI Design System Tokens (Dark & Light)
+   ========================================================================== */
+
+:root,
+[data-theme="dark"],
+.dark {
+  --background: #080B11;
+  --foreground: #F8FAFC;
+
+  /* Cinema Dark (Default obsidian slate palette) */
+  --cine-bg-rgb: 8 11 17;        /* #080B11 */
+  --cine-surface-rgb: 15 21 35;   /* #0F1523 */
+  --cine-card-rgb: 22 31 51;      /* #161F33 */
+  --cine-border-rgb: 35 47 77;    /* #232F4D */
+  --cine-accent-rgb: 99 102 241;  /* #6366F1 */
+  --cine-text-rgb: 248 250 252;  /* #F8FAFC */
+  --cine-muted-rgb: 148 163 184;  /* #94A3B8 */
+
+  color-scheme: dark;
+}
+
+[data-theme="light"],
+.light {
+  --background: #F8FAFC;
+  --foreground: #0F172A;
+
+  /* Clean Light (High-contrast, clean day studio palette) */
+  --cine-bg-rgb: 248 250 252;    /* #F8FAFC */
+  --cine-surface-rgb: 255 255 255;/* #FFFFFF */
+  --cine-card-rgb: 241 245 249;   /* #F1F5F9 */
+  --cine-border-rgb: 226 232 240; /* #E2E8F0 */
+  --cine-accent-rgb: 79 70 229;   /* #4F46E5 */
+  --cine-text-rgb: 15 23 42;      /* #0F172A */
+  --cine-muted-rgb: 100 116 139;  /* #64748B */
+
+  color-scheme: light;
 }
 
 * {
@@ -19,9 +53,10 @@ body {
   margin: 0;
   padding: 0;
   overflow-x: hidden;
+  transition: background-color 0.15s ease, color 0.15s ease;
 }
 
-/* Custom scrollbars */
+/* Scrollbars */
 ::-webkit-scrollbar {
   width: 8px;
   height: 8px;
@@ -35,4 +70,185 @@ body {
 }
 ::-webkit-scrollbar-thumb:hover {
   background: #334155;
+}
+
+[data-theme="light"] ::-webkit-scrollbar-track,
+.light ::-webkit-scrollbar-track {
+  background: #f1f5f9;
+}
+[data-theme="light"] ::-webkit-scrollbar-thumb,
+.light ::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+}
+[data-theme="light"] ::-webkit-scrollbar-thumb:hover,
+.light ::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+/* ==========================================================================
+   Clean Light Theme Overrides
+   Adapts standard utility combinations to crisp light contrast without breaking
+   component architecture.
+   ========================================================================== */
+
+[data-theme="light"] input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),
+[data-theme="light"] select,
+[data-theme="light"] textarea,
+.light input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),
+.light select,
+.light textarea {
+  background-color: #ffffff !important;
+  color: #0f172a !important;
+  border-color: #cbd5e1 !important;
+}
+
+[data-theme="light"] input::placeholder,
+[data-theme="light"] textarea::placeholder,
+.light input::placeholder,
+.light textarea::placeholder {
+  color: #94a3b8 !important;
+}
+
+/* Adaptive dark backgrounds in light mode */
+[data-theme="light"] .bg-slate-950,
+[data-theme="light"] .bg-slate-950\/60,
+[data-theme="light"] .bg-slate-950\/50,
+[data-theme="light"] .bg-slate-950\/40,
+[data-theme="light"] .bg-\[\#12131a\],
+[data-theme="light"] .bg-\[\#121422\],
+.light .bg-slate-950,
+.light .bg-slate-950\/60,
+.light .bg-slate-950\/50,
+.light .bg-slate-950\/40,
+.light .bg-\[\#12131a\],
+.light .bg-\[\#121422\] {
+  background-color: #f1f5f9 !important;
+}
+
+[data-theme="light"] .bg-slate-900,
+[data-theme="light"] .bg-slate-900\/90,
+[data-theme="light"] .bg-slate-900\/80,
+[data-theme="light"] .bg-slate-900\/60,
+[data-theme="light"] .bg-slate-900\/50,
+[data-theme="light"] .bg-slate-900\/40,
+.light .bg-slate-900,
+.light .bg-slate-900\/90,
+.light .bg-slate-900\/80,
+.light .bg-slate-900\/60,
+.light .bg-slate-900\/50,
+.light .bg-slate-900\/40 {
+  background-color: #ffffff !important;
+}
+
+[data-theme="light"] .bg-slate-800,
+[data-theme="light"] .bg-slate-800\/80,
+[data-theme="light"] .bg-slate-800\/60,
+.light .bg-slate-800,
+.light .bg-slate-800\/80,
+.light .bg-slate-800\/60 {
+  background-color: #e2e8f0 !important;
+}
+
+[data-theme="light"] .border-slate-800,
+[data-theme="light"] .border-slate-800\/80,
+[data-theme="light"] .border-slate-800\/60,
+[data-theme="light"] .border-slate-700,
+[data-theme="light"] .border-slate-700\/60,
+[data-theme="light"] .border-\[\#232738\],
+.light .border-slate-800,
+.light .border-slate-800\/80,
+.light .border-slate-800\/60,
+.light .border-slate-700,
+.light .border-slate-700\/60,
+.light .border-\[\#232738\] {
+  border-color: #e2e8f0 !important;
+}
+
+/* Headings and card titles in light mode */
+[data-theme="light"] h1,
+[data-theme="light"] h2,
+[data-theme="light"] h3,
+[data-theme="light"] h4,
+.light h1,
+.light h2,
+.light h3,
+.light h4 {
+  color: #0f172a;
+}
+
+/* Ensure buttons with solid accent colors maintain readable white text */
+[data-theme="light"] button[class*="from-cine-accent"],
+[data-theme="light"] button[class*="bg-cine-accent"],
+[data-theme="light"] button[class*="bg-rose-"],
+[data-theme="light"] button[class*="bg-emerald-"],
+[data-theme="light"] [class*="bg-gradient-to-r"] *,
+.light button[class*="from-cine-accent"],
+.light button[class*="bg-cine-accent"],
+.light button[class*="bg-rose-"],
+.light button[class*="bg-emerald-"],
+.light [class*="bg-gradient-to-r"] * {
+  color: #ffffff !important;
+}
+
+/* Secondary and muted text adapt in light mode */
+[data-theme="light"] .text-slate-400,
+.light .text-slate-400 {
+  color: #64748b !important;
+}
+
+[data-theme="light"] .text-slate-300,
+[data-theme="light"] .text-slate-200,
+.light .text-slate-300,
+.light .text-slate-200 {
+  color: #1e293b !important;
+}
+
+/* ==========================================================================
+   Reduced Motion
+   ========================================================================== */
+
+[data-reduced-motion="true"],
+[data-reduced-motion="true"] *,
+[data-reduced-motion="true"] *::before,
+[data-reduced-motion="true"] *::after {
+  animation-duration: 0.001ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.001ms !important;
+  scroll-behavior: auto !important;
+}
+
+/* ==========================================================================
+   Density: Compact
+   ========================================================================== */
+
+[data-density="compact"] main {
+  padding-top: 1rem !important;
+  padding-bottom: 1rem !important;
+}
+
+[data-density="compact"] .space-y-6 > * + * {
+  margin-top: 0.875rem !important;
+}
+
+[data-density="compact"] .space-y-8 > * + * {
+  margin-top: 1rem !important;
+}
+
+[data-density="compact"] aside {
+  padding: 0.75rem !important;
+}
+
+[data-density="compact"] aside .space-y-6 > * + * {
+  margin-top: 0.75rem !important;
+}
+
+[data-density="compact"] .p-5,
+[data-density="compact"] .p-6,
+[data-density="compact"] .sm\:p-6 {
+  padding: 1rem !important;
+}
+
+[data-density="compact"] .pb-6,
+[data-density="compact"] .sm\:pb-8 {
+  padding-bottom: 0.875rem !important;
 }
