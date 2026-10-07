@@ -1,6 +1,7 @@
 import uuid
 from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File, Form
+from fastapi.responses import FileResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from sqlalchemy.orm import selectinload
@@ -21,12 +22,19 @@ from app.services.document_extractor import (
 )
 from app.services.script_parser import parse_script_text_to_segments
 from app.models.creator_profile import CreatorProfile
-from app.models.script import Script, ScriptVersion
+from app.models.script import Script, ScriptVersion, ScriptVisual
 from app.schemas.script import (
     ScriptGenerationRequest,
     ScriptUpdateRequest,
     ScriptResponse,
     ScriptVersionResponse,
+)
+from app.schemas.visual_concept import (
+    VisualConceptAnalysisRequest,
+    VisualConceptResponse,
+    GenerateImageRequest,
+    VisualUpdateRequest,
+    VisualProviderStatusResponse,
 )
 from app.schemas.analyzer import ScriptAnalysisResponse, ScriptAnalysisRequest
 from app.schemas.optimizer import (
@@ -37,6 +45,7 @@ from app.schemas.optimizer import (
 from app.agents.script_agent import get_script_agent, ScriptAgent
 from app.agents.retention_analyzer_agent import get_retention_analyzer_agent, RetentionAnalyzerAgent
 from app.agents.script_optimizer_agent import get_script_optimizer_agent, ScriptOptimizerAgent
+from app.agents.visual_concept_agent import get_visual_concept_agent, VisualConceptAgent
 
 router = APIRouter()
 
@@ -588,3 +597,140 @@ async def generate_script_from_url_endpoint(
     saved = res.scalar_one()
 
     return ScriptResponse.model_validate(saved)
+
+
+# =====================================================================
+# AI VISUAL CONCEPTS & IMAGE GENERATION ENDPOINTS
+# =====================================================================
+
+@router.get(
+    "/scripts/{script_id}/visual-concepts/status",
+    response_model=VisualProviderStatusResponse,
+    summary="Get Image Generation Provider Status",
+    description="Returns whether an AI image generation provider is configured and available.",
+)
+async def get_visual_provider_status_endpoint(
+    script_id: str,
+    agent: VisualConceptAgent = Depends(get_visual_concept_agent),
+) -> VisualProviderStatusResponse:
+    info = await agent.get_provider_status()
+    return VisualProviderStatusResponse(**info)
+
+
+@router.post(
+    "/scripts/{script_id}/visual-concepts",
+    response_model=List[VisualConceptResponse],
+    summary="Analyze Script for Visual Concepts",
+    description="Discovers high-impact visual explanation opportunities across script segments and generates structured prompts.",
+)
+async def analyze_visual_concepts_endpoint(
+    script_id: str,
+    payload: VisualConceptAnalysisRequest,
+    db: AsyncSession = Depends(get_db),
+    agent: VisualConceptAgent = Depends(get_visual_concept_agent),
+) -> List[VisualConceptResponse]:
+    visuals = await agent.analyze_and_store_concepts(script_id=script_id, request=payload, db=db)
+    return [VisualConceptResponse.model_validate(v) for v in visuals]
+
+
+@router.get(
+    "/scripts/{script_id}/visuals",
+    response_model=List[VisualConceptResponse],
+    summary="List Script Visuals",
+    description="Returns all visual concepts and generated visual attachments for a script.",
+)
+async def get_script_visuals_endpoint(
+    script_id: str,
+    db: AsyncSession = Depends(get_db),
+    agent: VisualConceptAgent = Depends(get_visual_concept_agent),
+) -> List[VisualConceptResponse]:
+    visuals = await agent.get_visuals_for_script(script_id=script_id, db=db)
+    return [VisualConceptResponse.model_validate(v) for v in visuals]
+
+
+@router.post(
+    "/scripts/{script_id}/visuals/{visual_id}/generate",
+    response_model=VisualConceptResponse,
+    summary="Generate AI Image for Visual Concept",
+    description="Invokes the configured image generation provider to produce a visual asset for the concept.",
+)
+async def generate_visual_image_endpoint(
+    script_id: str,
+    visual_id: str,
+    payload: GenerateImageRequest,
+    db: AsyncSession = Depends(get_db),
+    agent: VisualConceptAgent = Depends(get_visual_concept_agent),
+) -> VisualConceptResponse:
+    visual = await agent.generate_visual_image(
+        script_id=script_id, visual_id=visual_id, request=payload, db=db
+    )
+    return VisualConceptResponse.model_validate(visual)
+
+
+@router.post(
+    "/scripts/{script_id}/visuals/{visual_id}/regenerate",
+    response_model=VisualConceptResponse,
+    summary="Regenerate AI Image for Visual Concept",
+    description="Regenerates an image asset with optional prompt or style modifications.",
+)
+async def regenerate_visual_image_endpoint(
+    script_id: str,
+    visual_id: str,
+    payload: GenerateImageRequest,
+    db: AsyncSession = Depends(get_db),
+    agent: VisualConceptAgent = Depends(get_visual_concept_agent),
+) -> VisualConceptResponse:
+    visual = await agent.generate_visual_image(
+        script_id=script_id, visual_id=visual_id, request=payload, db=db
+    )
+    return VisualConceptResponse.model_validate(visual)
+
+
+@router.put(
+    "/scripts/{script_id}/visuals/{visual_id}",
+    response_model=VisualConceptResponse,
+    summary="Update Visual Concept",
+    description="Updates prompt, style, aspect ratio, or attachment status for a visual concept.",
+)
+async def update_visual_endpoint(
+    script_id: str,
+    visual_id: str,
+    payload: VisualUpdateRequest,
+    db: AsyncSession = Depends(get_db),
+    agent: VisualConceptAgent = Depends(get_visual_concept_agent),
+) -> VisualConceptResponse:
+    visual = await agent.update_visual(
+        script_id=script_id, visual_id=visual_id, request=payload, db=db
+    )
+    return VisualConceptResponse.model_validate(visual)
+
+
+@router.delete(
+    "/scripts/{script_id}/visuals/{visual_id}",
+    summary="Delete Visual Concept",
+    description="Removes a visual concept and its associated local image file.",
+)
+async def delete_visual_endpoint(
+    script_id: str,
+    visual_id: str,
+    db: AsyncSession = Depends(get_db),
+    agent: VisualConceptAgent = Depends(get_visual_concept_agent),
+) -> dict:
+    success = await agent.delete_visual(script_id=script_id, visual_id=visual_id, db=db)
+    return {"deleted": success, "id": visual_id}
+
+
+@router.get(
+    "/scripts/{script_id}/visuals/{visual_id}/image",
+    summary="Serve Generated Visual Image",
+    description="Streams the generated PNG image asset securely.",
+)
+async def serve_visual_image_endpoint(
+    script_id: str,
+    visual_id: str,
+    db: AsyncSession = Depends(get_db),
+    agent: VisualConceptAgent = Depends(get_visual_concept_agent),
+):
+    file_path = await agent.get_image_file_path(script_id=script_id, visual_id=visual_id, db=db)
+    return FileResponse(file_path, media_type="image/png")
+

@@ -380,9 +380,9 @@ def calculate_profile_completeness(profile_obj: Any) -> ProfileCompleteness:
     recommendations: List[str] = []
 
     # 1. Identity (Weight 15)
-    has_name = bool(data.get("creator_name", "").strip())
-    has_type = bool(data.get("creator_type", "").strip())
-    has_bio = bool(data.get("creator_bio", "").strip())
+    has_name = bool((data.get("creator_name") or "").strip())
+    has_type = bool((data.get("creator_type") or "").strip())
+    has_bio = bool((data.get("creator_bio") or "").strip())
     cat_identity = has_name and (has_type or has_bio)
     categories.append(CategoryCompleteness(
         category="Identity",
@@ -394,7 +394,7 @@ def calculate_profile_completeness(profile_obj: Any) -> ProfileCompleteness:
         recommendations.append("Add a short creator bio to ground AI screenplays in your story.")
 
     # 2. Content Niche & Pillars (Weight 20)
-    has_niche = bool(data.get("niche", "").strip())
+    has_niche = bool((data.get("niche") or "").strip())
     has_pillars = bool(data.get("content_pillars") and len(data.get("content_pillars", [])) > 0)
     cat_niche = has_niche and has_pillars
     categories.append(CategoryCompleteness(
@@ -407,11 +407,11 @@ def calculate_profile_completeness(profile_obj: Any) -> ProfileCompleteness:
         recommendations.append("Define 2-3 content pillars (e.g., 'Behind the scenes', 'Camera tips').")
 
     # 3. Target Audience (Weight 20)
-    has_aud = bool(data.get("target_audience", "").strip())
+    has_aud = bool((data.get("target_audience") or "").strip())
     has_pain = bool(
         (data.get("audience_pain_points") and len(data.get("audience_pain_points", [])) > 0)
         or (data.get("audience_interests") and len(data.get("audience_interests", [])) > 0)
-        or bool(data.get("target_audience_age", "").strip() if data.get("target_audience_age") else False)
+        or bool((data.get("target_audience_age") or "").strip())
     )
     cat_audience = has_aud and has_pain
     categories.append(CategoryCompleteness(
@@ -442,7 +442,7 @@ def calculate_profile_completeness(profile_obj: Any) -> ProfileCompleteness:
         recommendations.append("Configure delivery energy or vocabulary style to refine script phrasing.")
 
     # 5. Language Profile (Weight 10)
-    has_lang = bool(data.get("primary_language", "").strip())
+    has_lang = bool((data.get("primary_language") or "").strip())
     categories.append(CategoryCompleteness(
         category="Language Profile",
         completed=has_lang,

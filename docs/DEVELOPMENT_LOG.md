@@ -363,3 +363,39 @@ This document records chronological development checkpoints, environment finding
      - Added 13 frontend tests in `apps/web/tests/videoUrlExtraction.test.tsx` (Full frontend suite: **251/251 passed**).
      - TypeScript: **0 errors** (`npx tsc --noEmit`).
      - Production Build: **PASS** (`npm run build`, 15 static pages rendered).
+
+## Log Entry 017: AI Visual Concepts & Image Generation in Script Studio
+- **Date:** 2026-10-07
+- **Module:** Script Studio (`/scripts`), AI Visual Concepts, Multilingual Image Generation
+- **Author:** Antigravity Architect / Pair Programmer
+- **Summary of Implementation:**
+  Added native "AI Visual Concepts" and modular image generation to Script Studio:
+  1. **Visual Concept Analysis Engine**:
+     - Analyzes short-form screenplay beats, voiceover, and visual directions to identify visual explanation opportunities.
+     - Classifies visual types (`Diagram`, `Process`, `Comparison`, `Metaphor`, `Product Context`, `Data Explanation`, `Minimal Illustration`).
+     - Prioritizes importance (`Essential`, `Recommended`, `Optional`).
+     - Supports styles (`Clean Educational` default, `Cinematic`, `Modern 3D`, `Minimal Illustration`, `Editorial`, `Realistic`, `Infographic-style`).
+     - Supports aspect ratios (`9:16` default, `1:1`, `16:9`).
+  2. **Multilingual Conceptual Fidelity**:
+     - Concept titles and explanations strictly respect the script language: English, Telugu (తెలుగు Unicode), and Tanglish (Latin script).
+     - Image generation prompts are automatically synthesized in detailed descriptive English for optimal diffusion model performance.
+  3. **Pluggable Image Generation Architecture**:
+     - Built `apps/api/app/services/image_generation/`:
+       - `BaseImageGenerationProvider`: Standard interface for all image providers (`generate_image(prompt, settings)`).
+       - `UnconfiguredImageGenerationProvider`: Returns clean diagnostic error if unconfigured. Never generates fake images and labels them as AI-generated!
+       - `MockImageGenerationProvider`: Local rendering of test PNG cards with PIL Pillow for CI/CD and offline testing.
+       - `OpenAIImageGenerationProvider`: Connects to OpenAI DALL-E 3 / DALL-E 2 with retry and timeout.
+       - Extensible architecture ready for Google Imagen and Stability AI.
+  4. **Backend Persistence & API**:
+     - Added `ScriptVisual` model in `apps/api/app/models/script.py` and synced SQLite schema in `sync_sqlite_schema`.
+     - Built `VisualConceptAgent` managing analysis, prompt tuning, image generation, regeneration, file serving, and asset deletion.
+     - Added 8 REST endpoints in `/api/v1/scripts/`: `/visual-concepts/status`, `/visual-concepts`, `/visuals`, `/visuals/{id}/generate`, `/visuals/{id}/regenerate`, `/visuals/{id}`, `/visuals/{id}/image`.
+  5. **Frontend Workspace & Handoffs**:
+     - Added `VisualConceptsSection.tsx` inside `ScriptWorkspace.tsx` with header, opportunity badges, provider status banner, and analysis trigger.
+     - Added `VisualConceptCard.tsx` with visual preview, style/aspect ratio controls, advanced prompt editor accordion, copy prompt, full modal preview, and actions (`Generate`, `Regenerate`, `Use in Script`, `Remove`).
+     - Added visual callout cards to `ScriptSegment.tsx` when a visual concept is attached to a beat.
+  6. **Testing & Verification**:
+     - Added 12 backend unit and integration tests in `apps/api/tests/test_visual_concepts.py` (Full backend suite: **244/244 passed**).
+     - Added 10 frontend tests in `apps/web/tests/visualConcepts.test.tsx` (Full frontend suite: **261/261 passed** across 25 test files).
+     - TypeScript: **0 errors** (`npx tsc --noEmit`).
+     - Production Build: **PASS** (`npm run build`, 15 static pages rendered).

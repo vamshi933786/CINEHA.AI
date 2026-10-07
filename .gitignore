@@ -43,6 +43,7 @@ htmlcov/
 
 # Video uploads and temporary scratch files
 uploads/
+storage/
 scratch/
 temp/
 *.mp4

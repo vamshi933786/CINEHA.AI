@@ -1,14 +1,15 @@
 "use client";
 
 import React from "react";
-import type { ScriptSegment as ScriptSegmentType } from "@/types/script";
-import { Mic, Video, Layers, Type, Music, Clock } from "lucide-react";
+import type { ScriptSegment as ScriptSegmentType, ScriptVisual } from "@/types/script";
+import { Mic, Video, Layers, Type, Music, Clock, Sparkles } from "lucide-react";
 
 interface ScriptSegmentProps {
   segment: ScriptSegmentType;
   index: number;
   isEditing: boolean;
   onChange?: (updated: ScriptSegmentType) => void;
+  attachedVisual?: ScriptVisual;
 }
 
 export function ScriptSegment({
@@ -16,6 +17,7 @@ export function ScriptSegment({
   index,
   isEditing,
   onChange,
+  attachedVisual,
 }: ScriptSegmentProps) {
   const handleFieldChange = (field: keyof ScriptSegmentType, value: string) => {
     if (onChange) {
@@ -197,6 +199,37 @@ export function ScriptSegment({
               </div>
             )}
           </div>
+
+          {/* Attached AI Visual Concept */}
+          {attachedVisual && (
+            <div className="mt-3 p-3 rounded-xl border border-cyan-500/30 bg-cyan-950/20 flex items-center justify-between gap-3 transition">
+              <div className="flex items-center gap-3 min-w-0">
+                {attachedVisual.image_url ? (
+                  <img
+                    src={attachedVisual.image_url}
+                    alt={attachedVisual.concept_title}
+                    className="w-12 h-16 rounded-lg object-cover border border-white/10 shrink-0 shadow-sm"
+                  />
+                ) : (
+                  <div className="w-12 h-16 rounded-lg bg-slate-900 border border-white/10 flex items-center justify-center shrink-0">
+                    <Sparkles className="w-4 h-4 text-cyan-400" />
+                  </div>
+                )}
+                <div className="space-y-0.5 min-w-0">
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-[10px] font-bold font-mono uppercase px-1.5 py-0.5 rounded bg-cyan-500/20 text-cyan-300">
+                      AI Visual Concept
+                    </span>
+                    <span className="text-[10px] text-slate-400 font-mono">
+                      {attachedVisual.visual_type} • {attachedVisual.aspect_ratio}
+                    </span>
+                  </div>
+                  <p className="text-xs font-bold text-white truncate">{attachedVisual.concept_title}</p>
+                  <p className="text-[11px] text-slate-300 line-clamp-1">{attachedVisual.explanation}</p>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       )}
     </div>

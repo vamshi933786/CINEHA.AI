@@ -6,3 +6,5 @@ export { ScriptToolbar } from "./ScriptToolbar";
 export { UnifiedScriptInput } from "./UnifiedScriptInput";
 export { VideoURLInputPanel } from "./VideoURLInputPanel";
 export { ExtractedVideoScriptPanel } from "./ExtractedVideoScriptPanel";
+export { VisualConceptCard } from "./VisualConceptCard";
+export { VisualConceptsSection } from "./VisualConceptsSection";

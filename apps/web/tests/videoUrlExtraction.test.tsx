@@ -26,6 +26,13 @@ vi.mock("../lib/api", () => ({
     getScript: vi.fn(),
     getScriptVersions: vi.fn().mockResolvedValue([]),
     updateScript: vi.fn(),
+    getVisualProviderStatus: vi.fn().mockResolvedValue({
+      configured: false,
+      provider: "unconfigured",
+      model: "none",
+      message: "Image generation provider is not configured.",
+    }),
+    getScriptVisuals: vi.fn().mockResolvedValue([]),
   },
 }));
 

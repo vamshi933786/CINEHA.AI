@@ -7,6 +7,7 @@ import type {
   ScriptVersion,
   ScriptSegment as ScriptSegmentType,
   ScriptGenerationPayload,
+  ScriptVisual,
 } from "@/types/script";
 import { PenTool, Upload, Link2 } from "lucide-react";
 import { ScriptInput, ScriptFormData } from "./ScriptInput";
@@ -15,6 +16,7 @@ import { ScriptToolbar } from "./ScriptToolbar";
 import { UnifiedScriptInput } from "./UnifiedScriptInput";
 import { VideoURLInputPanel } from "./VideoURLInputPanel";
 import { ExtractedVideoScriptPanel } from "./ExtractedVideoScriptPanel";
+import { VisualConceptsSection } from "./VisualConceptsSection";
 import type { VideoURLScriptExtraction, NormalizedScriptInput } from "@/types/scriptInput";
 
 interface ScriptWorkspaceProps {
@@ -48,6 +50,7 @@ export function ScriptWorkspace({
   const [activeScript, setActiveScript] = useState<Script | null>(null);
   const [versions, setVersions] = useState<ScriptVersion[]>([]);
   const [selectedVersionNumber, setSelectedVersionNumber] = useState<number>(1);
+  const [scriptVisuals, setScriptVisuals] = useState<ScriptVisual[]>([]);
 
   // Edit Mode state
   const [isEditing, setIsEditing] = useState<boolean>(false);
@@ -513,7 +516,15 @@ export function ScriptWorkspace({
               onCtaChange={setEditableCta}
               isGenerating={isGenerating}
               error={error}
+              attachedVisuals={scriptVisuals}
             />
+
+            {activeScript && (
+              <VisualConceptsSection
+                script={activeScript}
+                onVisualsUpdated={setScriptVisuals}
+              />
+            )}
           </div>
         </div>
       )}

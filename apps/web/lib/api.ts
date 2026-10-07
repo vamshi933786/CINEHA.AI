@@ -15,6 +15,8 @@ import type {
   ScriptVersion,
   ScriptGenerationPayload,
   ScriptUpdatePayload,
+  ScriptVisual,
+  VisualProviderStatus,
 } from "../types/script";
 import type {
   ScriptAnalysisRequest,
@@ -1257,6 +1259,139 @@ export class ApiClient {
         `Failed to delete trend research session (${response.status})`
       );
     }
+  }
+
+  // AI Visual Concepts & Image Generation
+  async getVisualProviderStatus(scriptId: string): Promise<VisualProviderStatus> {
+    const response = await fetch(`${this.baseUrl}/scripts/${scriptId}/visual-concepts/status`, {
+      method: "GET",
+      cache: "no-store",
+    });
+    if (!response.ok) {
+      throw new Error(`Failed to check visual provider status (${response.status})`);
+    }
+    return (await response.json()) as VisualProviderStatus;
+  }
+
+  async analyzeVisualConcepts(
+    scriptId: string,
+    payload?: {
+      language?: string;
+      preferred_aspect_ratio?: string;
+      preferred_style?: string;
+      profile_id?: string;
+    }
+  ): Promise<ScriptVisual[]> {
+    const response = await fetch(`${this.baseUrl}/scripts/${scriptId}/visual-concepts`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload || {}),
+    });
+    if (!response.ok) {
+      let errorMessage = `Failed to analyze visual concepts (${response.status})`;
+      try {
+        const errorJson = await response.json();
+        if (errorJson.detail) errorMessage = String(errorJson.detail);
+      } catch (_) {}
+      throw new Error(errorMessage);
+    }
+    return (await response.json()) as ScriptVisual[];
+  }
+
+  async getScriptVisuals(scriptId: string): Promise<ScriptVisual[]> {
+    const response = await fetch(`${this.baseUrl}/scripts/${scriptId}/visuals`, {
+      method: "GET",
+      cache: "no-store",
+    });
+    if (!response.ok) {
+      throw new Error(`Failed to fetch script visuals (${response.status})`);
+    }
+    return (await response.json()) as ScriptVisual[];
+  }
+
+  async generateVisualImage(
+    scriptId: string,
+    visualId: string,
+    payload?: { prompt?: string; style?: string; aspect_ratio?: string }
+  ): Promise<ScriptVisual> {
+    const response = await fetch(
+      `${this.baseUrl}/scripts/${scriptId}/visuals/${visualId}/generate`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload || {}),
+      }
+    );
+    if (!response.ok) {
+      let errorMessage = `Image generation failed (${response.status})`;
+      try {
+        const errorJson = await response.json();
+        if (errorJson.detail) errorMessage = String(errorJson.detail);
+      } catch (_) {}
+      throw new Error(errorMessage);
+    }
+    return (await response.json()) as ScriptVisual;
+  }
+
+  async regenerateVisualImage(
+    scriptId: string,
+    visualId: string,
+    payload?: { prompt?: string; style?: string; aspect_ratio?: string }
+  ): Promise<ScriptVisual> {
+    const response = await fetch(
+      `${this.baseUrl}/scripts/${scriptId}/visuals/${visualId}/regenerate`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload || {}),
+      }
+    );
+    if (!response.ok) {
+      let errorMessage = `Image regeneration failed (${response.status})`;
+      try {
+        const errorJson = await response.json();
+        if (errorJson.detail) errorMessage = String(errorJson.detail);
+      } catch (_) {}
+      throw new Error(errorMessage);
+    }
+    return (await response.json()) as ScriptVisual;
+  }
+
+  async updateScriptVisual(
+    scriptId: string,
+    visualId: string,
+    payload: { prompt?: string; style?: string; aspect_ratio?: string; is_attached?: boolean }
+  ): Promise<ScriptVisual> {
+    const response = await fetch(
+      `${this.baseUrl}/scripts/${scriptId}/visuals/${visualId}`,
+      {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      }
+    );
+    if (!response.ok) {
+      let errorMessage = `Failed to update visual (${response.status})`;
+      try {
+        const errorJson = await response.json();
+        if (errorJson.detail) errorMessage = String(errorJson.detail);
+      } catch (_) {}
+      throw new Error(errorMessage);
+    }
+    return (await response.json()) as ScriptVisual;
+  }
+
+  async deleteScriptVisual(scriptId: string, visualId: string): Promise<{ deleted: boolean; id: string }> {
+    const response = await fetch(
+      `${this.baseUrl}/scripts/${scriptId}/visuals/${visualId}`,
+      {
+        method: "DELETE",
+      }
+    );
+    if (!response.ok) {
+      throw new Error(`Failed to delete visual (${response.status})`);
+    }
+    return (await response.json()) as { deleted: boolean; id: string };
   }
 }
 

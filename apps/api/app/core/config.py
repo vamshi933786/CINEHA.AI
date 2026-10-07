@@ -82,6 +82,24 @@ class Settings(BaseSettings):
         description="Optional directory for rendered MP4 outputs (defaults to system temp)",
     )
 
+    # Script Studio AI Visual Concepts & Image Generation
+    IMAGE_PROVIDER: str = Field(
+        default="unconfigured",
+        description="Image generation provider: 'unconfigured', 'mock', 'openai', 'imagen'",
+    )
+    IMAGE_GENERATION_API_KEY: str = Field(
+        default="",
+        description="Dedicated API key for image generation (falls back to OPENAI_API_KEY or GEMINI_API_KEY)",
+    )
+    IMAGE_MODEL: str = Field(
+        default="dall-e-3",
+        description="Image generation model identifier",
+    )
+    IMAGE_STORAGE_DIR: str = Field(
+        default="storage/visuals",
+        description="Storage directory for generated visual image assets",
+    )
+
     @property
     def cors_origins(self) -> List[str]:
         if not self.ALLOWED_ORIGINS:

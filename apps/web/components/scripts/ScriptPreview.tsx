@@ -11,7 +11,7 @@ import {
   FileText,
   Sparkles,
 } from "lucide-react";
-import type { Script, ScriptSegment as ScriptSegmentType } from "@/types/script";
+import type { Script, ScriptSegment as ScriptSegmentType, ScriptVisual } from "@/types/script";
 import { ScriptSegment } from "./ScriptSegment";
 
 interface ScriptPreviewProps {
@@ -24,6 +24,7 @@ interface ScriptPreviewProps {
   onCtaChange: (newCta: string) => void;
   isGenerating: boolean;
   error: string | null;
+  attachedVisuals?: ScriptVisual[];
 }
 
 export function ScriptPreview({
@@ -36,6 +37,7 @@ export function ScriptPreview({
   onCtaChange,
   isGenerating,
   error,
+  attachedVisuals,
 }: ScriptPreviewProps) {
   // Empty State
   if (!script && !isGenerating) {
@@ -166,15 +168,27 @@ export function ScriptPreview({
           </div>
 
           <div className="space-y-3">
-            {activeSegments.map((segment, idx) => (
-              <ScriptSegment
-                key={segment.id || `seg-${idx}`}
-                segment={segment}
-                index={idx}
-                isEditing={isEditing}
-                onChange={(updated) => onSegmentChange(idx, updated)}
-              />
-            ))}
+            {activeSegments.map((segment, idx) => {
+              const segKey = segment.id || `seg-${idx}`;
+              const attached = attachedVisuals?.find(
+                (v) =>
+                  v.is_attached &&
+                  (v.segment_id === segment.id ||
+                    v.segment_id === `seg-${idx}` ||
+                    v.segment_id === `seg_${idx}` ||
+                    (!v.segment_id && idx === 0))
+              );
+              return (
+                <ScriptSegment
+                  key={segKey}
+                  segment={segment}
+                  index={idx}
+                  isEditing={isEditing}
+                  onChange={(updated) => onSegmentChange(idx, updated)}
+                  attachedVisual={attached}
+                />
+              );
+            })}
           </div>
         </div>
 

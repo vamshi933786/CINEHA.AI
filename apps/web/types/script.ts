@@ -46,6 +46,68 @@ export interface Script {
   created_at: string;
   updated_at: string;
   versions?: ScriptVersion[];
+  visuals?: ScriptVisual[];
+}
+
+export type VisualConceptType =
+  | "Concept Illustration"
+  | "Diagram"
+  | "Process"
+  | "Comparison"
+  | "Before / After"
+  | "Educational"
+  | "Story Scene"
+  | "Product Context"
+  | "Metaphor"
+  | "Data Explanation";
+
+export type VisualImportance = "Essential" | "Recommended" | "Optional";
+
+export type VisualAspectRatio = "9:16" | "1:1" | "16:9";
+
+export type VisualStyle =
+  | "Clean Educational"
+  | "Cinematic"
+  | "Modern 3D"
+  | "Minimal Illustration"
+  | "Editorial"
+  | "Realistic"
+  | "Infographic-style";
+
+export type VisualStatus = "suggested" | "generating" | "ready" | "failed";
+
+export interface ScriptVisual {
+  id: string;
+  script_id: string;
+  script_version_id?: string | null;
+  segment_id: string;
+  concept_title: string;
+  explanation: string;
+  visual_type: VisualConceptType;
+  importance: VisualImportance;
+  related_script_text: string;
+  suggested_prompt: string;
+  prompt: string;
+  aspect_ratio: VisualAspectRatio;
+  style: VisualStyle;
+  language: string;
+  status: VisualStatus;
+  image_asset_reference?: string | null;
+  image_url?: string | null;
+  provider?: string | null;
+  model?: string | null;
+  placement?: string | null;
+  is_attached: boolean;
+  error_message?: string | null;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface VisualProviderStatus {
+  configured: boolean;
+  provider: string;
+  model: string;
+  message: string;
 }
 
 export interface ScriptGenerationPayload {

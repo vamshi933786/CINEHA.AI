@@ -26,9 +26,9 @@ class ScriptSegmentSchema(BaseModel):
     end_time: str = Field(..., description="Timestamp end e.g. 0:03")
     section: str = Field(..., description="Section label e.g. HOOK, PROBLEM, SOLUTION, CTA")
     voiceover: str = Field(..., description="Spoken dialogue or voiceover script")
-    visual_direction: str = Field(..., description="Camera instruction or shot framing")
+    visual_direction: str = Field(default="", description="Camera instruction or shot framing")
     b_roll: Optional[str] = Field(default=None, description="B-roll suggestions or cutaway cues")
-    on_screen_text: str = Field(..., description="Lower thirds, graphic overlays or text punchlines")
+    on_screen_text: str = Field(default="", description="Lower thirds, graphic overlays or text punchlines")
     audio_direction: Optional[str] = Field(default=None, description="Sound effects, foley, or music pacing cues")
 
 
