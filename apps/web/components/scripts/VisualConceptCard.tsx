@@ -331,7 +331,14 @@ export function VisualConceptCard({
               size="sm"
               onClick={handleGenerateClick}
               disabled={isGenerating || !isProviderConfigured}
-              className="text-xs font-semibold gap-1.5"
+              title={
+                !isProviderConfigured
+                  ? "Image generation is not configured yet."
+                  : undefined
+              }
+              className={`text-xs font-semibold gap-1.5 ${
+                !isProviderConfigured ? "opacity-60 cursor-not-allowed" : ""
+              }`}
             >
               {isGenerating ? (
                 <>

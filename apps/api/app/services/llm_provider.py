@@ -2,12 +2,15 @@ import json
 import uuid
 import re
 import copy
+import logging
 import httpx
 from typing import List, Optional, Dict, Any
 from app.core.config import settings
 from app.schemas.hook import HookItem, VALID_TAXONOMIES
 from app.schemas.trend_research import calculate_overall_score
 from app.services.script_language_detector import normalize_language_contract, detect_script_language, TELUGU_UNICODE_PATTERN
+
+logger = logging.getLogger(__name__)
 
 class BaseLLMProvider:
     async def generate_hooks(
@@ -3588,7 +3591,20 @@ Return ONLY valid JSON matching this exact structure:
                             concepts = parsed.get("visual_concepts", [])
                             if isinstance(concepts, list) and len(concepts) > 0:
                                 for c in concepts:
-                                    c["prompt"] = c.get("suggested_prompt", "")
+                                    prompt_val = (
+                                        c.get("suggested_prompt")
+                                        or c.get("prompt")
+                                        or c.get("image_prompt")
+                                        or ""
+                                    ).strip()
+                                    if not prompt_val:
+                                        prompt_val = (
+                                            f"Vertical {aspect_ratio} {style.lower()} educational visual "
+                                            f"explaining {c.get('concept_title', topic)}, high visual clarity, "
+                                            f"cinematic creator lighting, clean minimalist composition, no distorted text"
+                                        )
+                                    c["suggested_prompt"] = prompt_val
+                                    c["prompt"] = prompt_val
                                     c["aspect_ratio"] = c.get("aspect_ratio") or aspect_ratio
                                     c["style"] = c.get("style") or style
                                     c["language"] = norm_lang

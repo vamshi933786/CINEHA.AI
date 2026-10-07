@@ -40,9 +40,15 @@ app.add_middleware(
 @app.exception_handler(Exception)
 async def unhandled_exception_handler(request, exc):
     logger.error(f"Unhandled exception processing {request.method} {request.url.path}: {exc}", exc_info=True)
+    origin = request.headers.get("origin")
+    headers = {}
+    if origin and (origin in settings.cors_origins or "*" in settings.cors_origins):
+        headers["Access-Control-Allow-Origin"] = origin
+        headers["Access-Control-Allow-Credentials"] = "true"
     return JSONResponse(
         status_code=500,
         content={"detail": "An internal server error occurred. Please contact support."},
+        headers=headers,
     )
 
 # Mount API Routers

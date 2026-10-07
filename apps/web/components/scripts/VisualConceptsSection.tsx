@@ -88,7 +88,11 @@ export function VisualConceptsSection({
       setVisuals(analyzed);
       if (onVisualsUpdated) onVisualsUpdated(analyzed);
     } catch (err: any) {
-      setError(err?.message || "Failed to analyze script for visual concepts.");
+      let friendlyError = err?.message || "Failed to analyze script for visual concepts.";
+      if (friendlyError.toLowerCase().includes("failed to fetch") || friendlyError.toLowerCase().includes("networkerror")) {
+        friendlyError = "Unable to connect to the visual concepts service.";
+      }
+      setError(friendlyError);
     } finally {
       setIsAnalyzing(false);
       setAnalysisStage("");
@@ -122,14 +126,21 @@ export function VisualConceptsSection({
         return next;
       });
     } catch (err: any) {
+      let friendlyError = err?.message || "Image generation failed. Your script is unchanged.";
+      if (friendlyError.toLowerCase().includes("failed to fetch") || friendlyError.toLowerCase().includes("networkerror")) {
+        friendlyError = "Unable to connect to the image generation service.";
+      } else if (friendlyError.toLowerCase().includes("not configured")) {
+        friendlyError = "Image generation is not configured yet.";
+      }
+
       setVisuals((prev) =>
         prev.map((v) =>
           v.id === visualId
-            ? { ...v, status: "failed", error_message: err?.message || "Generation failed" }
+            ? { ...v, status: "failed", error_message: friendlyError }
             : v
         )
       );
-      setError(err?.message || "Image generation failed. Your script is unchanged.");
+      setError(friendlyError);
     }
   };
 
@@ -159,14 +170,21 @@ export function VisualConceptsSection({
         return next;
       });
     } catch (err: any) {
+      let friendlyError = err?.message || "Image regeneration failed. Your script is unchanged.";
+      if (friendlyError.toLowerCase().includes("failed to fetch") || friendlyError.toLowerCase().includes("networkerror")) {
+        friendlyError = "Unable to connect to the image generation service.";
+      } else if (friendlyError.toLowerCase().includes("not configured")) {
+        friendlyError = "Image generation is not configured yet.";
+      }
+
       setVisuals((prev) =>
         prev.map((v) =>
           v.id === visualId
-            ? { ...v, status: "failed", error_message: err?.message || "Regeneration failed" }
+            ? { ...v, status: "failed", error_message: friendlyError }
             : v
         )
       );
-      setError(err?.message || "Image regeneration failed. Your script is unchanged.");
+      setError(friendlyError);
     }
   };
 
@@ -255,6 +273,7 @@ export function VisualConceptsSection({
       {/* Provider Status Diagnostic Banner */}
       {providerStatus && (
         <div
+          data-testid="visual-provider-status"
           className={`flex items-start sm:items-center justify-between gap-3 p-3.5 rounded-xl border text-xs ${
             providerStatus.configured
               ? "bg-emerald-950/20 border-emerald-500/30 text-emerald-300"
@@ -267,7 +286,16 @@ export function VisualConceptsSection({
             ) : (
               <AlertCircle className="w-4 h-4 text-amber-400 shrink-0" />
             )}
-            <span>{providerStatus.message}</span>
+            <div className="flex flex-wrap items-center gap-1.5">
+              <span className="font-semibold text-white">
+                Image Generation:{" "}
+                <span className={providerStatus.configured ? "text-emerald-400" : "text-amber-400"}>
+                  [{providerStatus.configured ? "Available" : "Not configured"}]
+                </span>
+              </span>
+              <span className="hidden sm:inline text-slate-500">•</span>
+              <span>{providerStatus.message}</span>
+            </div>
           </div>
 
           <span className="font-mono text-[11px] px-2 py-0.5 rounded bg-black/30 border border-white/5 uppercase shrink-0">

@@ -1263,14 +1263,26 @@ export class ApiClient {
 
   // AI Visual Concepts & Image Generation
   async getVisualProviderStatus(scriptId: string): Promise<VisualProviderStatus> {
-    const response = await fetch(`${this.baseUrl}/scripts/${scriptId}/visual-concepts/status`, {
-      method: "GET",
-      cache: "no-store",
-    });
-    if (!response.ok) {
-      throw new Error(`Failed to check visual provider status (${response.status})`);
+    try {
+      const response = await fetch(`${this.baseUrl}/scripts/${scriptId}/visual-concepts/status`, {
+        method: "GET",
+        cache: "no-store",
+      });
+      if (!response.ok) {
+        throw new Error(`Failed to check visual provider status (${response.status})`);
+      }
+      return (await response.json()) as VisualProviderStatus;
+    } catch (err: any) {
+      if (err?.message === "Failed to fetch" || err?.name === "TypeError") {
+        return {
+          configured: false,
+          provider: "unconfigured",
+          model: "none",
+          message: "Image generation provider is not configured.",
+        };
+      }
+      throw err;
     }
-    return (await response.json()) as VisualProviderStatus;
   }
 
   async analyzeVisualConcepts(
@@ -1282,31 +1294,55 @@ export class ApiClient {
       profile_id?: string;
     }
   ): Promise<ScriptVisual[]> {
-    const response = await fetch(`${this.baseUrl}/scripts/${scriptId}/visual-concepts`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload || {}),
-    });
-    if (!response.ok) {
-      let errorMessage = `Failed to analyze visual concepts (${response.status})`;
-      try {
-        const errorJson = await response.json();
-        if (errorJson.detail) errorMessage = String(errorJson.detail);
-      } catch (_) {}
-      throw new Error(errorMessage);
+    try {
+      const response = await fetch(`${this.baseUrl}/scripts/${scriptId}/visual-concepts`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload || {}),
+      });
+      if (!response.ok) {
+        let detailMsg = "";
+        try {
+          const errorJson = await response.json();
+          if (errorJson.detail) {
+            detailMsg = typeof errorJson.detail === "string" ? errorJson.detail : JSON.stringify(errorJson.detail);
+          }
+        } catch (_) {}
+
+        if (response.status === 400) {
+          throw new Error(detailMsg || "The visual generation request could not be processed.");
+        } else if (response.status === 429) {
+          throw new Error("Image generation provider quota is unavailable.");
+        } else if (response.status >= 500) {
+          throw new Error("Image generation failed. Your script and visual concepts are unchanged.");
+        }
+        throw new Error(detailMsg || `Failed to analyze visual concepts (${response.status})`);
+      }
+      return (await response.json()) as ScriptVisual[];
+    } catch (err: any) {
+      if (err?.message === "Failed to fetch" || err?.name === "TypeError") {
+        throw new Error("Unable to connect to the visual concepts service.");
+      }
+      throw err;
     }
-    return (await response.json()) as ScriptVisual[];
   }
 
   async getScriptVisuals(scriptId: string): Promise<ScriptVisual[]> {
-    const response = await fetch(`${this.baseUrl}/scripts/${scriptId}/visuals`, {
-      method: "GET",
-      cache: "no-store",
-    });
-    if (!response.ok) {
-      throw new Error(`Failed to fetch script visuals (${response.status})`);
+    try {
+      const response = await fetch(`${this.baseUrl}/scripts/${scriptId}/visuals`, {
+        method: "GET",
+        cache: "no-store",
+      });
+      if (!response.ok) {
+        throw new Error(`Failed to fetch script visuals (${response.status})`);
+      }
+      return (await response.json()) as ScriptVisual[];
+    } catch (err: any) {
+      if (err?.message === "Failed to fetch" || err?.name === "TypeError") {
+        throw new Error("Unable to connect to the visual concepts service.");
+      }
+      throw err;
     }
-    return (await response.json()) as ScriptVisual[];
   }
 
   async generateVisualImage(
@@ -1314,23 +1350,43 @@ export class ApiClient {
     visualId: string,
     payload?: { prompt?: string; style?: string; aspect_ratio?: string }
   ): Promise<ScriptVisual> {
-    const response = await fetch(
-      `${this.baseUrl}/scripts/${scriptId}/visuals/${visualId}/generate`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload || {}),
+    try {
+      const response = await fetch(
+        `${this.baseUrl}/scripts/${scriptId}/visuals/${visualId}/generate`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload || {}),
+        }
+      );
+      if (!response.ok) {
+        let detailMsg = "";
+        try {
+          const errorJson = await response.json();
+          if (errorJson.detail) {
+            detailMsg = typeof errorJson.detail === "string" ? errorJson.detail : JSON.stringify(errorJson.detail);
+          }
+        } catch (_) {}
+
+        if (response.status === 400) {
+          if (detailMsg.toLowerCase().includes("not configured")) {
+            throw new Error("Image generation is not configured yet.");
+          }
+          throw new Error(detailMsg || "The visual generation request could not be processed.");
+        } else if (response.status === 429) {
+          throw new Error("Image generation provider quota is unavailable.");
+        } else if (response.status >= 500) {
+          throw new Error("Image generation failed. Your script and visual concepts are unchanged.");
+        }
+        throw new Error(detailMsg || `Image generation failed (${response.status})`);
       }
-    );
-    if (!response.ok) {
-      let errorMessage = `Image generation failed (${response.status})`;
-      try {
-        const errorJson = await response.json();
-        if (errorJson.detail) errorMessage = String(errorJson.detail);
-      } catch (_) {}
-      throw new Error(errorMessage);
+      return (await response.json()) as ScriptVisual;
+    } catch (err: any) {
+      if (err?.message === "Failed to fetch" || err?.name === "TypeError") {
+        throw new Error("Unable to connect to the image generation service.");
+      }
+      throw err;
     }
-    return (await response.json()) as ScriptVisual;
   }
 
   async regenerateVisualImage(
@@ -1338,23 +1394,43 @@ export class ApiClient {
     visualId: string,
     payload?: { prompt?: string; style?: string; aspect_ratio?: string }
   ): Promise<ScriptVisual> {
-    const response = await fetch(
-      `${this.baseUrl}/scripts/${scriptId}/visuals/${visualId}/regenerate`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload || {}),
+    try {
+      const response = await fetch(
+        `${this.baseUrl}/scripts/${scriptId}/visuals/${visualId}/regenerate`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload || {}),
+        }
+      );
+      if (!response.ok) {
+        let detailMsg = "";
+        try {
+          const errorJson = await response.json();
+          if (errorJson.detail) {
+            detailMsg = typeof errorJson.detail === "string" ? errorJson.detail : JSON.stringify(errorJson.detail);
+          }
+        } catch (_) {}
+
+        if (response.status === 400) {
+          if (detailMsg.toLowerCase().includes("not configured")) {
+            throw new Error("Image generation is not configured yet.");
+          }
+          throw new Error(detailMsg || "The visual generation request could not be processed.");
+        } else if (response.status === 429) {
+          throw new Error("Image generation provider quota is unavailable.");
+        } else if (response.status >= 500) {
+          throw new Error("Image generation failed. Your script and visual concepts are unchanged.");
+        }
+        throw new Error(detailMsg || `Image regeneration failed (${response.status})`);
       }
-    );
-    if (!response.ok) {
-      let errorMessage = `Image regeneration failed (${response.status})`;
-      try {
-        const errorJson = await response.json();
-        if (errorJson.detail) errorMessage = String(errorJson.detail);
-      } catch (_) {}
-      throw new Error(errorMessage);
+      return (await response.json()) as ScriptVisual;
+    } catch (err: any) {
+      if (err?.message === "Failed to fetch" || err?.name === "TypeError") {
+        throw new Error("Unable to connect to the image generation service.");
+      }
+      throw err;
     }
-    return (await response.json()) as ScriptVisual;
   }
 
   async updateScriptVisual(
@@ -1362,36 +1438,52 @@ export class ApiClient {
     visualId: string,
     payload: { prompt?: string; style?: string; aspect_ratio?: string; is_attached?: boolean }
   ): Promise<ScriptVisual> {
-    const response = await fetch(
-      `${this.baseUrl}/scripts/${scriptId}/visuals/${visualId}`,
-      {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
+    try {
+      const response = await fetch(
+        `${this.baseUrl}/scripts/${scriptId}/visuals/${visualId}`,
+        {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        }
+      );
+      if (!response.ok) {
+        let detailMsg = "";
+        try {
+          const errorJson = await response.json();
+          if (errorJson.detail) {
+            detailMsg = typeof errorJson.detail === "string" ? errorJson.detail : JSON.stringify(errorJson.detail);
+          }
+        } catch (_) {}
+        throw new Error(detailMsg || `Failed to update visual (${response.status})`);
       }
-    );
-    if (!response.ok) {
-      let errorMessage = `Failed to update visual (${response.status})`;
-      try {
-        const errorJson = await response.json();
-        if (errorJson.detail) errorMessage = String(errorJson.detail);
-      } catch (_) {}
-      throw new Error(errorMessage);
+      return (await response.json()) as ScriptVisual;
+    } catch (err: any) {
+      if (err?.message === "Failed to fetch" || err?.name === "TypeError") {
+        throw new Error("Unable to connect to the visual concepts service.");
+      }
+      throw err;
     }
-    return (await response.json()) as ScriptVisual;
   }
 
   async deleteScriptVisual(scriptId: string, visualId: string): Promise<{ deleted: boolean; id: string }> {
-    const response = await fetch(
-      `${this.baseUrl}/scripts/${scriptId}/visuals/${visualId}`,
-      {
-        method: "DELETE",
+    try {
+      const response = await fetch(
+        `${this.baseUrl}/scripts/${scriptId}/visuals/${visualId}`,
+        {
+          method: "DELETE",
+        }
+      );
+      if (!response.ok) {
+        throw new Error(`Failed to delete visual (${response.status})`);
       }
-    );
-    if (!response.ok) {
-      throw new Error(`Failed to delete visual (${response.status})`);
+      return (await response.json()) as { deleted: boolean; id: string };
+    } catch (err: any) {
+      if (err?.message === "Failed to fetch" || err?.name === "TypeError") {
+        throw new Error("Unable to connect to the visual concepts service.");
+      }
+      throw err;
     }
-    return (await response.json()) as { deleted: boolean; id: string };
   }
 }
 

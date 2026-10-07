@@ -91,7 +91,7 @@ describe("AI Visual Concepts Feature", () => {
   });
 
   describe("Provider Status Diagnostics", () => {
-    it("renders unconfigured warning banner clearly without crashing", async () => {
+    it("renders unconfigured warning banner clearly with [Not configured] state", async () => {
       vi.mocked(api.getVisualProviderStatus).mockResolvedValue({
         configured: false,
         provider: "unconfigured",
@@ -104,6 +104,7 @@ describe("AI Visual Concepts Feature", () => {
 
       await waitFor(() => {
         expect(screen.getByText("Image generation provider is not configured.")).toBeInTheDocument();
+        expect(screen.getByText(/\[Not configured\]/i)).toBeInTheDocument();
       });
 
       expect(
@@ -112,7 +113,7 @@ describe("AI Visual Concepts Feature", () => {
       expect(screen.getAllByRole("button", { name: /Analyze Script for Visuals/i })[0]).toBeInTheDocument();
     });
 
-    it("renders configured provider banner when ready", async () => {
+    it("renders configured provider banner when ready with [Available] state", async () => {
       vi.mocked(api.getVisualProviderStatus).mockResolvedValue({
         configured: true,
         provider: "openai",
@@ -125,6 +126,31 @@ describe("AI Visual Concepts Feature", () => {
 
       await waitFor(() => {
         expect(screen.getByText("Image generation is ready with openai (dall-e-3).")).toBeInTheDocument();
+        expect(screen.getByText(/\[Available\]/i)).toBeInTheDocument();
+      });
+    });
+
+    it("displays user-friendly error message when network request fails", async () => {
+      vi.mocked(api.getVisualProviderStatus).mockResolvedValue({
+        configured: false,
+        provider: "unconfigured",
+        model: "none",
+        message: "Image generation provider is not configured.",
+      });
+      vi.mocked(api.getScriptVisuals).mockResolvedValue([]);
+      vi.mocked(api.analyzeVisualConcepts).mockRejectedValue(
+        new Error("Unable to connect to the visual concepts service.")
+      );
+
+      render(<VisualConceptsSection script={mockScript} />);
+
+      const analyzeBtn = screen.getAllByRole("button", { name: /Analyze Script for Visuals/i })[0];
+      fireEvent.click(analyzeBtn);
+
+      await waitFor(() => {
+        expect(
+          screen.getByText("Unable to connect to the visual concepts service.")
+        ).toBeInTheDocument();
       });
     });
   });

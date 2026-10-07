@@ -396,6 +396,13 @@ This document records chronological development checkpoints, environment finding
      - Added visual callout cards to `ScriptSegment.tsx` when a visual concept is attached to a beat.
   6. **Testing & Verification**:
      - Added 12 backend unit and integration tests in `apps/api/tests/test_visual_concepts.py` (Full backend suite: **244/244 passed**).
-     - Added 10 frontend tests in `apps/web/tests/visualConcepts.test.tsx` (Full frontend suite: **261/261 passed** across 25 test files).
+     - Added 11 frontend tests in `apps/web/tests/visualConcepts.test.tsx` (Full frontend suite: **262/262 passed** across 25 test files).
      - TypeScript: **0 errors** (`npx tsc --noEmit`).
      - Production Build: **PASS** (`npm run build`, 15 static pages rendered).
+  7. **Post-Implementation Diagnostic & Bug Fix ("Failed to fetch")**:
+     - Identified root cause of `Failed to fetch` error: in `apps/api/app/services/llm_provider.py`, `GeminiLLMProvider.analyze_visual_concepts` had a missing `logger` import (`NameError: name 'logger' is not defined`), causing unhandled 500 exceptions on fallback that broke browser CORS headers.
+     - Imported `logging` and initialized `logger = logging.getLogger(__name__)` in `llm_provider.py`.
+     - Added CORS header injection to `unhandled_exception_handler` in `apps/api/app/main.py` so any unexpected 500 error produces valid JSON rather than raw network CORS failures.
+     - Enhanced `apps/web/lib/api.ts` and `VisualConceptsSection.tsx` with user-friendly error translations (converting network dropouts to `"Unable to connect to the visual concepts service."` and provider unconfigured to `"Image generation is not configured yet."`).
+     - Enhanced diagnostic banner to explicitly show `Image Generation: [Available]` or `Image Generation: [Not configured]`.
+
