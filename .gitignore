@@ -1,22 +1,55 @@
+# ==============================================================================
+# CINEHAI AI — Git Ignore Configuration
+# ==============================================================================
+
 # Operating System Files
 .DS_Store
+.DS_Store?
+._*
 Thumbs.db
+ehthumbs.db
+[Dd]esktop.ini
+$RECYCLE.BIN/
 
-# Node.js / Next.js
+# IDE & Editor Files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+*.sublime-project
+*.sublime-workspace
+
+# Environment Variables & Secrets
+# (Never commit actual credentials, tokens, or local env files)
+.env
+.env.*
+*.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+apps/api/.env
+apps/web/.env.local
+
+# Allow example environment templates
+!*.env.example
+!.env.example
+
+# Node.js & Next.js
 node_modules/
 .next/
 out/
 build/
 dist/
+.turbo/
+*.tsbuildinfo
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
-.turbo/
-*.tsbuildinfo
 
-
-# Python / FastAPI / Conda
+# Python, Bytecode & Virtual Environments
 __pycache__/
 *.py[cod]
 *$py.class
@@ -26,32 +59,44 @@ env/
 venv/
 .venv/
 ENV/
+env.bak/
+venv.bak/
 *.egg-info/
+.eggs/
+*.egg
 .pytest_cache/
 .coverage
 htmlcov/
+.mypy_cache/
+.ruff_cache/
 
-# Environment Variables & Secrets
-.env
-.env.local
-.env.*.local
-*.env
-
-# SQLite / Database
+# Databases & SQLite Local State
 *.sqlite3
 *.db
+*.db-journal
+*.db-shm
+*.db-wal
+cineha_ai.db
+apps/api/cineha_ai.db
 
-# Video uploads and temporary scratch files
+# Media, Uploads, Storage, Cache & Scratch Files
 uploads/
 storage/
 scratch/
 temp/
+tmp/
 *.mp4
 *.mov
 *.avi
+*.mkv
+*.webm
+*.mp3
+*.wav
+*.m4a
+*.aac
 
-# Runtime files and process logs
+# Runtime Files, PIDs & Logs
 .cinehai/
 logs/
+*.log
 *.pid
-
